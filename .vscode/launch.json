@@ -5,24 +5,84 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug FastAPI Project backend: Python Debugger",
+            "name": "Backend: Debug FastAPI",
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
-            "args": [
-                "app.main:app",
-                "--reload"
-            ],
+            "args": ["app.main:app", "--reload", "--port", "8000"],
             "cwd": "${workspaceFolder}/backend",
             "jinja": true,
             "envFile": "${workspaceFolder}/.env",
+            "preLaunchTask": "backend: prestart (migrate + seed)",
+            "presentation": { "group": "1-backend", "order": 1 }
         },
         {
+            "name": "Backend: Debug FastAPI (skip prestart)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": ["app.main:app", "--reload", "--port", "8000"],
+            "cwd": "${workspaceFolder}/backend",
+            "jinja": true,
+            "envFile": "${workspaceFolder}/.env",
+            "presentation": { "group": "1-backend", "order": 2 }
+        },
+        {
+            "name": "Backend: Debug pytest",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["-x", "-v"],
+            "cwd": "${workspaceFolder}/backend",
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": false,
+            "preLaunchTask": "services: up (db, mailpit)",
+            "presentation": { "group": "1-backend", "order": 3 }
+        },
+        {
+            "name": "Backend: Debug current test file",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["${file}", "-x", "-v"],
+            "cwd": "${workspaceFolder}/backend",
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": false,
+            "presentation": { "group": "1-backend", "order": 4 }
+        },
+        {
+            "name": "Frontend: Chrome (starts Vite)",
             "type": "chrome",
             "request": "launch",
-            "name": "Debug Frontend: Launch Chrome against http://localhost:5173",
             "url": "http://localhost:5173",
-            "webRoot": "${workspaceFolder}/frontend"
+            "webRoot": "${workspaceFolder}/frontend",
+            "preLaunchTask": "frontend: dev server",
+            "presentation": { "group": "2-frontend", "order": 1 }
         },
+        {
+            "name": "Frontend: Edge (starts Vite)",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/frontend",
+            "preLaunchTask": "frontend: dev server",
+            "presentation": { "group": "2-frontend", "order": 2 }
+        },
+        {
+            "name": "Frontend: Chrome (Vite already running)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/frontend",
+            "presentation": { "group": "2-frontend", "order": 3 }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Stack: Debug backend + frontend",
+            "configurations": ["Backend: Debug FastAPI", "Frontend: Chrome (starts Vite)"],
+            "stopAll": true,
+            "presentation": { "group": "0-fullstack", "order": 1 }
+        }
     ]
 }
