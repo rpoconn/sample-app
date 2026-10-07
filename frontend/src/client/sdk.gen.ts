@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { companiesCreateCompanyData, companiesCreateCompanyErrors, companiesCreateCompanyResponses, companiesReadCompaniesData, companiesReadCompaniesErrors, companiesReadCompaniesResponses, companiesReadCompanyData, companiesReadCompanyErrors, companiesReadCompanyJurisdictionsData, companiesReadCompanyJurisdictionsErrors, companiesReadCompanyJurisdictionsResponses, companiesReadCompanyResponses, companiesSetCompanyJurisdictionsData, companiesSetCompanyJurisdictionsErrors, companiesSetCompanyJurisdictionsResponses, companiesUpdateCompanyData, companiesUpdateCompanyErrors, companiesUpdateCompanyResponses, itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, jurisdictionsCreateJurisdictionData, jurisdictionsCreateJurisdictionErrors, jurisdictionsCreateJurisdictionResponses, jurisdictionsDeleteJurisdictionData, jurisdictionsDeleteJurisdictionErrors, jurisdictionsDeleteJurisdictionResponses, jurisdictionsReadJurisdictionData, jurisdictionsReadJurisdictionErrors, jurisdictionsReadJurisdictionResponses, jurisdictionsReadJurisdictionsData, jurisdictionsReadJurisdictionsErrors, jurisdictionsReadJurisdictionsResponses, jurisdictionsReadJurisdictionTreeData, jurisdictionsReadJurisdictionTreeResponses, jurisdictionsUpdateJurisdictionData, jurisdictionsUpdateJurisdictionErrors, jurisdictionsUpdateJurisdictionResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginLogoutData, loginLogoutResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadMyJurisdictionsData, usersReadMyJurisdictionsResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserJurisdictionsData, usersReadUserJurisdictionsErrors, usersReadUserJurisdictionsResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersSetMyJurisdictionsData, usersSetMyJurisdictionsErrors, usersSetMyJurisdictionsResponses, usersSetUserJurisdictionsData, usersSetUserJurisdictionsErrors, usersSetUserJurisdictionsResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -34,6 +34,20 @@ export class LoginService {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 ...options.headers
             }
+        });
+    }
+    
+    /**
+     * Logout
+     *
+     * Revoke the current access token
+     */
+    public static logout<ThrowOnError extends boolean = true>(options?: Options<loginLogoutData, ThrowOnError>) {
+        return (options?.client ?? client).post<loginLogoutResponses, unknown, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/logout',
+            ...options
         });
     }
     
@@ -194,6 +208,38 @@ export class UsersService {
     }
     
     /**
+     * Read My Jurisdictions
+     *
+     * Get the jurisdictions the current user has opted into.
+     */
+    public static readMyJurisdictions<ThrowOnError extends boolean = true>(options?: Options<usersReadMyJurisdictionsData, ThrowOnError>) {
+        return (options?.client ?? client).get<usersReadMyJurisdictionsResponses, unknown, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/me/jurisdictions',
+            ...options
+        });
+    }
+    
+    /**
+     * Set My Jurisdictions
+     *
+     * Replace the current user's opt-ins; each must be opted into by their company.
+     */
+    public static setMyJurisdictions<ThrowOnError extends boolean = true>(options: Options<usersSetMyJurisdictionsData, ThrowOnError>) {
+        return (options.client ?? client).put<usersSetMyJurisdictionsResponses, usersSetMyJurisdictionsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/me/jurisdictions',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
      * Register User
      *
      * Create new user without the need to be logged in.
@@ -248,6 +294,38 @@ export class UsersService {
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/users/{user_id}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Read User Jurisdictions
+     *
+     * Get a user's opt-ins. Allowed for superusers and admins of the user's company.
+     */
+    public static readUserJurisdictions<ThrowOnError extends boolean = true>(options: Options<usersReadUserJurisdictionsData, ThrowOnError>) {
+        return (options.client ?? client).get<usersReadUserJurisdictionsResponses, usersReadUserJurisdictionsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/{user_id}/jurisdictions',
+            ...options
+        });
+    }
+    
+    /**
+     * Set User Jurisdictions
+     *
+     * Replace a user's opt-ins. Allowed for superusers and admins of the user's company.
+     */
+    public static setUserJurisdictions<ThrowOnError extends boolean = true>(options: Options<usersSetUserJurisdictionsData, ThrowOnError>) {
+        return (options.client ?? client).put<usersSetUserJurisdictionsResponses, usersSetUserJurisdictionsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/{user_id}/jurisdictions',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -355,6 +433,198 @@ export class ItemsService {
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/items/{id}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+}
+
+export class JurisdictionsService {
+    /**
+     * Read Jurisdictions
+     *
+     * List the children of a jurisdiction, or the root jurisdictions when no parent_id.
+     */
+    public static readJurisdictions<ThrowOnError extends boolean = true>(options?: Options<jurisdictionsReadJurisdictionsData, ThrowOnError>) {
+        return (options?.client ?? client).get<jurisdictionsReadJurisdictionsResponses, jurisdictionsReadJurisdictionsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/jurisdictions/',
+            ...options
+        });
+    }
+    
+    /**
+     * Create Jurisdiction
+     *
+     * Create a jurisdiction, as a root or under parent_id.
+     */
+    public static createJurisdiction<ThrowOnError extends boolean = true>(options: Options<jurisdictionsCreateJurisdictionData, ThrowOnError>) {
+        return (options.client ?? client).post<jurisdictionsCreateJurisdictionResponses, jurisdictionsCreateJurisdictionErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/jurisdictions/',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Read Jurisdiction Tree
+     *
+     * List every jurisdiction as a flat list; build the tree from parent_id.
+     */
+    public static readJurisdictionTree<ThrowOnError extends boolean = true>(options?: Options<jurisdictionsReadJurisdictionTreeData, ThrowOnError>) {
+        return (options?.client ?? client).get<jurisdictionsReadJurisdictionTreeResponses, unknown, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/jurisdictions/tree',
+            ...options
+        });
+    }
+    
+    /**
+     * Delete Jurisdiction
+     *
+     * Delete a leaf jurisdiction that no company has opted into.
+     */
+    public static deleteJurisdiction<ThrowOnError extends boolean = true>(options: Options<jurisdictionsDeleteJurisdictionData, ThrowOnError>) {
+        return (options.client ?? client).delete<jurisdictionsDeleteJurisdictionResponses, jurisdictionsDeleteJurisdictionErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/jurisdictions/{jurisdiction_id}',
+            ...options
+        });
+    }
+    
+    /**
+     * Read Jurisdiction
+     *
+     * Get a jurisdiction by id.
+     */
+    public static readJurisdiction<ThrowOnError extends boolean = true>(options: Options<jurisdictionsReadJurisdictionData, ThrowOnError>) {
+        return (options.client ?? client).get<jurisdictionsReadJurisdictionResponses, jurisdictionsReadJurisdictionErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/jurisdictions/{jurisdiction_id}',
+            ...options
+        });
+    }
+    
+    /**
+     * Update Jurisdiction
+     *
+     * Rename, reorder, or move a jurisdiction. Sending parent_id: null moves it to the root.
+     */
+    public static updateJurisdiction<ThrowOnError extends boolean = true>(options: Options<jurisdictionsUpdateJurisdictionData, ThrowOnError>) {
+        return (options.client ?? client).patch<jurisdictionsUpdateJurisdictionResponses, jurisdictionsUpdateJurisdictionErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/jurisdictions/{jurisdiction_id}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+}
+
+export class CompaniesService {
+    /**
+     * Read Companies
+     *
+     * Retrieve companies.
+     */
+    public static readCompanies<ThrowOnError extends boolean = true>(options?: Options<companiesReadCompaniesData, ThrowOnError>) {
+        return (options?.client ?? client).get<companiesReadCompaniesResponses, companiesReadCompaniesErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/companies/',
+            ...options
+        });
+    }
+    
+    /**
+     * Create Company
+     *
+     * Create new company.
+     */
+    public static createCompany<ThrowOnError extends boolean = true>(options: Options<companiesCreateCompanyData, ThrowOnError>) {
+        return (options.client ?? client).post<companiesCreateCompanyResponses, companiesCreateCompanyErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/companies/',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Read Company
+     *
+     * Get a company by id. Members can read their own company.
+     */
+    public static readCompany<ThrowOnError extends boolean = true>(options: Options<companiesReadCompanyData, ThrowOnError>) {
+        return (options.client ?? client).get<companiesReadCompanyResponses, companiesReadCompanyErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/companies/{company_id}',
+            ...options
+        });
+    }
+    
+    /**
+     * Update Company
+     *
+     * Update a company.
+     */
+    public static updateCompany<ThrowOnError extends boolean = true>(options: Options<companiesUpdateCompanyData, ThrowOnError>) {
+        return (options.client ?? client).patch<companiesUpdateCompanyResponses, companiesUpdateCompanyErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/companies/{company_id}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Read Company Jurisdictions
+     *
+     * Jurisdictions the company has opted into; its users may opt into these.
+     */
+    public static readCompanyJurisdictions<ThrowOnError extends boolean = true>(options: Options<companiesReadCompanyJurisdictionsData, ThrowOnError>) {
+        return (options.client ?? client).get<companiesReadCompanyJurisdictionsResponses, companiesReadCompanyJurisdictionsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/companies/{company_id}/jurisdictions',
+            ...options
+        });
+    }
+    
+    /**
+     * Set Company Jurisdictions
+     *
+     * Replace the company's opt-ins. Users lose any opt-in the company drops.
+     */
+    public static setCompanyJurisdictions<ThrowOnError extends boolean = true>(options: Options<companiesSetCompanyJurisdictionsData, ThrowOnError>) {
+        return (options.client ?? client).put<companiesSetCompanyJurisdictionsResponses, companiesSetCompanyJurisdictionsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/companies/{company_id}/jurisdictions',
             ...options,
             headers: {
                 'Content-Type': 'application/json',

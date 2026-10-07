@@ -59,7 +59,9 @@ uv run python app/initial_data.py
 
 On Windows PowerShell, use `Remove-Item app.db` instead of `rm app.db`.
 
-**Note**: The backend tests use the same database and delete all users when they finish. Run `uv run python app/initial_data.py` again afterwards to recreate the superuser.
+The data persists across restarts. `initial_data.py` only creates the superuser and seeds the jurisdictions from `app/data/jurisdictions.json` when the superuser does not exist yet, so later changes to the jurisdictions are kept. Reset the database to re-seed them.
+
+**Note**: The backend tests use their own database, `backend/test.db`, which they recreate on every run. They never touch `app.db`.
 
 ### VS Code
 

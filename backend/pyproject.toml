@@ -74,6 +74,9 @@ sort = "-Cover"
 [tool.coverage.html]
 show_contexts = true
 
+[tool.ty.environment]
+python = "../.venv"
+
 [tool.ty.terminal]
 error-on-warning = true
 

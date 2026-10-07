@@ -9,11 +9,15 @@ from app.api.deps import (
     CurrentUser,
     SessionDep,
     get_current_active_superuser,
+    require_company_admin,
 )
+from app.api.routes.jurisdictions import to_public_list
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.models import (
     Item,
+    JurisdictionSelection,
+    JurisdictionsPublic,
     Message,
     UpdatePassword,
     User,
@@ -129,6 +133,28 @@ def read_user_me(current_user: CurrentUser) -> Any:
     return current_user
 
 
+@router.get("/me/jurisdictions", response_model=JurisdictionsPublic)
+def read_my_jurisdictions(session: SessionDep, current_user: CurrentUser) -> Any:
+    """
+    Get the jurisdictions the current user has opted into.
+    """
+    rows = crud.get_user_jurisdictions(session=session, user_id=current_user.id)
+    return to_public_list(session, rows)
+
+
+@router.put("/me/jurisdictions", response_model=JurisdictionsPublic)
+def set_my_jurisdictions(
+    *, session: SessionDep, current_user: CurrentUser, body: JurisdictionSelection
+) -> Any:
+    """
+    Replace the current user's opt-ins; each must be opted into by their company.
+    """
+    rows = crud.set_user_jurisdictions(
+        session=session, user=current_user, jurisdiction_ids=body.jurisdiction_ids
+    )
+    return to_public_list(session, rows)
+
+
 @router.delete("/me", response_model=Message)
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
@@ -230,3 +256,48 @@ def delete_user(
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
+
+
+def _get_user_for_company_admin(
+    session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
+) -> User:
+    user = session.get(User, user_id)
+    if not user:
+        if not current_user.is_superuser:
+            # Don't reveal whether the id exists to non-superusers
+            raise HTTPException(
+                status_code=403, detail="The user doesn't have enough privileges"
+            )
+        raise HTTPException(status_code=404, detail="User not found")
+    require_company_admin(current_user, user.company_id)
+    return user
+
+
+@router.get("/{user_id}/jurisdictions", response_model=JurisdictionsPublic)
+def read_user_jurisdictions(
+    session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
+) -> Any:
+    """
+    Get a user's opt-ins. Allowed for superusers and admins of the user's company.
+    """
+    user = _get_user_for_company_admin(session, current_user, user_id)
+    rows = crud.get_user_jurisdictions(session=session, user_id=user.id)
+    return to_public_list(session, rows)
+
+
+@router.put("/{user_id}/jurisdictions", response_model=JurisdictionsPublic)
+def set_user_jurisdictions(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    user_id: uuid.UUID,
+    body: JurisdictionSelection,
+) -> Any:
+    """
+    Replace a user's opt-ins. Allowed for superusers and admins of the user's company.
+    """
+    user = _get_user_for_company_admin(session, current_user, user_id)
+    rows = crud.set_user_jurisdictions(
+        session=session, user=user, jurisdiction_ids=body.jurisdiction_ids
+    )
+    return to_public_list(session, rows)

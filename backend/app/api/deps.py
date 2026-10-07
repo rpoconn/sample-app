@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Generator
 from typing import Annotated
 
@@ -11,7 +12,7 @@ from sqlmodel import Session
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
-from app.models import TokenPayload, User
+from app.models import CompanyRole, RevokedToken, TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -27,7 +28,7 @@ SessionDep = Annotated[Session, Depends(get_db)]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 
-def get_current_user(session: SessionDep, token: TokenDep) -> User:
+def get_token_payload(session: SessionDep, token: TokenDep) -> TokenPayload:
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
@@ -38,6 +39,15 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
+    if session.get(RevokedToken, token_data.jti):
+        raise HTTPException(status_code=401, detail="Token has been revoked")
+    return token_data
+
+
+TokenPayloadDep = Annotated[TokenPayload, Depends(get_token_payload)]
+
+
+def get_current_user(session: SessionDep, token_data: TokenPayloadDep) -> User:
     user = session.get(User, token_data.sub)
     if not user:
         # 401 (not 404) so clients drop stale tokens, e.g. after a DB reset
@@ -56,3 +66,21 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
             status_code=403, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+
+def require_company_member(current_user: User, company_id: uuid.UUID) -> None:
+    if not current_user.is_superuser and current_user.company_id != company_id:
+        raise HTTPException(
+            status_code=403, detail="The user doesn't have enough privileges"
+        )
+
+
+def require_company_admin(current_user: User, company_id: uuid.UUID) -> None:
+    is_admin = (
+        current_user.company_id == company_id
+        and current_user.company_role == CompanyRole.admin
+    )
+    if not current_user.is_superuser and not is_admin:
+        raise HTTPException(
+            status_code=403, detail="The user doesn't have enough privileges"
+        )

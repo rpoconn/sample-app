@@ -30,7 +30,8 @@
     }
   },
   "formatter": {
-    "indentStyle": "space"
+    "indentStyle": "space",
+    "indentWidth": 4
   },
   "javascript": {
     "formatter": {

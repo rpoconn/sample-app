@@ -1,15 +1,28 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import delete
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.api.deps import (
+    CurrentUser,
+    SessionDep,
+    TokenPayloadDep,
+    get_current_active_superuser,
+)
 from app.core import security
 from app.core.config import settings
-from app.models import Message, NewPassword, Token, UserPublic, UserUpdate
+from app.models import (
+    Message,
+    NewPassword,
+    RevokedToken,
+    Token,
+    UserPublic,
+    UserUpdate,
+)
 from app.utils import (
     generate_password_reset_token,
     generate_reset_password_email,
@@ -40,6 +53,20 @@ def login_access_token(
             user.id, expires_delta=access_token_expires
         )
     )
+
+
+@router.post("/logout")
+def logout(session: SessionDep, token_data: TokenPayloadDep) -> Message:
+    """
+    Revoke the current access token
+    """
+    # Expired tokens are rejected anyway, so their rows are no longer needed
+    session.exec(
+        delete(RevokedToken).where(RevokedToken.expires_at < datetime.now(UTC))
+    )  # type: ignore[arg-type]
+    session.add(RevokedToken(jti=token_data.jti, expires_at=token_data.exp))
+    session.commit()
+    return Message(message="Logged out")
 
 
 @router.post("/login/test-token", response_model=UserPublic)

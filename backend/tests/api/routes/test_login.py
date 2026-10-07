@@ -10,7 +10,11 @@ from app.crud import create_user
 from app.models import User, UserCreate
 from app.utils import generate_password_reset_token
 from tests.utils.user import user_authentication_headers
-from tests.utils.utils import random_email, random_lower_string
+from tests.utils.utils import (
+    get_superuser_token_headers,
+    random_email,
+    random_lower_string,
+)
 
 
 def test_get_access_token(client: TestClient) -> None:
@@ -32,6 +36,28 @@ def test_get_access_token_incorrect_password(client: TestClient) -> None:
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
     assert r.status_code == 400
+
+
+def test_logout_revokes_only_that_token(client: TestClient) -> None:
+    # Fresh tokens, so the shared superuser_token_headers fixture stays valid
+    headers = get_superuser_token_headers(client)
+    other_headers = get_superuser_token_headers(client)
+
+    r = client.post(f"{settings.API_V1_STR}/logout", headers=headers)
+    assert r.status_code == 200
+    assert r.json() == {"message": "Logged out"}
+
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
+    assert r.status_code == 401
+    assert r.json() == {"detail": "Token has been revoked"}
+
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=other_headers)
+    assert r.status_code == 200
+
+
+def test_logout_without_token(client: TestClient) -> None:
+    r = client.post(f"{settings.API_V1_STR}/logout")
+    assert r.status_code == 401
 
 
 def test_use_access_token(

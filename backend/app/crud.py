@@ -1,15 +1,70 @@
 import uuid
+from collections.abc import Iterable
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, delete, func, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import Item, ItemCreate, Jurisdiction, User, UserCreate, UserUpdate
+from app.models import (
+    DEFAULT_COMPANY_ID,
+    Company,
+    CompanyCreate,
+    CompanyJurisdiction,
+    CompanyUpdate,
+    Item,
+    ItemCreate,
+    Jurisdiction,
+    JurisdictionCreate,
+    JurisdictionUpdate,
+    User,
+    UserCreate,
+    UserJurisdiction,
+    UserUpdate,
+    get_datetime_utc,
+)
+
+
+# Raised for rule violations; app.main maps status_code onto the HTTP response
+class CrudError(Exception):
+    status_code = 400
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+
+class NotFoundError(CrudError):
+    status_code = 404
+
+
+class ConflictError(CrudError):
+    status_code = 409
+
+
+class InvalidSelectionError(CrudError):
+    status_code = 422
+
+
+class NotPermittedError(CrudError):
+    status_code = 403
+
+
+def _get_company(*, session: Session, company_id: uuid.UUID) -> Company:
+    company = session.get(Company, company_id)
+    if not company:
+        raise NotFoundError("Company not found")
+    return company
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
+    company_id = user_create.company_id or DEFAULT_COMPANY_ID
+    _get_company(session=session, company_id=company_id)
     db_obj = User.model_validate(
-        user_create, update={"hashed_password": get_password_hash(user_create.password)}
+        user_create,
+        update={
+            "hashed_password": get_password_hash(user_create.password),
+            "company_id": company_id,
+        },
     )
     session.add(db_obj)
     session.commit()
@@ -19,11 +74,22 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
 
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     user_data = user_in.model_dump(exclude_unset=True)
+    # Company membership can be changed but never cleared
+    for key in ("company_id", "company_role"):
+        if key in user_data and user_data[key] is None:
+            del user_data[key]
     extra_data = {}
     if "password" in user_data:
         password = user_data["password"]
         hashed_password = get_password_hash(password)
         extra_data["hashed_password"] = hashed_password
+    new_company_id = user_data.get("company_id")
+    if new_company_id and new_company_id != db_user.company_id:
+        _get_company(session=session, company_id=new_company_id)
+        # Opt-ins belong to the old company; the FK rejects the move while they exist
+        session.exec(
+            delete(UserJurisdiction).where(col(UserJurisdiction.user_id) == db_user.id)
+        )
     db_user.sqlmodel_update(user_data, update=extra_data)
     session.add(db_user)
     session.commit()
@@ -104,3 +170,315 @@ def seed_jurisdictions(*, session: Session, nodes: list[dict[str, Any]]) -> int:
     walk(nodes, None)
     session.commit()
     return created
+
+
+def _apply_tree_position(node: Jurisdiction, parent: Jurisdiction | None) -> None:
+    node.parent_id = parent.id if parent else None
+    node.depth = parent.depth + 1 if parent else 0
+    node.path = f"{parent.path if parent else '/'}{node.id.hex}/"
+    node.name_path = f"{parent.name_path} / {node.name}" if parent else node.name
+
+
+def _get_parent(
+    *, session: Session, parent_id: uuid.UUID | None
+) -> Jurisdiction | None:
+    if parent_id is None:
+        return None
+    parent = session.get(Jurisdiction, parent_id)
+    if not parent:
+        raise NotFoundError("Parent jurisdiction not found")
+    return parent
+
+
+def _check_sibling_name(
+    *,
+    session: Session,
+    parent_id: uuid.UUID | None,
+    name: str,
+    exclude_id: uuid.UUID | None,
+) -> None:
+    statement = select(Jurisdiction.id).where(
+        Jurisdiction.parent_id == parent_id, Jurisdiction.name == name
+    )
+    if exclude_id:
+        statement = statement.where(Jurisdiction.id != exclude_id)
+    if session.exec(statement).first():
+        raise ConflictError(
+            "A jurisdiction with this name already exists under that parent"
+        )
+
+
+def _next_sort_order(*, session: Session, parent_id: uuid.UUID | None) -> int:
+    current = session.exec(
+        select(func.max(Jurisdiction.sort_order)).where(
+            Jurisdiction.parent_id == parent_id
+        )
+    ).one()
+    return 0 if current is None else current + 1
+
+
+def _has_company_optins(*, session: Session, jurisdiction_id: uuid.UUID) -> bool:
+    statement = select(CompanyJurisdiction.company_id).where(
+        CompanyJurisdiction.jurisdiction_id == jurisdiction_id
+    )
+    return session.exec(statement).first() is not None
+
+
+def create_jurisdiction(
+    *, session: Session, jurisdiction_in: JurisdictionCreate
+) -> Jurisdiction:
+    parent = _get_parent(session=session, parent_id=jurisdiction_in.parent_id)
+    _check_sibling_name(
+        session=session,
+        parent_id=jurisdiction_in.parent_id,
+        name=jurisdiction_in.name,
+        exclude_id=None,
+    )
+    sort_order = jurisdiction_in.sort_order
+    if sort_order is None:
+        sort_order = _next_sort_order(
+            session=session, parent_id=jurisdiction_in.parent_id
+        )
+    db_obj = Jurisdiction(
+        name=jurisdiction_in.name,
+        is_structural=jurisdiction_in.is_structural,
+        sort_order=sort_order,
+        path="",
+        name_path="",
+    )
+    _apply_tree_position(db_obj, parent)
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
+
+
+def update_jurisdiction(
+    *, session: Session, db_obj: Jurisdiction, jurisdiction_in: JurisdictionUpdate
+) -> Jurisdiction:
+    data = jurisdiction_in.model_dump(exclude_unset=True)
+    moving = "parent_id" in data and data["parent_id"] != db_obj.parent_id
+    new_parent_id = data["parent_id"] if moving else db_obj.parent_id
+    new_name = data.get("name") or db_obj.name
+
+    if data.get("is_structural") and not db_obj.is_structural:
+        if _has_company_optins(session=session, jurisdiction_id=db_obj.id):
+            raise ConflictError(
+                "Companies have opted into this jurisdiction; it cannot become structural"
+            )
+    parent = _get_parent(session=session, parent_id=new_parent_id)
+    if parent and parent.path.startswith(db_obj.path):
+        raise ConflictError(
+            "A jurisdiction cannot be moved under itself or its descendants"
+        )
+    if moving or new_name != db_obj.name:
+        _check_sibling_name(
+            session=session,
+            parent_id=new_parent_id,
+            name=new_name,
+            exclude_id=db_obj.id,
+        )
+
+    old_path, old_name_path, old_depth = db_obj.path, db_obj.name_path, db_obj.depth
+    db_obj.name = new_name
+    if data.get("is_structural") is not None:
+        db_obj.is_structural = data["is_structural"]
+    if data.get("sort_order") is not None:
+        db_obj.sort_order = data["sort_order"]
+    elif moving:
+        db_obj.sort_order = _next_sort_order(session=session, parent_id=new_parent_id)
+    _apply_tree_position(db_obj, parent)
+    db_obj.updated_at = get_datetime_utc()
+
+    # path holds ids, so it only changes on a move; name_path also changes on rename
+    if db_obj.path != old_path or db_obj.name_path != old_name_path:
+        descendants = session.exec(
+            select(Jurisdiction).where(
+                col(Jurisdiction.path).startswith(old_path),
+                Jurisdiction.id != db_obj.id,
+            )
+        ).all()
+        for d in descendants:
+            d.path = db_obj.path + d.path[len(old_path) :]
+            d.name_path = db_obj.name_path + d.name_path[len(old_name_path) :]
+            d.depth += db_obj.depth - old_depth
+            session.add(d)
+
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
+
+
+def delete_jurisdiction(*, session: Session, db_obj: Jurisdiction) -> None:
+    has_children = session.exec(
+        select(Jurisdiction.id).where(Jurisdiction.parent_id == db_obj.id)
+    ).first()
+    if has_children:
+        raise ConflictError("Jurisdiction has children; delete or move them first")
+    if _has_company_optins(session=session, jurisdiction_id=db_obj.id):
+        raise ConflictError(
+            "Companies have opted into this jurisdiction; remove those opt-ins first"
+        )
+    session.delete(db_obj)
+    session.commit()
+
+
+def ensure_default_company(*, session: Session, name: str) -> Company:
+    company = session.get(Company, DEFAULT_COMPANY_ID)
+    if not company:
+        company = Company(id=DEFAULT_COMPANY_ID, name=name)
+        session.add(company)
+        session.commit()
+        session.refresh(company)
+    return company
+
+
+def _check_company_name(
+    *, session: Session, name: str, exclude_id: uuid.UUID | None
+) -> None:
+    statement = select(Company.id).where(Company.name == name)
+    if exclude_id:
+        statement = statement.where(Company.id != exclude_id)
+    if session.exec(statement).first():
+        raise ConflictError("A company with this name already exists")
+
+
+def create_company(*, session: Session, company_in: CompanyCreate) -> Company:
+    _check_company_name(session=session, name=company_in.name, exclude_id=None)
+    db_obj = Company.model_validate(company_in)
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
+
+
+def update_company(
+    *, session: Session, db_obj: Company, company_in: CompanyUpdate
+) -> Company:
+    data = company_in.model_dump(exclude_unset=True, exclude_none=True)
+    if "name" in data:
+        _check_company_name(session=session, name=data["name"], exclude_id=db_obj.id)
+    db_obj.sqlmodel_update(data, update={"updated_at": get_datetime_utc()})
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
+
+
+def get_company_jurisdictions(
+    *, session: Session, company_id: uuid.UUID
+) -> list[Jurisdiction]:
+    statement = (
+        select(Jurisdiction)
+        .join(
+            CompanyJurisdiction,
+            col(CompanyJurisdiction.jurisdiction_id) == Jurisdiction.id,
+        )
+        .where(CompanyJurisdiction.company_id == company_id)
+        .order_by(col(Jurisdiction.name_path))
+    )
+    return list(session.exec(statement).all())
+
+
+def get_user_jurisdictions(
+    *, session: Session, user_id: uuid.UUID
+) -> list[Jurisdiction]:
+    statement = (
+        select(Jurisdiction)
+        .join(
+            UserJurisdiction, col(UserJurisdiction.jurisdiction_id) == Jurisdiction.id
+        )
+        .where(UserJurisdiction.user_id == user_id)
+        .order_by(col(Jurisdiction.name_path))
+    )
+    return list(session.exec(statement).all())
+
+
+def _validate_selectable(*, session: Session, ids: set[uuid.UUID]) -> None:
+    if not ids:
+        return
+    rows = session.exec(select(Jurisdiction).where(col(Jurisdiction.id).in_(ids))).all()
+    missing = ids - {j.id for j in rows}
+    if missing:
+        raise InvalidSelectionError(
+            f"Unknown jurisdiction ids: {sorted(str(i) for i in missing)}"
+        )
+    structural = [j.name_path for j in rows if j.is_structural]
+    if structural:
+        raise InvalidSelectionError(
+            f"Structural jurisdictions cannot be selected: {structural}"
+        )
+
+
+def set_company_jurisdictions(
+    *, session: Session, company_id: uuid.UUID, jurisdiction_ids: Iterable[uuid.UUID]
+) -> list[Jurisdiction]:
+    """Replace the company's opt-ins. Removed ids cascade to its users' opt-ins."""
+    _get_company(session=session, company_id=company_id)
+    wanted = set(jurisdiction_ids)
+    _validate_selectable(session=session, ids=wanted)
+    current = set(
+        session.exec(
+            select(CompanyJurisdiction.jurisdiction_id).where(
+                CompanyJurisdiction.company_id == company_id
+            )
+        ).all()
+    )
+    if removed := current - wanted:
+        session.exec(
+            delete(CompanyJurisdiction).where(
+                col(CompanyJurisdiction.company_id) == company_id,
+                col(CompanyJurisdiction.jurisdiction_id).in_(removed),
+            )
+        )
+    for jurisdiction_id in wanted - current:
+        session.add(
+            CompanyJurisdiction(company_id=company_id, jurisdiction_id=jurisdiction_id)
+        )
+    session.commit()
+    return get_company_jurisdictions(session=session, company_id=company_id)
+
+
+def set_user_jurisdictions(
+    *, session: Session, user: User, jurisdiction_ids: Iterable[uuid.UUID]
+) -> list[Jurisdiction]:
+    """Replace the user's opt-ins; each must already be opted into by the company."""
+    wanted = set(jurisdiction_ids)
+    _validate_selectable(session=session, ids=wanted)
+    allowed = set(
+        session.exec(
+            select(CompanyJurisdiction.jurisdiction_id).where(
+                CompanyJurisdiction.company_id == user.company_id
+            )
+        ).all()
+    )
+    if outside := wanted - allowed:
+        raise NotPermittedError(
+            "The company has not opted into jurisdictions: "
+            f"{sorted(str(i) for i in outside)}"
+        )
+    current = set(
+        session.exec(
+            select(UserJurisdiction.jurisdiction_id).where(
+                UserJurisdiction.user_id == user.id
+            )
+        ).all()
+    )
+    if removed := current - wanted:
+        session.exec(
+            delete(UserJurisdiction).where(
+                col(UserJurisdiction.user_id) == user.id,
+                col(UserJurisdiction.jurisdiction_id).in_(removed),
+            )
+        )
+    for jurisdiction_id in wanted - current:
+        session.add(
+            UserJurisdiction(
+                user_id=user.id,
+                company_id=user.company_id,
+                jurisdiction_id=jurisdiction_id,
+            )
+        )
+    session.commit()
+    return get_user_jurisdictions(session=session, user_id=user.id)

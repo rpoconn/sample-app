@@ -7,11 +7,11 @@ from sqlmodel import Session, create_engine, select
 
 from app import crud
 from app.core.config import settings
-from app.models import User, UserCreate
+from app.models import CompanyRole, User, UserCreate
 
 JURISDICTIONS_SEED_FILE = Path(__file__).parents[1] / "data" / "jurisdictions.json"
 
-engine =create_engine(settings.DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(settings.DATABASE_URL, connect_args={"check_same_thread": False})
 
 
 # SQLite ignores foreign keys (and ON DELETE CASCADE) unless enabled per connection
@@ -36,6 +36,9 @@ def init_db(session: Session) -> None:
     # This works because the models are already imported and registered from app.models
     # SQLModel.metadata.create_all(engine)
 
+    # Normally created by the migration; recreated here if it was removed
+    crud.ensure_default_company(session=session, name="Default")
+
     user = session.exec(
         select(User).where(User.email == settings.FIRST_SUPERUSER)
     ).first()
@@ -44,8 +47,10 @@ def init_db(session: Session) -> None:
             email=settings.FIRST_SUPERUSER,
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
+            company_role=CompanyRole.admin,
         )
         user = crud.create_user(session=session, user_create=user_in)
 
-    nodes = json.loads(JURISDICTIONS_SEED_FILE.read_text(encoding="utf-8"))
-    crud.seed_jurisdictions(session=session, nodes=nodes)
+        # Seed only on first setup, so later edits to jurisdictions are not undone
+        nodes = json.loads(JURISDICTIONS_SEED_FILE.read_text(encoding="utf-8"))
+        crud.seed_jurisdictions(session=session, nodes=nodes)

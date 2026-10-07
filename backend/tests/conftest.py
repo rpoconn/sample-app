@@ -1,27 +1,35 @@
+import os
 from collections.abc import Generator
+from pathlib import Path
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlmodel import Session, delete
+# Use a separate database so the tests never touch the dev data in app.db.
+# Must be set before app.core.config is imported; env vars take precedence over .env
+BACKEND_DIR = Path(__file__).parents[1]
+TEST_DB_FILE = BACKEND_DIR / "test.db"
+os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_FILE.as_posix()}"
 
-from app.core.config import settings
-from app.core.db import engine, init_db
-from app.main import app
-from app.models import Item, User
-from tests.utils.user import authentication_token_from_email
-from tests.utils.utils import get_superuser_token_headers
+import pytest  # noqa: E402
+from alembic import command  # noqa: E402
+from alembic.config import Config  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlmodel import Session  # noqa: E402
+
+from app.core.config import settings  # noqa: E402
+from app.core.db import engine, init_db  # noqa: E402
+from app.main import app  # noqa: E402
+from tests.utils.user import authentication_token_from_email  # noqa: E402
+from tests.utils.utils import get_superuser_token_headers  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)
 def db() -> Generator[Session]:
+    # Start every run from a fresh, fully migrated database
+    engine.dispose()
+    TEST_DB_FILE.unlink(missing_ok=True)
+    command.upgrade(Config(str(BACKEND_DIR / "alembic.ini")), "head")
     with Session(engine) as session:
         init_db(session)
         yield session
-        statement = delete(Item)
-        session.execute(statement)
-        statement = delete(User)
-        session.execute(statement)
-        session.commit()
 
 
 @pytest.fixture(scope="module")

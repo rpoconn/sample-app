@@ -35,6 +35,75 @@ export type Body_login_login_access_token = {
 };
 
 /**
+ * CompaniesPublic
+ */
+export type CompaniesPublic = {
+    /**
+     * Data
+     */
+    data: Array<CompanyPublic>;
+    /**
+     * Count
+     */
+    count: number;
+};
+
+/**
+ * CompanyCreate
+ */
+export type CompanyCreate = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Is Active
+     */
+    is_active?: boolean;
+};
+
+/**
+ * CompanyPublic
+ */
+export type CompanyPublic = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Is Active
+     */
+    is_active?: boolean;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Created At
+     */
+    created_at?: string | null;
+};
+
+/**
+ * CompanyRole
+ */
+export type CompanyRole = 'member' | 'admin';
+
+/**
+ * CompanyUpdate
+ */
+export type CompanyUpdate = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Is Active
+     */
+    is_active?: boolean | null;
+};
+
+/**
  * HTTPValidationError
  */
 export type HTTPValidationError = {
@@ -106,6 +175,116 @@ export type ItemsPublic = {
      * Data
      */
     data: Array<ItemPublic>;
+    /**
+     * Count
+     */
+    count: number;
+};
+
+/**
+ * JurisdictionCreate
+ */
+export type JurisdictionCreate = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Is Structural
+     */
+    is_structural?: boolean;
+    /**
+     * Parent Id
+     */
+    parent_id?: string | null;
+    /**
+     * Sort Order
+     */
+    sort_order?: number | null;
+};
+
+/**
+ * JurisdictionPublic
+ */
+export type JurisdictionPublic = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Is Structural
+     */
+    is_structural?: boolean;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Parent Id
+     */
+    parent_id?: string | null;
+    /**
+     * Sort Order
+     */
+    sort_order: number;
+    /**
+     * Depth
+     */
+    depth: number;
+    /**
+     * Path
+     */
+    path: string;
+    /**
+     * Name Path
+     */
+    name_path: string;
+    /**
+     * Child Count
+     */
+    child_count?: number;
+};
+
+/**
+ * JurisdictionSelection
+ */
+export type JurisdictionSelection = {
+    /**
+     * Jurisdiction Ids
+     */
+    jurisdiction_ids: Array<string>;
+};
+
+/**
+ * JurisdictionUpdate
+ */
+export type JurisdictionUpdate = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Is Structural
+     */
+    is_structural?: boolean | null;
+    /**
+     * Parent Id
+     */
+    parent_id?: string | null;
+    /**
+     * Sort Order
+     */
+    sort_order?: number | null;
+};
+
+/**
+ * JurisdictionsPublic
+ */
+export type JurisdictionsPublic = {
+    /**
+     * Data
+     */
+    data: Array<JurisdictionPublic>;
     /**
      * Count
      */
@@ -210,6 +389,11 @@ export type UserCreate = {
      * Password
      */
     password: string;
+    /**
+     * Company Id
+     */
+    company_id?: string | null;
+    company_role?: CompanyRole;
 };
 
 /**
@@ -236,6 +420,11 @@ export type UserPublic = {
      * Id
      */
     id: string;
+    /**
+     * Company Id
+     */
+    company_id: string;
+    company_role: CompanyRole;
     /**
      * Created At
      */
@@ -284,6 +473,11 @@ export type UserUpdate = {
      * Password
      */
     password?: string | null;
+    /**
+     * Company Id
+     */
+    company_id?: string | null;
+    company_role?: CompanyRole | null;
 };
 
 /**
@@ -366,6 +560,22 @@ export type loginLoginAccessTokenResponses = {
 };
 
 export type loginLoginAccessTokenResponse = loginLoginAccessTokenResponses[keyof loginLoginAccessTokenResponses];
+
+export type loginLogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/logout';
+};
+
+export type loginLogoutResponses = {
+    /**
+     * Successful Response
+     */
+    200: Message;
+};
+
+export type loginLogoutResponse = loginLogoutResponses[keyof loginLogoutResponses];
 
 export type loginTestTokenData = {
     body?: never;
@@ -609,6 +819,47 @@ export type usersUpdatePasswordMeResponses = {
 
 export type usersUpdatePasswordMeResponse = usersUpdatePasswordMeResponses[keyof usersUpdatePasswordMeResponses];
 
+export type usersReadMyJurisdictionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/jurisdictions';
+};
+
+export type usersReadMyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionsPublic;
+};
+
+export type usersReadMyJurisdictionsResponse = usersReadMyJurisdictionsResponses[keyof usersReadMyJurisdictionsResponses];
+
+export type usersSetMyJurisdictionsData = {
+    body: JurisdictionSelection;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/jurisdictions';
+};
+
+export type usersSetMyJurisdictionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type usersSetMyJurisdictionsError = usersSetMyJurisdictionsErrors[keyof usersSetMyJurisdictionsErrors];
+
+export type usersSetMyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionsPublic;
+};
+
+export type usersSetMyJurisdictionsResponse = usersSetMyJurisdictionsResponses[keyof usersSetMyJurisdictionsResponses];
+
 export type usersRegisterUserData = {
     body: UserRegister;
     path?: never;
@@ -723,6 +974,66 @@ export type usersUpdateUserResponses = {
 };
 
 export type usersUpdateUserResponse = usersUpdateUserResponses[keyof usersUpdateUserResponses];
+
+export type usersReadUserJurisdictionsData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/jurisdictions';
+};
+
+export type usersReadUserJurisdictionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type usersReadUserJurisdictionsError = usersReadUserJurisdictionsErrors[keyof usersReadUserJurisdictionsErrors];
+
+export type usersReadUserJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionsPublic;
+};
+
+export type usersReadUserJurisdictionsResponse = usersReadUserJurisdictionsResponses[keyof usersReadUserJurisdictionsResponses];
+
+export type usersSetUserJurisdictionsData = {
+    body: JurisdictionSelection;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/jurisdictions';
+};
+
+export type usersSetUserJurisdictionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type usersSetUserJurisdictionsError = usersSetUserJurisdictionsErrors[keyof usersSetUserJurisdictionsErrors];
+
+export type usersSetUserJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionsPublic;
+};
+
+export type usersSetUserJurisdictionsResponse = usersSetUserJurisdictionsResponses[keyof usersSetUserJurisdictionsResponses];
 
 export type utilsTestEmailData = {
     body?: never;
@@ -920,6 +1231,346 @@ export type itemsUpdateItemResponses = {
 };
 
 export type itemsUpdateItemResponse = itemsUpdateItemResponses[keyof itemsUpdateItemResponses];
+
+export type jurisdictionsReadJurisdictionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Parent Id
+         */
+        parent_id?: string | null;
+    };
+    url: '/api/v1/jurisdictions/';
+};
+
+export type jurisdictionsReadJurisdictionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type jurisdictionsReadJurisdictionsError = jurisdictionsReadJurisdictionsErrors[keyof jurisdictionsReadJurisdictionsErrors];
+
+export type jurisdictionsReadJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionsPublic;
+};
+
+export type jurisdictionsReadJurisdictionsResponse = jurisdictionsReadJurisdictionsResponses[keyof jurisdictionsReadJurisdictionsResponses];
+
+export type jurisdictionsCreateJurisdictionData = {
+    body: JurisdictionCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/jurisdictions/';
+};
+
+export type jurisdictionsCreateJurisdictionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type jurisdictionsCreateJurisdictionError = jurisdictionsCreateJurisdictionErrors[keyof jurisdictionsCreateJurisdictionErrors];
+
+export type jurisdictionsCreateJurisdictionResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionPublic;
+};
+
+export type jurisdictionsCreateJurisdictionResponse = jurisdictionsCreateJurisdictionResponses[keyof jurisdictionsCreateJurisdictionResponses];
+
+export type jurisdictionsReadJurisdictionTreeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/jurisdictions/tree';
+};
+
+export type jurisdictionsReadJurisdictionTreeResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionsPublic;
+};
+
+export type jurisdictionsReadJurisdictionTreeResponse = jurisdictionsReadJurisdictionTreeResponses[keyof jurisdictionsReadJurisdictionTreeResponses];
+
+export type jurisdictionsDeleteJurisdictionData = {
+    body?: never;
+    path: {
+        /**
+         * Jurisdiction Id
+         */
+        jurisdiction_id: string;
+    };
+    query?: never;
+    url: '/api/v1/jurisdictions/{jurisdiction_id}';
+};
+
+export type jurisdictionsDeleteJurisdictionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type jurisdictionsDeleteJurisdictionError = jurisdictionsDeleteJurisdictionErrors[keyof jurisdictionsDeleteJurisdictionErrors];
+
+export type jurisdictionsDeleteJurisdictionResponses = {
+    /**
+     * Successful Response
+     */
+    200: Message;
+};
+
+export type jurisdictionsDeleteJurisdictionResponse = jurisdictionsDeleteJurisdictionResponses[keyof jurisdictionsDeleteJurisdictionResponses];
+
+export type jurisdictionsReadJurisdictionData = {
+    body?: never;
+    path: {
+        /**
+         * Jurisdiction Id
+         */
+        jurisdiction_id: string;
+    };
+    query?: never;
+    url: '/api/v1/jurisdictions/{jurisdiction_id}';
+};
+
+export type jurisdictionsReadJurisdictionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type jurisdictionsReadJurisdictionError = jurisdictionsReadJurisdictionErrors[keyof jurisdictionsReadJurisdictionErrors];
+
+export type jurisdictionsReadJurisdictionResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionPublic;
+};
+
+export type jurisdictionsReadJurisdictionResponse = jurisdictionsReadJurisdictionResponses[keyof jurisdictionsReadJurisdictionResponses];
+
+export type jurisdictionsUpdateJurisdictionData = {
+    body: JurisdictionUpdate;
+    path: {
+        /**
+         * Jurisdiction Id
+         */
+        jurisdiction_id: string;
+    };
+    query?: never;
+    url: '/api/v1/jurisdictions/{jurisdiction_id}';
+};
+
+export type jurisdictionsUpdateJurisdictionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type jurisdictionsUpdateJurisdictionError = jurisdictionsUpdateJurisdictionErrors[keyof jurisdictionsUpdateJurisdictionErrors];
+
+export type jurisdictionsUpdateJurisdictionResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionPublic;
+};
+
+export type jurisdictionsUpdateJurisdictionResponse = jurisdictionsUpdateJurisdictionResponses[keyof jurisdictionsUpdateJurisdictionResponses];
+
+export type companiesReadCompaniesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Skip
+         */
+        skip?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/companies/';
+};
+
+export type companiesReadCompaniesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type companiesReadCompaniesError = companiesReadCompaniesErrors[keyof companiesReadCompaniesErrors];
+
+export type companiesReadCompaniesResponses = {
+    /**
+     * Successful Response
+     */
+    200: CompaniesPublic;
+};
+
+export type companiesReadCompaniesResponse = companiesReadCompaniesResponses[keyof companiesReadCompaniesResponses];
+
+export type companiesCreateCompanyData = {
+    body: CompanyCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/companies/';
+};
+
+export type companiesCreateCompanyErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type companiesCreateCompanyError = companiesCreateCompanyErrors[keyof companiesCreateCompanyErrors];
+
+export type companiesCreateCompanyResponses = {
+    /**
+     * Successful Response
+     */
+    200: CompanyPublic;
+};
+
+export type companiesCreateCompanyResponse = companiesCreateCompanyResponses[keyof companiesCreateCompanyResponses];
+
+export type companiesReadCompanyData = {
+    body?: never;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}';
+};
+
+export type companiesReadCompanyErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type companiesReadCompanyError = companiesReadCompanyErrors[keyof companiesReadCompanyErrors];
+
+export type companiesReadCompanyResponses = {
+    /**
+     * Successful Response
+     */
+    200: CompanyPublic;
+};
+
+export type companiesReadCompanyResponse = companiesReadCompanyResponses[keyof companiesReadCompanyResponses];
+
+export type companiesUpdateCompanyData = {
+    body: CompanyUpdate;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}';
+};
+
+export type companiesUpdateCompanyErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type companiesUpdateCompanyError = companiesUpdateCompanyErrors[keyof companiesUpdateCompanyErrors];
+
+export type companiesUpdateCompanyResponses = {
+    /**
+     * Successful Response
+     */
+    200: CompanyPublic;
+};
+
+export type companiesUpdateCompanyResponse = companiesUpdateCompanyResponses[keyof companiesUpdateCompanyResponses];
+
+export type companiesReadCompanyJurisdictionsData = {
+    body?: never;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}/jurisdictions';
+};
+
+export type companiesReadCompanyJurisdictionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type companiesReadCompanyJurisdictionsError = companiesReadCompanyJurisdictionsErrors[keyof companiesReadCompanyJurisdictionsErrors];
+
+export type companiesReadCompanyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionsPublic;
+};
+
+export type companiesReadCompanyJurisdictionsResponse = companiesReadCompanyJurisdictionsResponses[keyof companiesReadCompanyJurisdictionsResponses];
+
+export type companiesSetCompanyJurisdictionsData = {
+    body: JurisdictionSelection;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}/jurisdictions';
+};
+
+export type companiesSetCompanyJurisdictionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type companiesSetCompanyJurisdictionsError = companiesSetCompanyJurisdictionsErrors[keyof companiesSetCompanyJurisdictionsErrors];
+
+export type companiesSetCompanyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionsPublic;
+};
+
+export type companiesSetCompanyJurisdictionsResponse = companiesSetCompanyJurisdictionsResponses[keyof companiesSetCompanyJurisdictionsResponses];
 
 export type privateCreateUserData = {
     body: PrivateUserCreate;
