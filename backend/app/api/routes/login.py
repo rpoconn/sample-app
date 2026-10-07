@@ -4,7 +4,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import delete
+from sqlmodel import col, delete
 
 from app import crud
 from app.api.deps import (
@@ -62,8 +62,8 @@ def logout(session: SessionDep, token_data: TokenPayloadDep) -> Message:
     """
     # Expired tokens are rejected anyway, so their rows are no longer needed
     session.exec(
-        delete(RevokedToken).where(RevokedToken.expires_at < datetime.now(UTC))
-    )  # type: ignore[arg-type]
+        delete(RevokedToken).where(col(RevokedToken.expires_at) < datetime.now(UTC))
+    )
     session.add(RevokedToken(jti=token_data.jti, expires_at=token_data.exp))
     session.commit()
     return Message(message="Logged out")

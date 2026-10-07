@@ -1,94 +1,51 @@
+import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles"
 import {
-    useMutation,
+    useQuery,
     useQueryClient,
     useSuspenseQuery,
 } from "@tanstack/react-query"
-import {
-    AllCommunityModule,
-    type ColDef,
-    colorSchemeDark,
-    colorSchemeLight,
-    ModuleRegistry,
-    themeQuartz,
-} from "ag-grid-community"
-import { AgGridReact } from "ag-grid-react"
-import { useMemo, useRef, useState } from "react"
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 
-import {
-    CompaniesService,
-    type JurisdictionPublic,
-    JurisdictionsService,
-    type UserPublic,
-    UsersService,
-} from "@/client"
+import type { UserPublic } from "@/client"
 import { useTheme } from "@/components/theme-provider"
-import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { EnabledCell } from "./EnabledCell"
-import { NameCell } from "./NameCell"
+import {
+    ConfirmDisableDialog,
+    type PendingDisable,
+} from "./ConfirmDisableDialog"
+import {
+    facetsFor,
+    filterTree,
+    isFiltering,
+    statusCounts,
+    withFacet,
+} from "./filterTree"
+import { flagUrlFor, preloadFlags } from "./flags"
+import { JurisdictionGridService as Service } from "./JurisdictionGridService"
+import { JurisdictionTable } from "./JurisdictionTable"
+import { JurisdictionToolbar } from "./JurisdictionToolbar"
+import { muiThemes } from "./muiTheme"
+import { NoMatches } from "./NoMatches"
+import { ScopeBanner } from "./ScopeBanner"
+import { SelectionSheet } from "./SelectionSheet"
+import { summarizeSelection } from "./selectionSummary"
 import type {
+    JurisdictionFilters,
     JurisdictionGridContext,
     JurisdictionMode,
-    JurisdictionRow,
+    JurisdictionSort,
 } from "./types"
+import { useExpandedState } from "./useExpandedState"
+import { useSelectionMutation } from "./useSelectionMutation"
 
 export type { JurisdictionMode } from "./types"
 
-ModuleRegistry.registerModules([AllCommunityModule])
-
-const treeQueryKey = ["jurisdictions", "tree"]
-const myQueryKey = ["myJurisdictions"]
-const companyQueryKey = (companyId: string) => [
-    "companyJurisdictions",
-    companyId,
-]
-
-const columnDefs: ColDef<JurisdictionRow>[] = [
-    {
-        headerName: "Jurisdiction",
-        field: "jurisdiction.name",
-        flex: 1,
-        sortable: false,
-        cellRenderer: NameCell,
-    },
-    {
-        headerName: "Enabled",
-        width: 120,
-        sortable: false,
-        cellRenderer: EnabledCell,
-    },
-]
-
-function useSelectionMutation(
-    queryKey: string[],
-    save: (ids: string[]) => Promise<unknown>,
-    onSaved?: () => void,
-) {
-    const queryClient = useQueryClient()
-    const { showErrorToast } = useCustomToast()
-
-    return useMutation({
-        mutationFn: save,
-        onMutate: async (ids) => {
-            await queryClient.cancelQueries({ queryKey })
-            const previous = queryClient.getQueryData<string[]>(queryKey)
-            queryClient.setQueryData(queryKey, ids)
-            return { previous }
-        },
-        onError: (err, _ids, ctx) => {
-            queryClient.setQueryData(queryKey, ctx?.previous)
-            handleError.call(showErrorToast, err)
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey })
-            onSaved?.()
-        },
-    })
+const noFilters: JurisdictionFilters = {
+    search: "",
+    byType: {},
+    status: "all",
 }
-
-const idsOf = (res: { data: { data: JurisdictionPublic[] } }) =>
-    res.data.data.map((j) => j.id)
 
 export function JurisdictionGrid({
     mode,
@@ -99,186 +56,325 @@ export function JurisdictionGrid({
 }) {
     const queryClient = useQueryClient()
     const { resolvedTheme } = useTheme()
+    const { showErrorToast } = useCustomToast()
     const companyId = user.company_id
     const canEditCompany = user.is_superuser || user.company_role === "admin"
+    const showUserCounts = mode === "company" && canEditCompany
 
-    const { data: tree } = useSuspenseQuery({
-        queryKey: treeQueryKey,
-        queryFn: async () =>
-            (await JurisdictionsService.readJurisdictionTree()).data.data,
+    const [sort, setSort] = useState<JurisdictionSort>(Service.defaultSort)
+    // Kept across scope switches, so the same slice can be compared in both
+    const [filters, setFilters] = useState<JurisdictionFilters>(noFilters)
+    const search = useDeferredValue(filters.search)
+    const [pendingDisable, setPendingDisable] = useState<{
+        open: boolean
+        item: PendingDisable | null
+    }>({ open: false, item: null })
+    const [selectionOpen, setSelectionOpen] = useState(false)
+
+    const { data: tree } = useSuspenseQuery(Service.treeQuery(sort, mode))
+    const { data: company } = useSuspenseQuery(Service.companyQuery(companyId))
+    const { data: companyIds } = useSuspenseQuery(
+        Service.companyIdsQuery(companyId),
+    )
+    const { data: myIds } = useSuspenseQuery(Service.myIdsQuery())
+    // Admins only; shows who loses an opt-in before the company drops it
+    const { data: userCounts } = useQuery({
+        ...Service.userCountsQuery(companyId),
+        enabled: canEditCompany,
     })
-    const { data: companyIds } = useSuspenseQuery({
-        queryKey: companyQueryKey(companyId),
-        queryFn: async () =>
-            idsOf(
-                await CompaniesService.readCompanyJurisdictions({
-                    path: { company_id: companyId },
-                }),
-            ),
-    })
-    const { data: myIds } = useSuspenseQuery({
-        queryKey: myQueryKey,
-        queryFn: async () => idsOf(await UsersService.readMyJurisdictions()),
+    // Members only; locked rows offer to email them
+    const { data: admins } = useQuery({
+        ...Service.adminsQuery(companyId),
+        enabled: mode === "user" && !canEditCompany,
     })
 
+    const invalidateUserCounts = () =>
+        queryClient.invalidateQueries({
+            queryKey: Service.keys.userCounts(companyId),
+        })
     const companyMutation = useSelectionMutation(
-        companyQueryKey(companyId),
-        (ids) =>
-            CompaniesService.setCompanyJurisdictions({
-                path: { company_id: companyId },
-                body: { jurisdiction_ids: ids },
+        Service.keys.companyIds(companyId),
+        (ids) => Service.saveCompanyIds(companyId, ids),
+        () => {
+            // Dropping a company opt-in also drops it for every user in the company
+            queryClient.invalidateQueries({ queryKey: Service.keys.myIds })
+            invalidateUserCounts()
+        },
+    )
+    const userMutation = useSelectionMutation(
+        Service.keys.myIds,
+        Service.saveMyIds,
+        invalidateUserCounts,
+    )
+
+    const byId = useMemo(() => new Map(tree.map((j) => [j.id, j])), [tree])
+    const childrenOf = useMemo(() => Service.childrenOf(tree), [tree])
+
+    // Flags depend on ancestors (a state's country), which the cell can't see
+    const flagUrls = useMemo(
+        () => new Map(tree.map((j) => [j.id, flagUrlFor(j, byId)])),
+        [tree, byId],
+    )
+    useEffect(() => preloadFlags(flagUrls.values()), [flagUrls])
+
+    const enabledIds = useMemo(
+        () => new Set(mode === "company" ? companyIds : myIds),
+        [mode, companyIds, myIds],
+    )
+    // The company's license; users can only turn these on
+    const licensedIds = useMemo(() => new Set(companyIds), [companyIds])
+    const selectionGroups = useMemo(
+        () =>
+            summarizeSelection(childrenOf, byId, flagUrls, enabledIds, (j) =>
+                Service.isSelectable(j, mode, licensedIds),
+            ),
+        [childrenOf, byId, flagUrls, enabledIds, licensedIds, mode],
+    )
+    const filtered = useMemo(
+        () =>
+            filterTree(
+                tree,
+                byId,
+                { search, byType: filters.byType, status: filters.status },
+                enabledIds,
+                licensedIds,
+            ),
+        [
+            tree,
+            byId,
+            search,
+            filters.byType,
+            filters.status,
+            enabledIds,
+            licensedIds,
+        ],
+    )
+    const counts = useMemo(
+        () =>
+            statusCounts(
+                tree,
+                byId,
+                { search, byType: filters.byType },
+                enabledIds,
+                licensedIds,
+            ),
+        [tree, byId, search, filters.byType, enabledIds, licensedIds],
+    )
+    const facets = useMemo(
+        () => facetsFor(tree, byId, filters.byType, flagUrls),
+        [tree, byId, filters.byType, flagUrls],
+    )
+
+    const { expanded, updateExpanded } = useExpandedState(tree, filtered)
+
+    const { rows, summary } = useMemo(
+        () =>
+            Service.buildRows({
+                tree,
+                childrenOf,
+                flagUrls,
+                filtered,
+                search,
+                expanded,
+                mode,
+                company,
+                companyIds,
+                myIds,
+                canEditCompany,
+                showUserCounts,
+                userCounts,
+                admins,
+                user,
             }),
-        // Dropping a company opt-in also drops it for every user in the company
-        () => queryClient.invalidateQueries({ queryKey: myQueryKey }),
+        [
+            tree,
+            childrenOf,
+            flagUrls,
+            filtered,
+            search,
+            expanded,
+            mode,
+            company,
+            companyIds,
+            myIds,
+            canEditCompany,
+            showUserCounts,
+            userCounts,
+            admins,
+            user,
+        ],
     )
-    const userMutation = useSelectionMutation(myQueryKey, (ids) =>
-        UsersService.setMyJurisdictions({ body: { jurisdiction_ids: ids } }),
-    )
-
-    const childrenOf = useMemo(() => {
-        const map = new Map<string | null, JurisdictionPublic[]>()
-        for (const j of tree) {
-            const key = j.parent_id ?? null
-            map.set(key, [...(map.get(key) ?? []), j])
-        }
-        for (const siblings of map.values()) {
-            siblings.sort(
-                (a, b) =>
-                    a.sort_order - b.sort_order || a.name.localeCompare(b.name),
-            )
-        }
-        return map
-    }, [tree])
-
-    const [expanded, setExpanded] = useState<Set<string>>(
-        () => new Set(tree.filter((j) => j.parent_id == null).map((j) => j.id)),
-    )
-
-    const rows = useMemo(() => {
-        const companySet = new Set(companyIds)
-        const mySet = new Set(myIds)
-        const result: JurisdictionRow[] = []
-        const walk = (parentId: string | null) => {
-            for (const j of childrenOf.get(parentId) ?? []) {
-                const isExpanded = expanded.has(j.id)
-                let row: JurisdictionRow
-                if (mode === "company") {
-                    row = {
-                        jurisdiction: j,
-                        expanded: isExpanded,
-                        checked: companySet.has(j.id),
-                        disabled: !canEditCompany,
-                        disabledReason: canEditCompany
-                            ? undefined
-                            : "Only company admins can change this",
-                    }
-                } else {
-                    const allowed = companySet.has(j.id)
-                    row = {
-                        jurisdiction: j,
-                        expanded: isExpanded,
-                        checked: mySet.has(j.id),
-                        disabled: !allowed,
-                        disabledReason: allowed
-                            ? undefined
-                            : "Not enabled for your company",
-                    }
-                }
-                result.push(row)
-                if (isExpanded) walk(j.id)
-            }
-        }
-        walk(null)
-        return result
-    }, [childrenOf, expanded, mode, companyIds, myIds, canEditCompany])
 
     // The grid may keep the first context it is given, so handlers read live state via a ref
     const latest = useRef({
         mode,
+        byId,
+        childrenOf,
+        companyId,
         companyIds,
         myIds,
         companyMutation,
         userMutation,
+        updateExpanded,
+        showErrorToast,
     })
-    latest.current = { mode, companyIds, myIds, companyMutation, userMutation }
+    latest.current = {
+        mode,
+        byId,
+        childrenOf,
+        companyId,
+        companyIds,
+        myIds,
+        companyMutation,
+        userMutation,
+        updateExpanded,
+        showErrorToast,
+    }
 
-    const context = useMemo<JurisdictionGridContext>(
-        () => ({
+    const context = useMemo<JurisdictionGridContext>(() => {
+        // Saves ids on or off in one request. Turning company opt-ins off asks
+        // first when users would lose them; named after the clicked row.
+        const apply = async (
+            rowId: string,
+            ids: string[],
+            enabled: boolean,
+        ) => {
+            const { mode, companyId, showErrorToast } = latest.current
+            if (mode === "company" && !enabled) {
+                // Fetch fresh: someone may have opted in since the page loaded
+                let users: PendingDisable["users"]
+                try {
+                    users = await Service.affectedUsers(companyId, ids)
+                } catch (err) {
+                    handleError.call(showErrorToast, err as Error)
+                    return
+                }
+                if (users.length > 0) {
+                    const name = latest.current.byId.get(rowId)?.name ?? ""
+                    setPendingDisable({
+                        open: true,
+                        item: { ids, name, users },
+                    })
+                    return
+                }
+            }
+            const l = latest.current
+            if (l.mode === "company") {
+                l.companyMutation.mutate(
+                    Service.nextIds(l.companyIds, ids, enabled),
+                )
+            } else {
+                l.userMutation.mutate(Service.nextIds(l.myIds, ids, enabled))
+            }
+        }
+        return {
             toggleExpanded: (id) =>
-                setExpanded((prev) => {
+                latest.current.updateExpanded((prev) => {
                     const next = new Set(prev)
                     if (!next.delete(id)) next.add(id)
                     return next
                 }),
-            toggleEnabled: (id, enabled) => {
-                const l = latest.current
-                const [current, mutation] =
-                    l.mode === "company"
-                        ? [l.companyIds, l.companyMutation]
-                        : [l.myIds, l.userMutation]
-                const next = enabled
-                    ? [...new Set([...current, id])]
-                    : current.filter((x) => x !== id)
-                mutation.mutate(next)
+            toggleEnabled: (id, enabled) => apply(id, [id], enabled),
+            toggleSubtree: (id, enabled) => {
+                const { mode, byId, childrenOf, companyIds } = latest.current
+                const root = byId.get(id)
+                if (!root) return
+                const companySet = new Set(companyIds)
+                const ids = Service.subtreeOf(childrenOf, root)
+                    .filter((j) => Service.isSelectable(j, mode, companySet))
+                    .map((j) => j.id)
+                if (ids.length > 0) apply(id, ids, enabled)
             },
-        }),
-        [],
-    )
-
-    const theme = useMemo(
-        () =>
-            themeQuartz.withPart(
-                resolvedTheme === "dark" ? colorSchemeDark : colorSchemeLight,
-            ),
-        [resolvedTheme],
-    )
+        }
+    }, [])
 
     return (
-        <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-4">
-                <p className="text-sm text-muted-foreground">
-                    {mode === "company"
-                        ? canEditCompany
-                            ? "Choose which jurisdictions your company opts into. Users can only enable these."
-                            : "Jurisdictions your company has opted into. Only company admins can change these."
-                        : "Choose your jurisdictions. Only those your company has opted into can be enabled."}
-                </p>
-                <div className="flex shrink-0 gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                            setExpanded(
+        <MuiThemeProvider
+            theme={resolvedTheme === "dark" ? muiThemes.dark : muiThemes.light}
+        >
+            <div className="flex flex-col gap-4">
+                <ScopeBanner
+                    mode={mode}
+                    canEditCompany={canEditCompany}
+                    lockedCount={summary.locked ?? 0}
+                />
+                <JurisdictionToolbar
+                    mode={mode}
+                    search={filters.search}
+                    onSearchChange={(value) =>
+                        setFilters((f) => ({ ...f, search: value }))
+                    }
+                    status={filters.status}
+                    counts={counts}
+                    onStatusChange={(status) =>
+                        setFilters((f) => ({ ...f, status }))
+                    }
+                    facets={facets}
+                    onFacetChange={(type, ids) =>
+                        setFilters((f) => ({
+                            ...f,
+                            byType: withFacet(tree, byId, f.byType, type, ids),
+                        }))
+                    }
+                    filtering={!!filtered}
+                    onClear={() => setFilters(noFilters)}
+                    summary={summary}
+                    onExpandAll={() =>
+                        updateExpanded(
+                            () =>
                                 new Set(
                                     tree
                                         .filter((j) => (j.child_count ?? 0) > 0)
                                         .map((j) => j.id),
                                 ),
-                            )
-                        }
-                    >
-                        Expand all
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setExpanded(new Set())}
-                    >
-                        Collapse all
-                    </Button>
+                        )
+                    }
+                    onCollapseAll={() => updateExpanded(() => new Set())}
+                    onViewSelection={() => setSelectionOpen(true)}
+                />
+                <div className="relative h-[max(24rem,calc(100vh-26rem))] overflow-hidden rounded-md">
+                    <JurisdictionTable
+                        rows={rows}
+                        mode={mode}
+                        showUserCounts={showUserCounts}
+                        context={context}
+                        onSortChange={setSort}
+                    />
+                    {filtered && rows.length === 0 && (
+                        <NoMatches
+                            allTaken={
+                                filters.status === "available" &&
+                                licensedIds.size > 0 &&
+                                !isFiltering({ ...filters, status: "all" })
+                            }
+                            onClear={() => setFilters(noFilters)}
+                        />
+                    )}
                 </div>
-            </div>
-            <div className="h-[calc(100vh-260px)] min-h-[320px]">
-                <AgGridReact<JurisdictionRow>
-                    theme={theme}
-                    rowData={rows}
-                    columnDefs={columnDefs}
-                    context={context}
-                    getRowId={({ data }) => data.jurisdiction.id}
-                    suppressCellFocus
+                <SelectionSheet
+                    open={selectionOpen}
+                    onOpenChange={setSelectionOpen}
+                    mode={mode}
+                    ownerId={mode === "company" ? companyId : user.id}
+                    groups={selectionGroups}
+                    ids={mode === "company" ? companyIds : myIds}
+                />
+                <ConfirmDisableDialog
+                    open={pendingDisable.open}
+                    pending={pendingDisable.item}
+                    companyName={company.name}
+                    onCancel={() =>
+                        setPendingDisable((p) => ({ ...p, open: false }))
+                    }
+                    onConfirm={(item) => {
+                        setPendingDisable((p) => ({ ...p, open: false }))
+                        companyMutation.mutate(
+                            Service.nextIds(companyIds, item.ids, false),
+                        )
+                    }}
                 />
             </div>
-        </div>
+        </MuiThemeProvider>
     )
 }
 

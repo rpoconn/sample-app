@@ -2,15 +2,29 @@ import type { ICellRendererParams } from "ag-grid-community"
 import { ChevronDown, ChevronRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { LockedIcon } from "./LockedIcon"
 import type { JurisdictionGridContext, JurisdictionRow } from "./types"
+
+// Splits text around the first case-insensitive match of term
+function splitMatch(text: string, term?: string) {
+    const at = term ? text.toLowerCase().indexOf(term.toLowerCase()) : -1
+    if (!term || at < 0) return null
+    return [
+        text.slice(0, at),
+        text.slice(at, at + term.length),
+        text.slice(at + term.length),
+    ]
+}
 
 export function NameCell({
     data,
     context,
 }: ICellRendererParams<JurisdictionRow, unknown, JurisdictionGridContext>) {
     if (!data) return null
-    const { jurisdiction: j, expanded } = data
+    const { jurisdiction: j, flagUrl, expanded, locked, highlight } = data
     const Chevron = expanded ? ChevronDown : ChevronRight
+    const nameParts = splitMatch(j.name, highlight)
+    const codeParts = j.code ? splitMatch(j.code, highlight) : null
     return (
         <div
             className="flex h-full items-center gap-1"
@@ -30,13 +44,50 @@ export function NameCell({
             ) : (
                 <span className="w-5" />
             )}
+            {flagUrl ? (
+                <img
+                    src={flagUrl}
+                    alt=""
+                    className="mx-1 h-3.5 w-5 shrink-0 rounded-[2px] border object-cover"
+                />
+            ) : (
+                <span className="mx-1 w-5 shrink-0" />
+            )}
             <span
                 className={cn(
                     j.is_structural && "font-semibold text-muted-foreground",
+                    locked && "text-muted-foreground",
                 )}
             >
-                {j.name}
+                {nameParts ? (
+                    <>
+                        {nameParts[0]}
+                        <mark className="rounded-sm bg-yellow-200 px-0.5 text-inherit dark:bg-yellow-500/40">
+                            {nameParts[1]}
+                        </mark>
+                        {nameParts[2]}
+                    </>
+                ) : (
+                    j.name
+                )}
             </span>
+            {j.code && (
+                <span className="text-xs text-muted-foreground">
+                    ·{" "}
+                    {codeParts ? (
+                        <>
+                            {codeParts[0]}
+                            <mark className="rounded-sm bg-yellow-200 px-0.5 text-inherit dark:bg-yellow-500/40">
+                                {codeParts[1]}
+                            </mark>
+                            {codeParts[2]}
+                        </>
+                    ) : (
+                        j.code
+                    )}
+                </span>
+            )}
+            {locked && <LockedIcon className="ml-1" />}
         </div>
     )
 }

@@ -43,6 +43,7 @@ export function Main({ items }: MainProps) {
                                 <SidebarMenuButton
                                     tooltip={item.title}
                                     isActive={isActive}
+                                    className="data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:hover:bg-sidebar-primary/90 data-[active=true]:hover:text-sidebar-primary-foreground"
                                     asChild
                                 >
                                     <RouterLink

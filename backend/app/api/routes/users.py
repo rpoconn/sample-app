@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.models import (
     Item,
+    JurisdictionIds,
     JurisdictionSelection,
     JurisdictionsPublic,
     Message,
@@ -140,6 +141,15 @@ def read_my_jurisdictions(session: SessionDep, current_user: CurrentUser) -> Any
     """
     rows = crud.get_user_jurisdictions(session=session, user_id=current_user.id)
     return to_public_list(session, rows)
+
+
+@router.get("/me/jurisdictions/ids", response_model=JurisdictionIds)
+def read_my_jurisdiction_ids(session: SessionDep, current_user: CurrentUser) -> Any:
+    """
+    Ids of the jurisdictions the current user has opted into.
+    """
+    rows = crud.get_user_jurisdictions(session=session, user_id=current_user.id)
+    return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
 
 
 @router.put("/me/jurisdictions", response_model=JurisdictionsPublic)
@@ -283,6 +293,18 @@ def read_user_jurisdictions(
     user = _get_user_for_company_admin(session, current_user, user_id)
     rows = crud.get_user_jurisdictions(session=session, user_id=user.id)
     return to_public_list(session, rows)
+
+
+@router.get("/{user_id}/jurisdictions/ids", response_model=JurisdictionIds)
+def read_user_jurisdiction_ids(
+    session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
+) -> Any:
+    """
+    Ids of a user's opt-ins. Allowed for superusers and admins of the user's company.
+    """
+    user = _get_user_for_company_admin(session, current_user, user_id)
+    rows = crud.get_user_jurisdictions(session=session, user_id=user.id)
+    return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
 
 
 @router.put("/{user_id}/jurisdictions", response_model=JurisdictionsPublic)

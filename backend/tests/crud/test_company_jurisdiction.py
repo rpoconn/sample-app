@@ -264,3 +264,52 @@ def test_move_under_own_descendant_rejected(db: Session) -> None:
                 db_obj=root,
                 jurisdiction_in=JurisdictionUpdate(parent_id=target.id),
             )
+
+
+def test_company_jurisdiction_user_counts(db: Session) -> None:
+    company, other = make_company(db), make_company(db)
+    a, b = make_jurisdiction(db), make_jurisdiction(db)
+    for c in (company, other):
+        crud.set_company_jurisdictions(
+            session=db, company_id=c.id, jurisdiction_ids=[a.id, b.id]
+        )
+    for user in (make_user(db, company), make_user(db, company)):
+        crud.set_user_jurisdictions(session=db, user=user, jurisdiction_ids=[a.id])
+    # Another company's users don't count
+    crud.set_user_jurisdictions(
+        session=db, user=make_user(db, other), jurisdiction_ids=[a.id, b.id]
+    )
+
+    counts = crud.get_company_jurisdiction_user_counts(
+        session=db, company_id=company.id
+    )
+    assert counts == [(a.id, 2)]
+
+
+def test_company_jurisdiction_affected_users(db: Session) -> None:
+    company, other = make_company(db), make_company(db)
+    a, b, c = make_jurisdiction(db), make_jurisdiction(db), make_jurisdiction(db)
+    for co in (company, other):
+        crud.set_company_jurisdictions(
+            session=db, company_id=co.id, jurisdiction_ids=[a.id, b.id, c.id]
+        )
+    both, only_a, only_c = (make_user(db, company) for _ in range(3))
+    crud.set_user_jurisdictions(session=db, user=both, jurisdiction_ids=[a.id, b.id])
+    crud.set_user_jurisdictions(session=db, user=only_a, jurisdiction_ids=[a.id])
+    crud.set_user_jurisdictions(session=db, user=only_c, jurisdiction_ids=[c.id])
+    # Another company's users aren't affected
+    crud.set_user_jurisdictions(
+        session=db, user=make_user(db, other), jurisdiction_ids=[a.id, b.id]
+    )
+
+    rows = crud.get_company_jurisdiction_affected_users(
+        session=db, company_id=company.id, jurisdiction_ids=[a.id, b.id]
+    )
+    # Each user once, however many of the ids they picked
+    assert {(u.id, n) for u, n in rows} == {(both.id, 2), (only_a.id, 1)}
+    assert (
+        crud.get_company_jurisdiction_affected_users(
+            session=db, company_id=company.id, jurisdiction_ids=[]
+        )
+        == []
+    )

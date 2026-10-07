@@ -71,14 +71,26 @@ def read_jurisdictions(
 
 
 @router.get("/tree", response_model=JurisdictionsPublic)
-def read_jurisdiction_tree(session: SessionDep, _current_user: CurrentUser) -> Any:
+def read_jurisdiction_tree(
+    session: SessionDep,
+    current_user: CurrentUser,
+    sort_by: crud.TreeSortBy | None = None,
+    sort_dir: crud.SortDir = "asc",
+    scope: crud.SelectionScope = "company",
+) -> Any:
     """
     List every jurisdiction as a flat list; build the tree from parent_id.
+    Siblings keep the returned order. sort_by=enabled checks the current user's
+    company opt-ins (scope=company) or their own (scope=user).
     """
-    statement = select(Jurisdiction).order_by(
-        col(Jurisdiction.depth), col(Jurisdiction.sort_order), col(Jurisdiction.name)
+    rows = crud.get_jurisdiction_tree(
+        session=session,
+        user=current_user,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        scope=scope,
     )
-    return to_public_list(session, session.exec(statement).all())
+    return to_public_list(session, rows)
 
 
 @router.get("/{jurisdiction_id}", response_model=JurisdictionPublic)

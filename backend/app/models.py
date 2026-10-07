@@ -27,6 +27,13 @@ class CompanyRole(StrEnum):
     admin = "admin"
 
 
+# Disambiguates codes that repeat across levels, e.g. "CA" is Canada or California
+class RegionType(StrEnum):
+    country = "country"
+    subdivision = "subdivision"
+    city = "city"
+
+
 # Shared properties
 class CompanyBase(SQLModel):
     name: str = Field(min_length=1, max_length=255, unique=True, index=True)
@@ -75,7 +82,7 @@ class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
     # None places the user in the default company
     company_id: uuid.UUID | None = None
-    company_role: CompanyRole = CompanyRole.member
+    company_role: CompanyRole = CompanyRole.admin
 
 
 class UserRegister(SQLModel):
@@ -124,7 +131,7 @@ class User(UserBase, table=True):
         ondelete="RESTRICT",
         index=True,
     )
-    company_role: CompanyRole = Field(default=CompanyRole.member, sa_type=String(20))
+    company_role: CompanyRole = Field(default=CompanyRole.admin, sa_type=String(20))
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
     items: list[Item] = Relationship(back_populates="owner", cascade_delete=True)
 
@@ -140,6 +147,16 @@ class UserPublic(UserBase):
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int
+
+
+# Who members can contact to change company settings; only what's needed to reach them
+class CompanyAdmin(SQLModel):
+    email: EmailStr
+    full_name: str | None = None
+
+
+class CompanyAdmins(SQLModel):
+    data: list[CompanyAdmin]
 
 
 # Shared properties
@@ -185,6 +202,10 @@ class ItemsPublic(SQLModel):
 class JurisdictionBase(SQLModel):
     name: str = Field(min_length=1, max_length=255, index=True)
     is_structural: bool = False
+    # ISO 3166-1 alpha-2 for countries, ISO 3166-2 suffix for subdivisions
+    # (e.g. "WA" for US-WA), UN/LOCODE location for cities (e.g. "LAX")
+    code: str | None = Field(default=None, min_length=1, max_length=3)
+    region_type: RegionType | None = Field(default=None, sa_type=String(20))
 
 
 # Database model: adjacency list (parent_id) + materialized path for tree queries
@@ -247,6 +268,8 @@ class JurisdictionCreate(JurisdictionBase):
 class JurisdictionUpdate(SQLModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     is_structural: bool | None = None
+    code: str | None = Field(default=None, min_length=1, max_length=3)
+    region_type: RegionType | None = None
     parent_id: uuid.UUID | None = None
     sort_order: int | None = Field(default=None, ge=0)
 
@@ -289,6 +312,36 @@ class UserJurisdiction(SQLModel, table=True):
     jurisdiction_id: uuid.UUID = Field(primary_key=True)
     company_id: uuid.UUID
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
+
+
+# How many of a company's users have opted into a jurisdiction
+class JurisdictionUserCount(SQLModel):
+    jurisdiction_id: uuid.UUID
+    user_count: int
+
+
+class JurisdictionUserCounts(SQLModel):
+    data: list[JurisdictionUserCount]
+
+
+# A company user who has opted into some of a given set of jurisdictions
+class JurisdictionAffectedUser(SQLModel):
+    id: uuid.UUID
+    email: EmailStr
+    full_name: str | None = None
+    # How many of the given jurisdictions this user has selected
+    jurisdiction_count: int
+
+
+class JurisdictionAffectedUsers(SQLModel):
+    data: list[JurisdictionAffectedUser]
+    count: int
+
+
+# Just the selected ids, for callers that don't need the full jurisdictions
+class JurisdictionIds(SQLModel):
+    jurisdiction_ids: list[uuid.UUID]
+    count: int
 
 
 # Full set of jurisdiction ids to opt into; replaces the existing set

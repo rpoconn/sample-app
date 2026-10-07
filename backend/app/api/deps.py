@@ -1,10 +1,11 @@
+import secrets
 import uuid
 from collections.abc import Generator
 from typing import Annotated
 
 import jwt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlmodel import Session
@@ -66,6 +67,33 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
             status_code=403, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+
+service_api_key = APIKeyHeader(name="X-API-Key", auto_error=False)
+optional_oauth2 = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/login/access-token", auto_error=False
+)
+
+
+def require_service_caller(
+    session: SessionDep,
+    api_key: Annotated[str | None, Depends(service_api_key)],
+    token: Annotated[str | None, Depends(optional_oauth2)],
+) -> None:
+    """Let in another service holding SERVICE_API_KEY, or a superuser's bearer token."""
+    if api_key is not None:
+        expected = settings.SERVICE_API_KEY
+        if not expected or not secrets.compare_digest(api_key, expected):
+            raise HTTPException(status_code=401, detail="Invalid API key")
+        return
+    if token is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = get_current_user(session, get_token_payload(session, token))
+    get_current_active_superuser(user)
 
 
 def require_company_member(current_user: User, company_id: uuid.UUID) -> None:

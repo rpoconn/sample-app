@@ -38,7 +38,7 @@ def upgrade():
 
     now = datetime.now(UTC)
     op.bulk_insert(company, [{
-        'id': DEFAULT_COMPANY_ID, 'name': 'Default', 'is_active': True,
+        'id': DEFAULT_COMPANY_ID, 'name': '[Company Name]', 'is_active': True,
         'created_at': now, 'updated_at': now,
     }])
 

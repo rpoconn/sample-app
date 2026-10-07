@@ -1,8 +1,8 @@
 import uuid
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Literal
 
-from sqlmodel import Session, col, delete, func, select
+from sqlmodel import Session, case, col, delete, func, select
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
@@ -10,6 +10,7 @@ from app.models import (
     Company,
     CompanyCreate,
     CompanyJurisdiction,
+    CompanyRole,
     CompanyUpdate,
     Item,
     ItemCreate,
@@ -157,6 +158,8 @@ def seed_jurisdictions(*, session: Session, nodes: list[dict[str, Any]]) -> int:
                     parent_id=parent.id if parent else None,
                     name=name,
                     is_structural=node.get("isStructural", False),
+                    code=node.get("code"),
+                    region_type=node.get("regionType"),
                     sort_order=sort_order,
                     depth=parent.depth + 1 if parent else 0,
                     path=f"{parent.path if parent else '/'}{node_id.hex}/",
@@ -242,6 +245,8 @@ def create_jurisdiction(
     db_obj = Jurisdiction(
         name=jurisdiction_in.name,
         is_structural=jurisdiction_in.is_structural,
+        code=jurisdiction_in.code,
+        region_type=jurisdiction_in.region_type,
         sort_order=sort_order,
         path="",
         name_path="",
@@ -283,6 +288,11 @@ def update_jurisdiction(
     db_obj.name = new_name
     if data.get("is_structural") is not None:
         db_obj.is_structural = data["is_structural"]
+    # An explicit null clears the code
+    if "code" in data:
+        db_obj.code = data["code"]
+    if "region_type" in data:
+        db_obj.region_type = data["region_type"]
     if data.get("sort_order") is not None:
         db_obj.sort_order = data["sort_order"]
     elif moving:
@@ -366,6 +376,69 @@ def update_company(
     return db_obj
 
 
+TreeSortBy = Literal["name", "enabled"]
+SortDir = Literal["asc", "desc"]
+SelectionScope = Literal["company", "user"]
+
+
+def get_jurisdiction_tree(
+    *,
+    session: Session,
+    user: User,
+    sort_by: TreeSortBy | None = None,
+    sort_dir: SortDir = "asc",
+    scope: SelectionScope = "company",
+) -> list[Jurisdiction]:
+    """Every jurisdiction, flat. Only sibling order matters; the client nests by parent_id."""
+    statement = select(Jurisdiction)
+    name_key = func.lower(Jurisdiction.name)
+    if sort_by is None:
+        order: list[Any] = [
+            col(Jurisdiction.depth),
+            col(Jurisdiction.sort_order),
+            col(Jurisdiction.name),
+        ]
+    elif sort_by == "name":
+        key = name_key.desc() if sort_dir == "desc" else name_key.asc()
+        order = [key, col(Jurisdiction.sort_order)]
+    else:
+        if scope == "company":
+            link_id = col(CompanyJurisdiction.jurisdiction_id)
+            statement = statement.outerjoin(
+                CompanyJurisdiction,
+                (link_id == Jurisdiction.id)
+                & (col(CompanyJurisdiction.company_id) == user.company_id),
+            )
+        else:
+            link_id = col(UserJurisdiction.jurisdiction_id)
+            statement = statement.outerjoin(
+                UserJurisdiction,
+                (link_id == Jurisdiction.id)
+                & (col(UserJurisdiction.user_id) == user.id),
+            )
+        # Structural nodes can't be selected, so they never count as enabled
+        enabled = case(
+            (link_id.is_not(None) & ~col(Jurisdiction.is_structural), 1), else_=0
+        )
+        key = enabled.desc() if sort_dir == "desc" else enabled.asc()
+        order = [key, name_key, col(Jurisdiction.sort_order)]
+    return list(session.exec(statement.order_by(*order)).all())
+
+
+def get_company_admins(*, session: Session, company_id: uuid.UUID) -> list[User]:
+    """Active admins of the company, for members who need one to change a setting."""
+    statement = (
+        select(User)
+        .where(
+            User.company_id == company_id,
+            User.company_role == CompanyRole.admin,
+            col(User.is_active),
+        )
+        .order_by(col(User.email))
+    )
+    return list(session.exec(statement).all())
+
+
 def get_company_jurisdictions(
     *, session: Session, company_id: uuid.UUID
 ) -> list[Jurisdiction]:
@@ -379,6 +452,40 @@ def get_company_jurisdictions(
         .order_by(col(Jurisdiction.name_path))
     )
     return list(session.exec(statement).all())
+
+
+def get_company_jurisdiction_user_counts(
+    *, session: Session, company_id: uuid.UUID
+) -> list[tuple[uuid.UUID, int]]:
+    """Users per jurisdiction within the company; jurisdictions with none are omitted."""
+    statement = (
+        select(UserJurisdiction.jurisdiction_id, func.count())
+        .where(UserJurisdiction.company_id == company_id)
+        .group_by(col(UserJurisdiction.jurisdiction_id))
+    )
+    return [(j, n) for j, n in session.exec(statement).all()]
+
+
+def get_company_jurisdiction_affected_users(
+    *, session: Session, company_id: uuid.UUID, jurisdiction_ids: Iterable[uuid.UUID]
+) -> list[tuple[User, int]]:
+    """Company users who selected any of the ids, with how many of them each selected."""
+    ids = set(jurisdiction_ids)
+    if not ids:
+        return []
+    statement = (
+        select(User, func.count())
+        .join(UserJurisdiction, col(UserJurisdiction.user_id) == User.id)
+        .where(
+            UserJurisdiction.company_id == company_id,
+            col(UserJurisdiction.jurisdiction_id).in_(ids),
+        )
+        .group_by(col(User.id))
+        .order_by(
+            func.lower(func.coalesce(User.full_name, User.email)), col(User.email)
+        )
+    )
+    return [(u, n) for u, n in session.exec(statement).all()]
 
 
 def get_user_jurisdictions(

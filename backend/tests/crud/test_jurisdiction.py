@@ -5,7 +5,7 @@ from sqlmodel import Session, func, select
 
 from app import crud
 from app.core.db import JURISDICTIONS_SEED_FILE
-from app.models import Jurisdiction
+from app.models import Jurisdiction, RegionType
 
 
 def _seed_nodes() -> list[dict]:
@@ -52,3 +52,23 @@ def test_seed_derives_tree_columns(db: Session) -> None:
         f"{uuid.UUID(grandchild['id']).hex}/"
     )
     assert row.name_path == f"{root['name']} / {child['name']} / {grandchild['name']}"
+
+
+def test_seed_sets_codes(db: Session) -> None:
+    # Codes repeat across levels, so region_type tells them apart
+    rows = db.exec(select(Jurisdiction).where(Jurisdiction.code == "CA")).all()
+    assert {(r.name, r.region_type) for r in rows} == {
+        ("Canada", RegionType.country),
+        ("California", RegionType.subdivision),
+    }
+
+    washington = db.exec(
+        select(Jurisdiction).where(Jurisdiction.name == "Washington")
+    ).one()
+    assert (washington.code, washington.region_type) == ("WA", RegionType.subdivision)
+
+    # Grouping nodes have no code
+    structural = db.exec(
+        select(Jurisdiction).where(Jurisdiction.name == "States")
+    ).one()
+    assert structural.code is None and structural.region_type is None
