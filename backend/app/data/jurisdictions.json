@@ -1,0 +1,479 @@
+[
+  {
+    "id": "1f71bcc9-db7b-4412-a4cf-91e381fa7120",
+    "name": "Canada",
+    "isStructural": true,
+    "jurisdictions": [
+      {
+        "id": "24559116-8529-4266-996f-02f3a85681d2",
+        "name": "National",
+        "isStructural": false,
+        "jurisdictions": []
+      },
+      {
+        "id": "454bafc7-93be-43c8-8590-2d107d006b05",
+        "name": "Provinces",
+        "isStructural": true,
+        "jurisdictions": [
+          {
+            "id": "4cbe4f71-5227-42fb-aae3-e40472af084c",
+            "name": "Alberta",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "2e70b1c4-05d8-4a08-98e3-9e7870427e3a",
+            "name": "British Columbia",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "d6643612-c358-4c43-baf4-de73eb235a28",
+            "name": "Manitoba",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "664b3d92-bc06-486c-8e1b-924ceea1d741",
+            "name": "New Brunswick",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "b0d79b16-e580-4513-8bd9-64f8ac3431b6",
+            "name": "Newfoundland and Labrador",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "b81b0dbe-8ebc-4e70-b1bf-2efdb07834c6",
+            "name": "Nova Scotia",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "c7ee907e-5cd2-4bbc-b491-e8cbdd2c52a3",
+            "name": "Ontario",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "5d267ca3-d018-4404-bb3c-530e504440ab",
+            "name": "Prince Edward Island",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "6d6fd26f-964e-4f13-be8e-99f52303f52d",
+            "name": "Quebec",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "cb1dc594-bce4-44a7-8b63-0aaba3d8821b",
+            "name": "Saskatchewan",
+            "isStructural": false,
+            "jurisdictions": []
+          }
+        ]
+      },
+      {
+        "id": "d5ef5e38-f9f5-4fd6-bac9-5d224b2b7826",
+        "name": "Territories",
+        "isStructural": true,
+        "jurisdictions": [
+          {
+            "id": "8acc838e-0249-4d9d-be6b-a6293567c5f4",
+            "name": "Yukon",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "7a532866-cd8e-4bfa-8822-195b934ea622",
+            "name": "Nunavut",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "d4ff380e-380d-4713-b59f-b2f712bf947f",
+            "name": "Northwest Territories",
+            "isStructural": false,
+            "jurisdictions": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "0645e486-d061-4a98-aab4-1c555dc727f5",
+    "name": "United States",
+    "isStructural": true,
+    "jurisdictions": [
+      {
+        "id": "1c5847a4-0ebb-45cc-9b31-8502780a1b9f",
+        "name": "National",
+        "isStructural": false,
+        "jurisdictions": []
+      },
+      {
+        "id": "4bf7e729-4937-403b-8e2b-f6c146ffc3ac",
+        "name": "States",
+        "isStructural": true,
+        "jurisdictions": [
+          {
+            "id": "cd498640-f435-461b-82e4-249c48c5a36e",
+            "name": "Alabama",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "ea2b5d25-ca63-4230-aed8-24a8d55a52fe",
+            "name": "Alaska",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "e502b7d9-c85c-449d-8073-401445165645",
+            "name": "Arizona",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "47902212-f803-45c3-844f-784097efd30d",
+            "name": "Arkansas",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "f6876e63-21bb-439d-b258-c666222d30f1",
+            "name": "California",
+            "isStructural": true,
+            "jurisdictions": [
+              {
+                "id": "5f8ddd58-8632-4efd-ac29-f3ae4fcbd856",
+                "name": "State",
+                "isStructural": false,
+                "jurisdictions": []
+              },
+              {
+                "id": "ffd667c8-753f-4720-b8ae-ef8e90b95825",
+                "name": "Cities",
+                "isStructural": true,
+                "jurisdictions": [
+                  {
+                    "id": "c73fab6b-bd5f-4fa0-8c96-15da65bbf375",
+                    "name": "Los Angeles",
+                    "isStructural": false,
+                    "jurisdictions": []
+                  },
+                  {
+                    "id": "59ddb83b-a59e-44a3-9722-da57c97c7af2",
+                    "name": "San Francisco",
+                    "isStructural": false,
+                    "jurisdictions": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "4e0dfc3d-2b68-4375-be58-e8f834238d3e",
+            "name": "Colorado",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "6f072a1b-acd9-4930-b10b-6a0157f893b1",
+            "name": "Connecticut",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "42efa48f-fe2d-49f4-87e0-839c51ecd7b8",
+            "name": "Delaware",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "a0f6fdb3-64e0-4bc8-977e-dd1afe0898d7",
+            "name": "Florida",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "bb996be2-0384-4e48-a1fb-080be102033d",
+            "name": "Georgia",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "ad9350c6-a91c-45a0-afc5-94ea845b63f9",
+            "name": "Hawaii",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "d17a6fc3-8763-4fca-9408-b64455b9352d",
+            "name": "Idaho",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "978c70f7-b1d4-4368-85a6-a20ce4c32289",
+            "name": "Illinois",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "2e86b461-2a16-4cab-9098-394d2240aa67",
+            "name": "Indiana",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "bd42ba8c-6b1c-4e38-8601-363f9a86c3b1",
+            "name": "Iowa",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "ed44069d-1217-4fdd-b799-4d0c971745e3",
+            "name": "Kansas",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "b8f262d4-22ca-413f-afff-65dfd4068a07",
+            "name": "Kentucky",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "51b7767a-57df-43c1-b702-36c8c60523a0",
+            "name": "Louisiana",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "53c090f1-2002-4146-bab8-02f3bf52c417",
+            "name": "Maine",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "46dc6c17-480e-4f7d-b1ad-860c6c36bf97",
+            "name": "Maryland",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "378691ea-5338-4730-b2cb-a26d29bf5933",
+            "name": "Massachusetts",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "0ad97629-9877-4a98-82d3-edaa2c5497fc",
+            "name": "Michigan",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "d00e9572-ab3b-47a9-a9c3-30ab5b7b836d",
+            "name": "Minnesota",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "3d6a48e3-c5a6-4e0f-83b8-edd44a361f83",
+            "name": "Mississippi",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "786c430d-d668-4b1c-873e-8413f253ff67",
+            "name": "Missouri",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "204fa1eb-dd4d-47e3-bb67-eda8d497b4d8",
+            "name": "Montana",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "5252aa7e-4305-463e-ad28-31df591d5f88",
+            "name": "Nebraska",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "5b9fcc25-036d-4cbd-b0f2-9d05edf970d1",
+            "name": "Nevada",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "17a86d1f-f9ea-4b2d-959c-1b6eea8be27e",
+            "name": "New Hampshire",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "c1ab1a23-210d-4be0-b601-2462213d20d0",
+            "name": "New Jersey",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "7ba1b2fb-4c34-408c-82a9-29bf9f02adf0",
+            "name": "New Mexico",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "17de3365-9d5b-4e4e-a65f-1f8c39ac185e",
+            "name": "New York",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "2783c8a9-2bb7-4a95-a00d-e488844d8963",
+            "name": "North Carolina",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "8eea1444-158a-401a-be4c-eb5327d6b619",
+            "name": "North Dakota",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "eb74ae56-34ae-4699-9cc5-321e0646f587",
+            "name": "Ohio",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "cd5b259d-1e92-43e7-8f1c-1e6b68d20c68",
+            "name": "Oklahoma",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "10130b56-c417-40fe-96b5-e64d8d0340b6",
+            "name": "Oregon",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "7c82ce6b-5294-4a30-8354-aa3d79d4355e",
+            "name": "Pennsylvania",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "cefd6926-1e59-4bb4-ba8a-4fca5bcbc190",
+            "name": "Rhode Island",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "2ba295c8-a22f-4f8a-a803-3e3f96e36d09",
+            "name": "South Carolina",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "c6a50601-6838-41ca-9c48-9ee752babdc8",
+            "name": "South Dakota",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "9ba8ea79-c20e-4969-9ffc-76224d8d4a6f",
+            "name": "Tennessee",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "84d7c64e-129b-49af-8109-5e31e2bc5cf0",
+            "name": "Texas",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "50d17dc6-56a4-4617-b82b-2dde6a5ac40d",
+            "name": "Utah",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "d5694b47-7f97-4a10-bbf9-cf36144c3eb0",
+            "name": "Vermont",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "a80d5f1b-2248-47d1-a319-f723c62c044a",
+            "name": "Virginia",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "9b4ff115-d1a7-4c5d-ad5b-3b3bf301fdf0",
+            "name": "Washington",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "e3f5bf54-bf2e-42e0-a2b7-b2095a1ff50b",
+            "name": "West Virginia",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "ec2a3f97-8ff3-4948-b027-47ac12a6f285",
+            "name": "Wisconsin",
+            "isStructural": false,
+            "jurisdictions": []
+          },
+          {
+            "id": "0ce67b75-6a46-4c7a-829a-b12aaa4e3719",
+            "name": "Wyoming",
+            "isStructural": false,
+            "jurisdictions": []
+          }
+        ]
+      },
+      {
+        "id": "401aab7f-4c08-44ed-8f44-f02f5541970b",
+        "name": "Federal Districts",
+        "isStructural": true,
+        "jurisdictions": [
+          {
+            "id": "fa8eb3fa-353e-4a43-bd3b-049c67c0fd1e",
+            "name": "District of Columbia",
+            "isStructural": false,
+            "jurisdictions": []
+          }
+        ]
+      },
+      {
+        "id": "219f7f3d-bbc3-4a11-93cb-316658c6c2f5",
+        "name": "Territories",
+        "isStructural": true,
+        "jurisdictions": [
+          {
+            "id": "256133c9-9cd7-430f-88af-ea1786e7f607",
+            "name": "Puerto Rico",
+            "isStructural": false,
+            "jurisdictions": []
+          }
+        ]
+      }
+    ]
+  }
+]

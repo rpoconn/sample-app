@@ -8,7 +8,7 @@ The frontend is built with [Vite](https://vitejs.dev/), [React](https://react.de
 
 ## Quick Start
 
-From the project root, install the dependencies and start the frontend development server:
+0From the project root, install the dependencies and start the frontend development server:
 
 ```bash
 bun install
@@ -17,7 +17,7 @@ bun run dev
 
 Then open <http://localhost:5173/> in your browser.
 
-Run `uv run bash scripts/prestart.sh` and `uv run fastapi dev` from the `backend` directory, with PostgreSQL running in Docker Compose. See [../development.md](../development.md) for the complete setup.
+The frontend needs the backend running at `http://localhost:8000`. From the `backend` directory, run `uv run alembic upgrade head`, `uv run python app/initial_data.py`, and `uv run fastapi dev`, or use the **Backend: Debug FastAPI** launch configuration in VS Code. See [../development.md](../development.md) for the complete setup.
 
 To serve the frontend with FastAPI, run `bun run build` from the `frontend` directory and open `http://localhost:8000`.
 

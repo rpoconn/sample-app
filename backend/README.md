@@ -7,33 +7,36 @@
 
 ## Local Development
 
-Run the backend locally and connect it to PostgreSQL in Docker Compose.
+Run the backend locally. The database is a SQLite file at `backend/app.db` (set by `DATABASE_URL`).
 
-From the project root, start PostgreSQL and Mailpit:
+From the project root, start Mailpit:
 
 ```console
-$ docker compose up -d db mailpit
+$ docker compose up -d mailpit
 ```
 
-Then, from `./backend/`, install the dependencies, prepare the database, and start the development server:
+Then, from `./backend/`, install the dependencies, prepare the database (creates `app.db` and the first superuser), and start the development server:
 
 ```console
 $ uv sync
-$ uv run bash scripts/prestart.sh
+$ uv run alembic upgrade head
+$ uv run python app/initial_data.py
 $ uv run fastapi dev
 ```
+
+On macOS/Linux, `uv run bash scripts/prestart.sh` runs the two preparation steps. To reset the database, delete `app.db` and run them again.
 
 The API is available at `http://localhost:8000`, with automatic interactive docs at `http://localhost:8000/docs`.
 
 ## General Workflow
 
-Run backend commands from `./backend/` with `uv run`. Make sure your editor uses the Python interpreter at `.venv/bin/python` in the project root.
+Run backend commands from `./backend/` with `uv run`. Make sure your editor uses the Python interpreter in the project root's `.venv` (`.venv/Scripts/python.exe` on Windows, `.venv/bin/python` on macOS/Linux).
 
 Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
 
 ## VS Code
 
-There are already configurations in place to run the backend through the VS Code debugger, so that you can use breakpoints, pause and explore variables, etc.
+There are already configurations in place to run the backend through the VS Code debugger, so that you can use breakpoints, pause and explore variables, etc. **Backend: Debug FastAPI** starts Mailpit, syncs dependencies, migrates and seeds the database, then starts the server. See [../development.md](../development.md#vs-code) for the full list.
 
 The setup is also already configured so you can run the tests through the VS Code Python tests tab.
 
@@ -92,7 +95,7 @@ When the tests run, they generate `htmlcov/index.html`. Open it in your browser 
 
 ## Migrations
 
-Make sure you create a revision of your models and upgrade the database with that revision every time you change them. From the `backend` directory, use `uv` to run Alembic against the PostgreSQL container:
+Make sure you create a revision of your models and upgrade the database with that revision every time you change them. From the `backend` directory, use `uv` to run Alembic against the SQLite database:
 
 * Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
 

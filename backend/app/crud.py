@@ -4,7 +4,7 @@ from typing import Any
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import Item, ItemCreate, User, UserCreate, UserUpdate
+from app.models import Item, ItemCreate, Jurisdiction, User, UserCreate, UserUpdate
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -66,3 +66,41 @@ def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -
     session.commit()
     session.refresh(db_item)
     return db_item
+
+
+def seed_jurisdictions(*, session: Session, nodes: list[dict[str, Any]]) -> int:
+    """Insert a nested jurisdiction tree, skipping ids that already exist.
+
+    Existing rows are left untouched so edits made through the app survive restarts.
+    New rows derive path/depth/name_path from their parent's current row.
+    Returns the number of rows inserted.
+    """
+    existing = {j.id: j for j in session.exec(select(Jurisdiction)).all()}
+    created = 0
+
+    # Depth-first so parents are always added (and flushed) before their children
+    def walk(children: list[dict[str, Any]], parent: Jurisdiction | None) -> None:
+        nonlocal created
+        for sort_order, node in enumerate(children):
+            node_id = uuid.UUID(node["id"])
+            row = existing.get(node_id)
+            if row is None:
+                name = node["name"]
+                row = Jurisdiction(
+                    id=node_id,
+                    parent_id=parent.id if parent else None,
+                    name=name,
+                    is_structural=node.get("isStructural", False),
+                    sort_order=sort_order,
+                    depth=parent.depth + 1 if parent else 0,
+                    path=f"{parent.path if parent else '/'}{node_id.hex}/",
+                    name_path=f"{parent.name_path} / {name}" if parent else name,
+                )
+                session.add(row)
+                existing[node_id] = row
+                created += 1
+            walk(node.get("jurisdictions", []), row)
+
+    walk(nodes, None)
+    session.commit()
+    return created

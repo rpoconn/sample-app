@@ -2,20 +2,23 @@
 
 ## Local Development
 
-For local development, run PostgreSQL and Mailpit with Docker Compose, and run the FastAPI and Vite development servers locally.
+For local development, run Mailpit with Docker Compose and run the FastAPI and Vite development servers locally. The database is a local SQLite file, so it doesn't need a database server.
 
 Start the supporting services:
 
 ```bash
-docker compose up -d db mailpit
+docker compose up -d mailpit
 ```
 
 Then, from the `backend` directory, install the dependencies and prepare the database:
 
 ```bash
 uv sync
-uv run bash scripts/prestart.sh
+uv run alembic upgrade head
+uv run python app/initial_data.py
 ```
+
+`alembic upgrade head` creates `backend/app.db` and applies the migrations. `initial_data.py` creates the first superuser from `FIRST_SUPERUSER` and `FIRST_SUPERUSER_PASSWORD` in `.env`. On macOS/Linux, `uv run bash scripts/prestart.sh` runs both steps.
 
 Start the FastAPI development server:
 
@@ -42,6 +45,36 @@ Mailpit: <http://localhost:8025>
 
 The frontend development server uses the backend at `http://localhost:8000`, as configured in `frontend/.env`.
 
+### Database
+
+The database is a SQLite file at `backend/app.db`, configured by `DATABASE_URL` in `.env` (`sqlite:///./app.db`, relative to the `backend` directory). It is ignored by git.
+
+To reset it, stop the backend, then from the `backend` directory delete the file and prepare it again:
+
+```bash
+rm app.db
+uv run alembic upgrade head
+uv run python app/initial_data.py
+```
+
+On Windows PowerShell, use `Remove-Item app.db` instead of `rm app.db`.
+
+**Note**: The backend tests use the same database and delete all users when they finish. Run `uv run python app/initial_data.py` again afterwards to recreate the superuser.
+
+### VS Code
+
+The workspace includes launch configurations (Run and Debug panel) and tasks (**Terminal** > **Run Task**):
+
+* **Backend: Debug FastAPI**: starts Mailpit, syncs dependencies, migrates and seeds the database, then runs the backend under the debugger on port 8000.
+* **Backend: Debug FastAPI (skip prestart)**: runs the backend under the debugger without the preparation steps.
+* **Backend: Debug pytest** / **Backend: Debug current test file**: run the tests under the debugger.
+* **Frontend: Chrome (starts Vite)** / **Frontend: Edge (starts Vite)**: start the Vite dev server and open the frontend in a debuggable browser.
+* **Full Stack: Debug backend + frontend**: both of the above together.
+
+Select the interpreter at `.venv/Scripts/python.exe` (Windows) or `.venv/bin/python` (macOS/Linux) in the project root.
+
+**Note**: If the project lives in a OneDrive (or similar) synced folder, the sync client can lock files in `.venv`, so a plain `uv sync` can fail with "Access is denied" when it tries to uninstall a package. The VS Code task uses `uv sync --inexact`, which never uninstalls anything, to avoid this. If it still fails, pause syncing or delete `.venv` and run `uv sync` again.
+
 ### Frontend Served by FastAPI
 
 Build the frontend from the `frontend` directory:
@@ -66,8 +99,6 @@ Now you can open these URLs:
 Application, with the frontend and API served by FastAPI: <http://localhost:8000>
 
 Automatic interactive API documentation with Swagger UI: <http://localhost:8000/docs>
-
-Adminer, database web administration: <http://localhost:8080>
 
 Traefik UI, to see how the routes are being handled by the proxy: <http://localhost:8090>
 
@@ -99,7 +130,7 @@ docker compose watch
 
 ## The `.env` File
 
-The tracked `.env` file contains local development defaults, passwords, and other configuration. Its hostnames use `localhost` for processes running on your machine. Docker Compose overrides hostnames such as the database and SMTP server with their Compose service names.
+The tracked `.env` file contains local development defaults, passwords, and other configuration. Its hostnames use `localhost` for processes running on your machine. Docker Compose overrides the SMTP hostname with its Compose service name, and stores the backend's SQLite database in the `app-data` volume (`/app/data/app.db`).
 
 Do not store deployment secrets in `.env`. Configure them as described in the [FastAPI Cloud deployment guide](./deployment.md) or the [Docker Compose deployment guide](./deployment-docker-compose.md).
 

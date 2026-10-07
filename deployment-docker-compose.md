@@ -5,7 +5,7 @@ You can deploy the project to your own remote server with Docker Compose. The de
 ## Preparation
 
 * Have a remote server ready and available.
-* Configure DNS records pointing to the server for the application domain and any supporting service subdomains you want to expose, such as `fastapi-project.example.com` and `adminer.fastapi-project.example.com`.
+* Configure DNS records pointing to the server for the application domain and any supporting service subdomains you want to expose, such as `fastapi-project.example.com`.
 * Install and configure [Docker](https://docs.docker.com/engine/install/) on the remote server (Docker Engine, not Docker Desktop).
 
 ## Copy the Code
@@ -37,10 +37,9 @@ You can also configure these environment variables as needed:
 
 ### Secrets
 
-Generate and set secure values for the database password, token signing key, and first superuser password:
+Generate and set secure values for the token signing key and first superuser password:
 
 ```bash
-export POSTGRES_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
 export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
 export FIRST_SUPERUSER_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
 ```
@@ -57,6 +56,8 @@ docker compose -f compose.yml -f compose.deploy.yml up -d
 ```
 
 The `compose.deploy.yml` file adds HTTPS and automatic certificate handling to the shared `compose.yml` configuration. Explicitly listing both files excludes the local settings from `compose.override.yml`.
+
+The SQLite database is stored at `/app/data/app.db` in the `app-data` Docker volume. Back up that volume to back up the data.
 
 The backend Docker image builds the frontend, so the server does not need Bun or prebuilt frontend files.
 
@@ -84,7 +85,6 @@ To enable Sentry, add the optional `SENTRY_DSN` repository variable.
 
 Add these repository secrets:
 
-* `POSTGRES_PASSWORD`
 * `SECRET_KEY`
 * `FIRST_SUPERUSER_PASSWORD`
 
@@ -125,5 +125,3 @@ Replace `fastapi-project.example.com` with your domain.
 Application (frontend and API): `https://fastapi-project.example.com`
 
 Interactive API docs: `https://fastapi-project.example.com/docs`
-
-Adminer: `https://adminer.fastapi-project.example.com`
