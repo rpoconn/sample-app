@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import EmailStr
 from sqlalchemy import (
@@ -446,6 +446,13 @@ class JurisdictionFacets(SQLModel):
 # Generic message
 class Message(SQLModel):
     message: str
+
+
+# The body of every error response; see app.errors
+class ErrorResponse(SQLModel):
+    detail: str
+    code: str
+    context: dict[str, Any] = Field(default_factory=dict)
 
 
 # JSON payload containing access token

@@ -13,7 +13,7 @@ from app.api.deps import (
     require_company_member,
 )
 from app.api.routes.jurisdictions import to_public_list
-from app.errors import NotFound
+from app.errors import NotFound, errors
 from app.models import (
     CompaniesPublic,
     Company,
@@ -33,7 +33,9 @@ from app.models import (
     JurisdictionUserCounts,
 )
 
-router = APIRouter(prefix="/companies", tags=["companies"])
+router = APIRouter(
+    prefix="/companies", tags=["companies"], responses=errors(401, 403, 422)
+)
 
 
 @router.get(
@@ -57,6 +59,7 @@ def read_companies(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
     "/",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=CompanyPublic,
+    responses=errors(409),
 )
 def create_company(*, session: SessionDep, company_in: CompanyCreate) -> Any:
     """
@@ -65,7 +68,7 @@ def create_company(*, session: SessionDep, company_in: CompanyCreate) -> Any:
     return crud.create_company(session=session, company_in=company_in)
 
 
-@router.get("/{company_id}", response_model=CompanyPublic)
+@router.get("/{company_id}", response_model=CompanyPublic, responses=errors(404))
 def read_company(
     session: SessionDep, current_user: CurrentUser, company_id: uuid.UUID
 ) -> Any:
@@ -83,6 +86,7 @@ def read_company(
     "/{company_id}",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=CompanyPublic,
+    responses=errors(404, 409),
 )
 def update_company(
     *, session: SessionDep, company_id: uuid.UUID, company_in: CompanyUpdate
@@ -132,7 +136,11 @@ def read_company_jurisdiction_ids(
     return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
 
 
-@router.put("/{company_id}/jurisdictions", response_model=JurisdictionsPublic)
+@router.put(
+    "/{company_id}/jurisdictions",
+    response_model=JurisdictionsPublic,
+    responses=errors(404),
+)
 def set_company_jurisdictions(
     *,
     session: SessionDep,
@@ -150,7 +158,11 @@ def set_company_jurisdictions(
     return to_public_list(session, rows)
 
 
-@router.post("/{company_id}/jurisdictions/subtree", response_model=JurisdictionIds)
+@router.post(
+    "/{company_id}/jurisdictions/subtree",
+    response_model=JurisdictionIds,
+    responses=errors(404),
+)
 def toggle_company_jurisdiction_subtree(
     *,
     session: SessionDep,

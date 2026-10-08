@@ -15,7 +15,7 @@ from app.api.deps import (
 )
 from app.core import security
 from app.core.config import settings
-from app.errors import ApiError, NotFound
+from app.errors import ApiError, NotFound, errors, json_errors
 from app.models import (
     Message,
     NewPassword,
@@ -31,10 +31,10 @@ from app.utils import (
     verify_password_reset_token,
 )
 
-router = APIRouter(tags=["login"])
+router = APIRouter(tags=["login"], responses=errors(422))
 
 
-@router.post("/login/access-token")
+@router.post("/login/access-token", responses=errors(400))
 def login_access_token(
     session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ) -> Token:
@@ -56,7 +56,7 @@ def login_access_token(
     )
 
 
-@router.post("/logout")
+@router.post("/logout", responses=errors(401))
 def logout(session: SessionDep, token_data: TokenPayloadDep) -> Message:
     """
     Revoke the current access token
@@ -70,7 +70,7 @@ def logout(session: SessionDep, token_data: TokenPayloadDep) -> Message:
     return Message(message="Logged out")
 
 
-@router.post("/login/test-token", response_model=UserPublic)
+@router.post("/login/test-token", response_model=UserPublic, responses=errors(401, 403))
 def test_token(current_user: CurrentUser) -> Any:
     """
     Test access token
@@ -102,7 +102,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
     )
 
 
-@router.post("/reset-password/")
+@router.post("/reset-password/", responses=errors(400))
 def reset_password(session: SessionDep, body: NewPassword) -> Message:
     """
     Reset password
@@ -129,6 +129,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
     "/password-recovery-html-content/{email}",
     dependencies=[Depends(get_current_active_superuser)],
     response_class=HTMLResponse,
+    responses=json_errors(401, 403, 404, 422),
 )
 def recover_password_html_content(email: str, session: SessionDep) -> Any:
     """

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from app import crud
 from app.api.deps import SessionDep
 from app.core.security import get_password_hash
-from app.errors import Conflict, NotFound
+from app.errors import Conflict, NotFound, errors
 from app.models import (
     DEFAULT_COMPANY_ID,
     Company,
@@ -16,7 +16,7 @@ from app.models import (
     UserPublic,
 )
 
-router = APIRouter(tags=["private"], prefix="/private")
+router = APIRouter(tags=["private"], prefix="/private", responses=errors(422))
 
 
 class PrivateUserCreate(BaseModel):
@@ -29,7 +29,7 @@ class PrivateUserCreate(BaseModel):
     company_role: CompanyRole = CompanyRole.admin
 
 
-@router.post("/users/", response_model=UserPublic)
+@router.post("/users/", response_model=UserPublic, responses=errors(404, 409))
 def create_user(user_in: PrivateUserCreate, session: SessionDep) -> Any:
     """
     Create a new user.

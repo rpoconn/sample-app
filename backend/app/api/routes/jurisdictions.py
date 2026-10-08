@@ -8,7 +8,7 @@ from sqlmodel import Session, col, func, select
 from app import crud
 from app import jurisdiction_query as jq
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
-from app.errors import NotFound
+from app.errors import NotFound, errors
 from app.models import (
     CompanyRole,
     Jurisdiction,
@@ -26,7 +26,11 @@ from app.models import (
     TreeSortBy,
 )
 
-router = APIRouter(prefix="/jurisdictions", tags=["jurisdictions"])
+router = APIRouter(
+    prefix="/jurisdictions",
+    tags=["jurisdictions"],
+    responses=errors(401, 403, 422),
+)
 
 
 def to_public(
@@ -155,7 +159,9 @@ def read_jurisdiction_facets(
     return jq.build_facets(index, sel, query)
 
 
-@router.get("/{jurisdiction_id}", response_model=JurisdictionPublic)
+@router.get(
+    "/{jurisdiction_id}", response_model=JurisdictionPublic, responses=errors(404)
+)
 def read_jurisdiction(
     session: SessionDep, _current_user: CurrentUser, jurisdiction_id: uuid.UUID
 ) -> Any:
@@ -169,6 +175,7 @@ def read_jurisdiction(
     "/",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=JurisdictionPublic,
+    responses=errors(409),
 )
 def create_jurisdiction(
     *, session: SessionDep, jurisdiction_in: JurisdictionCreate
@@ -186,6 +193,7 @@ def create_jurisdiction(
     "/{jurisdiction_id}",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=JurisdictionPublic,
+    responses=errors(404, 409),
 )
 def update_jurisdiction(
     *,
@@ -205,7 +213,9 @@ def update_jurisdiction(
 
 
 @router.delete(
-    "/{jurisdiction_id}", dependencies=[Depends(get_current_active_superuser)]
+    "/{jurisdiction_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+    responses=errors(404, 409),
 )
 def delete_jurisdiction(session: SessionDep, jurisdiction_id: uuid.UUID) -> Message:
     """

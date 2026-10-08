@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app import crud
 from app.api.deps import SessionDep, require_service_caller
-from app.errors import NotFound
+from app.errors import NotFound, errors
 from app.models import User
 
 # Machine-to-machine reads for other services: X-API-Key or a superuser bearer token
@@ -12,10 +12,11 @@ router = APIRouter(
     prefix="/service",
     tags=["service"],
     dependencies=[Depends(require_service_caller)],
+    responses=errors(401, 403, 422),
 )
 
 
-@router.get("/users/{user_id}/jurisdiction-ids")
+@router.get("/users/{user_id}/jurisdiction-ids", responses=errors(404))
 def read_user_jurisdiction_ids_for_service(
     session: SessionDep, user_id: uuid.UUID
 ) -> list[uuid.UUID]:

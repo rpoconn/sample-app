@@ -81,3 +81,16 @@ def test_inactive_user_403(client: TestClient, db: Session) -> None:
     r = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
     assert r.status_code == 403
     assert_envelope(r.json(), "user_inactive")
+
+
+def test_openapi_documents_errors_as_error_response(client: TestClient) -> None:
+    spec = client.get(f"{settings.API_V1_STR}/openapi.json").json()
+    assert "HTTPValidationError" not in spec["components"]["schemas"]
+    ref = "#/components/schemas/ErrorResponse"
+    for path, ops in spec["paths"].items():
+        for method, op in ops.items():
+            for status, response in op["responses"].items():
+                if status.startswith("2"):
+                    continue
+                schema = response["content"]["application/json"]["schema"]
+                assert schema == {"$ref": ref}, f"{method.upper()} {path} {status}"

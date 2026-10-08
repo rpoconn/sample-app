@@ -2,7 +2,7 @@
 
 ## Status
 
-- In progress. Phase 1 steps 1.1–1.3 done. Findings come from the adversarial API review (2026-10-07).
+- In progress. Phase 1 steps 1.1–1.4 done. Findings come from the adversarial API review (2026-10-07).
 - In scope: review items 2, 3, 7, 9, 10, 11 and all the Low items.
 - Out of scope (not chosen): #1 signup default role, #4 token lifetime / revocation on
   credential change, #5 recovery enumeration, #6 `FASTAPI_ENV` coupling, #8 implicit
@@ -126,6 +126,19 @@ There's one body shape for every error, including request validation:
 | Not a superuser / not a company admin | 403 | 403 | `forbidden` |
 
 ### 1.4 Document errors in OpenAPI
+
+**Done (2026-10-07).** `errors()` lives in `app/errors.py` next to the exception types. Router
+defaults: `users`, `companies`, `jurisdictions` and `service` use `errors(401, 403, 422)`. `login`
+and `private` use only `errors(422)`, because most of their routes are unauthenticated, so each
+route lists its own 400 / 401 / 403. `utils` has no params and gets nothing. Listing 422 on every
+router means FastAPI no longer adds `HTTPValidationError`, which is now gone from the spec and
+from the generated client. One wrinkle: FastAPI files a `model` response under the route's
+`response_class` media type. So the HTML route `password-recovery-html-content` uses a small
+`json_errors()` variant that references the schema under `application/json` directly. The new
+`test_errors.py::test_openapi_documents_errors_as_error_response` checks that every non-2xx
+response in the spec is a JSON `ErrorResponse`. Routes whose crud calls raise
+`company_not_found` (company selection PUT and subtree, user create) also list 404. Phase 3 adds
+412 and 428 when those routes are written.
 
 - Add a `ErrorResponse` model in `models.py` (`detail`, `code`, `context`).
 - Add a helper `errors(*codes) -> dict[int, dict]` that returns

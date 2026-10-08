@@ -17,6 +17,7 @@ import {
 import type { UserPublic } from "@/client"
 import { useTheme } from "@/components/theme-provider"
 import useCustomToast from "@/hooks/useCustomToast"
+import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { handleError } from "@/utils"
 import {
     ConfirmDisableDialog,
@@ -48,6 +49,10 @@ const noFilters: JurisdictionFilters = {
     status: "all",
 }
 
+const searchDelay = 250
+const searchSettled = (prev: JurisdictionFilters, next: JurisdictionFilters) =>
+    prev.search === next.search || next.search === ""
+
 export function JurisdictionGrid({
     mode,
     user,
@@ -64,8 +69,11 @@ export function JurisdictionGrid({
 
     // Kept across scope switches, so the same slice can be compared in both
     const [filters, setFilters] = useState<JurisdictionFilters>(noFilters)
-    // What the server filters by; the current rows and counts stay up meanwhile
-    const queried = useDeferredValue(filters)
+    // What the server filters by; the current rows and counts stay up meanwhile.
+    // Typing waits for a pause; everything else, clearing included, goes now.
+    const queried = useDeferredValue(
+        useDebouncedValue(filters, searchDelay, searchSettled),
+    )
     const [pendingDisable, setPendingDisable] = useState<{
         open: boolean
         item: PendingDisable | null

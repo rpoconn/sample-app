@@ -14,7 +14,7 @@ from app.api.deps import (
 from app.api.routes.jurisdictions import to_public_list
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
-from app.errors import ApiError, Conflict, Forbidden, NotFound
+from app.errors import ApiError, Conflict, Forbidden, NotFound, errors
 from app.models import (
     JurisdictionIds,
     JurisdictionSelection,
@@ -32,7 +32,7 @@ from app.models import (
 )
 from app.utils import generate_new_account_email, send_email
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["users"], responses=errors(401, 403, 422))
 
 
 @router.get(
@@ -58,7 +58,10 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 
 
 @router.post(
-    "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
+    "/",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=UserPublic,
+    responses=errors(404, 409),
 )
 def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
@@ -84,7 +87,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     return user
 
 
-@router.patch("/me", response_model=UserPublic)
+@router.patch("/me", response_model=UserPublic, responses=errors(409))
 def update_user_me(
     *, session: SessionDep, user_in: UserUpdateMe, current_user: CurrentUser
 ) -> Any:
@@ -104,7 +107,7 @@ def update_user_me(
     return current_user
 
 
-@router.patch("/me/password", response_model=Message)
+@router.patch("/me/password", response_model=Message, responses=errors(400))
 def update_password_me(
     *, session: SessionDep, body: UpdatePassword, current_user: CurrentUser
 ) -> Any:
@@ -179,7 +182,7 @@ def toggle_my_jurisdiction_subtree(
     return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
 
 
-@router.delete("/me", response_model=Message)
+@router.delete("/me", response_model=Message, responses=errors(409))
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
     Delete own user.
@@ -194,7 +197,7 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     return Message(message="User deleted successfully")
 
 
-@router.post("/signup", response_model=UserPublic)
+@router.post("/signup", response_model=UserPublic, responses=errors(409))
 def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
     Create new user without the need to be logged in.
@@ -210,7 +213,7 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     return user
 
 
-@router.get("/{user_id}", response_model=UserPublic)
+@router.get("/{user_id}", response_model=UserPublic, responses=errors(404))
 def read_user_by_id(
     user_id: uuid.UUID, session: SessionDep, current_user: CurrentUser
 ) -> Any:
@@ -231,6 +234,7 @@ def read_user_by_id(
     "/{user_id}",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=UserPublic,
+    responses=errors(404, 409),
 )
 def update_user(
     *,
@@ -257,7 +261,11 @@ def update_user(
     return db_user
 
 
-@router.delete("/{user_id}", dependencies=[Depends(get_current_active_superuser)])
+@router.delete(
+    "/{user_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+    responses=errors(404, 409),
+)
 def delete_user(
     session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
 ) -> Message:
@@ -290,7 +298,11 @@ def _get_user_for_company_admin(
     return user
 
 
-@router.get("/{user_id}/jurisdictions", response_model=JurisdictionsPublic)
+@router.get(
+    "/{user_id}/jurisdictions",
+    response_model=JurisdictionsPublic,
+    responses=errors(404),
+)
 def read_user_jurisdictions(
     session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
 ) -> Any:
@@ -302,7 +314,11 @@ def read_user_jurisdictions(
     return to_public_list(session, rows)
 
 
-@router.get("/{user_id}/jurisdictions/ids", response_model=JurisdictionIds)
+@router.get(
+    "/{user_id}/jurisdictions/ids",
+    response_model=JurisdictionIds,
+    responses=errors(404),
+)
 def read_user_jurisdiction_ids(
     session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
 ) -> Any:
@@ -314,7 +330,11 @@ def read_user_jurisdiction_ids(
     return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
 
 
-@router.put("/{user_id}/jurisdictions", response_model=JurisdictionsPublic)
+@router.put(
+    "/{user_id}/jurisdictions",
+    response_model=JurisdictionsPublic,
+    responses=errors(404),
+)
 def set_user_jurisdictions(
     *,
     session: SessionDep,

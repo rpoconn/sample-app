@@ -128,13 +128,23 @@ export type CompanyUpdate = {
 };
 
 /**
- * HTTPValidationError
+ * ErrorResponse
  */
-export type HTTPValidationError = {
+export type ErrorResponse = {
     /**
      * Detail
      */
-    detail?: Array<ValidationError>;
+    detail: string;
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Context
+     */
+    context?: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -884,34 +894,6 @@ export type UsersPublic = {
     count: number;
 };
 
-/**
- * ValidationError
- */
-export type ValidationError = {
-    /**
-     * Location
-     */
-    loc: Array<string | number>;
-    /**
-     * Message
-     */
-    msg: string;
-    /**
-     * Error Type
-     */
-    type: string;
-    /**
-     * Input
-     */
-    input?: unknown;
-    /**
-     * Context
-     */
-    ctx?: {
-        [key: string]: unknown;
-    };
-};
-
 export type loginLoginAccessTokenData = {
     body: Body_login_login_access_token;
     path?: never;
@@ -921,9 +903,13 @@ export type loginLoginAccessTokenData = {
 
 export type loginLoginAccessTokenErrors = {
     /**
-     * Validation Error
+     * Bad Request
      */
-    422: HTTPValidationError;
+    400: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type loginLoginAccessTokenError = loginLoginAccessTokenErrors[keyof loginLoginAccessTokenErrors];
@@ -944,6 +930,19 @@ export type loginLogoutData = {
     url: '/api/v1/logout';
 };
 
+export type loginLogoutErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type loginLogoutError = loginLogoutErrors[keyof loginLogoutErrors];
+
 export type loginLogoutResponses = {
     /**
      * Successful Response
@@ -959,6 +958,23 @@ export type loginTestTokenData = {
     query?: never;
     url: '/api/v1/login/test-token';
 };
+
+export type loginTestTokenErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type loginTestTokenError = loginTestTokenErrors[keyof loginTestTokenErrors];
 
 export type loginTestTokenResponses = {
     /**
@@ -983,9 +999,9 @@ export type loginRecoverPasswordData = {
 
 export type loginRecoverPasswordErrors = {
     /**
-     * Validation Error
+     * Unprocessable Content
      */
-    422: HTTPValidationError;
+    422: ErrorResponse;
 };
 
 export type loginRecoverPasswordError = loginRecoverPasswordErrors[keyof loginRecoverPasswordErrors];
@@ -1008,9 +1024,13 @@ export type loginResetPasswordData = {
 
 export type loginResetPasswordErrors = {
     /**
-     * Validation Error
+     * Bad Request
      */
-    422: HTTPValidationError;
+    400: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type loginResetPasswordError = loginResetPasswordErrors[keyof loginResetPasswordErrors];
@@ -1038,9 +1058,21 @@ export type loginRecoverPasswordHtmlContentData = {
 
 export type loginRecoverPasswordHtmlContentErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type loginRecoverPasswordHtmlContentError = loginRecoverPasswordHtmlContentErrors[keyof loginRecoverPasswordHtmlContentErrors];
@@ -1072,9 +1104,17 @@ export type usersReadUsersData = {
 
 export type usersReadUsersErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersReadUsersError = usersReadUsersErrors[keyof usersReadUsersErrors];
@@ -1097,9 +1137,25 @@ export type usersCreateUserData = {
 
 export type usersCreateUserErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersCreateUserError = usersCreateUserErrors[keyof usersCreateUserErrors];
@@ -1120,6 +1176,27 @@ export type usersDeleteUserMeData = {
     url: '/api/v1/users/me';
 };
 
+export type usersDeleteUserMeErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type usersDeleteUserMeError = usersDeleteUserMeErrors[keyof usersDeleteUserMeErrors];
+
 export type usersDeleteUserMeResponses = {
     /**
      * Successful Response
@@ -1135,6 +1212,23 @@ export type usersReadUserMeData = {
     query?: never;
     url: '/api/v1/users/me';
 };
+
+export type usersReadUserMeErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type usersReadUserMeError = usersReadUserMeErrors[keyof usersReadUserMeErrors];
 
 export type usersReadUserMeResponses = {
     /**
@@ -1154,9 +1248,21 @@ export type usersUpdateUserMeData = {
 
 export type usersUpdateUserMeErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersUpdateUserMeError = usersUpdateUserMeErrors[keyof usersUpdateUserMeErrors];
@@ -1179,9 +1285,21 @@ export type usersUpdatePasswordMeData = {
 
 export type usersUpdatePasswordMeErrors = {
     /**
-     * Validation Error
+     * Bad Request
      */
-    422: HTTPValidationError;
+    400: ErrorResponse;
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersUpdatePasswordMeError = usersUpdatePasswordMeErrors[keyof usersUpdatePasswordMeErrors];
@@ -1202,6 +1320,23 @@ export type usersReadMyJurisdictionsData = {
     url: '/api/v1/users/me/jurisdictions';
 };
 
+export type usersReadMyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type usersReadMyJurisdictionsError = usersReadMyJurisdictionsErrors[keyof usersReadMyJurisdictionsErrors];
+
 export type usersReadMyJurisdictionsResponses = {
     /**
      * Successful Response
@@ -1220,9 +1355,17 @@ export type usersSetMyJurisdictionsData = {
 
 export type usersSetMyJurisdictionsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersSetMyJurisdictionsError = usersSetMyJurisdictionsErrors[keyof usersSetMyJurisdictionsErrors];
@@ -1243,6 +1386,23 @@ export type usersReadMyJurisdictionIdsData = {
     url: '/api/v1/users/me/jurisdictions/ids';
 };
 
+export type usersReadMyJurisdictionIdsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type usersReadMyJurisdictionIdsError = usersReadMyJurisdictionIdsErrors[keyof usersReadMyJurisdictionIdsErrors];
+
 export type usersReadMyJurisdictionIdsResponses = {
     /**
      * Successful Response
@@ -1261,9 +1421,17 @@ export type usersToggleMyJurisdictionSubtreeData = {
 
 export type usersToggleMyJurisdictionSubtreeErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersToggleMyJurisdictionSubtreeError = usersToggleMyJurisdictionSubtreeErrors[keyof usersToggleMyJurisdictionSubtreeErrors];
@@ -1286,9 +1454,21 @@ export type usersRegisterUserData = {
 
 export type usersRegisterUserErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersRegisterUserError = usersRegisterUserErrors[keyof usersRegisterUserErrors];
@@ -1316,9 +1496,25 @@ export type usersDeleteUserData = {
 
 export type usersDeleteUserErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersDeleteUserError = usersDeleteUserErrors[keyof usersDeleteUserErrors];
@@ -1346,9 +1542,21 @@ export type usersReadUserByIdData = {
 
 export type usersReadUserByIdErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersReadUserByIdError = usersReadUserByIdErrors[keyof usersReadUserByIdErrors];
@@ -1376,9 +1584,25 @@ export type usersUpdateUserData = {
 
 export type usersUpdateUserErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersUpdateUserError = usersUpdateUserErrors[keyof usersUpdateUserErrors];
@@ -1406,9 +1630,21 @@ export type usersReadUserJurisdictionsData = {
 
 export type usersReadUserJurisdictionsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersReadUserJurisdictionsError = usersReadUserJurisdictionsErrors[keyof usersReadUserJurisdictionsErrors];
@@ -1436,9 +1672,21 @@ export type usersSetUserJurisdictionsData = {
 
 export type usersSetUserJurisdictionsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersSetUserJurisdictionsError = usersSetUserJurisdictionsErrors[keyof usersSetUserJurisdictionsErrors];
@@ -1466,9 +1714,21 @@ export type usersReadUserJurisdictionIdsData = {
 
 export type usersReadUserJurisdictionIdsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type usersReadUserJurisdictionIdsError = usersReadUserJurisdictionIdsErrors[keyof usersReadUserJurisdictionIdsErrors];
@@ -1514,9 +1774,17 @@ export type jurisdictionsReadJurisdictionsData = {
 
 export type jurisdictionsReadJurisdictionsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type jurisdictionsReadJurisdictionsError = jurisdictionsReadJurisdictionsErrors[keyof jurisdictionsReadJurisdictionsErrors];
@@ -1539,9 +1807,21 @@ export type jurisdictionsCreateJurisdictionData = {
 
 export type jurisdictionsCreateJurisdictionErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type jurisdictionsCreateJurisdictionError = jurisdictionsCreateJurisdictionErrors[keyof jurisdictionsCreateJurisdictionErrors];
@@ -1577,9 +1857,17 @@ export type jurisdictionsReadJurisdictionTreeData = {
 
 export type jurisdictionsReadJurisdictionTreeErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type jurisdictionsReadJurisdictionTreeError = jurisdictionsReadJurisdictionTreeErrors[keyof jurisdictionsReadJurisdictionTreeErrors];
@@ -1602,9 +1890,17 @@ export type jurisdictionsReadJurisdictionRowsData = {
 
 export type jurisdictionsReadJurisdictionRowsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type jurisdictionsReadJurisdictionRowsError = jurisdictionsReadJurisdictionRowsErrors[keyof jurisdictionsReadJurisdictionRowsErrors];
@@ -1627,9 +1923,17 @@ export type jurisdictionsReadJurisdictionFacetsData = {
 
 export type jurisdictionsReadJurisdictionFacetsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type jurisdictionsReadJurisdictionFacetsError = jurisdictionsReadJurisdictionFacetsErrors[keyof jurisdictionsReadJurisdictionFacetsErrors];
@@ -1657,9 +1961,25 @@ export type jurisdictionsDeleteJurisdictionData = {
 
 export type jurisdictionsDeleteJurisdictionErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type jurisdictionsDeleteJurisdictionError = jurisdictionsDeleteJurisdictionErrors[keyof jurisdictionsDeleteJurisdictionErrors];
@@ -1687,9 +2007,21 @@ export type jurisdictionsReadJurisdictionData = {
 
 export type jurisdictionsReadJurisdictionErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type jurisdictionsReadJurisdictionError = jurisdictionsReadJurisdictionErrors[keyof jurisdictionsReadJurisdictionErrors];
@@ -1717,9 +2049,25 @@ export type jurisdictionsUpdateJurisdictionData = {
 
 export type jurisdictionsUpdateJurisdictionErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type jurisdictionsUpdateJurisdictionError = jurisdictionsUpdateJurisdictionErrors[keyof jurisdictionsUpdateJurisdictionErrors];
@@ -1751,9 +2099,17 @@ export type companiesReadCompaniesData = {
 
 export type companiesReadCompaniesErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesReadCompaniesError = companiesReadCompaniesErrors[keyof companiesReadCompaniesErrors];
@@ -1776,9 +2132,21 @@ export type companiesCreateCompanyData = {
 
 export type companiesCreateCompanyErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesCreateCompanyError = companiesCreateCompanyErrors[keyof companiesCreateCompanyErrors];
@@ -1806,9 +2174,21 @@ export type companiesReadCompanyData = {
 
 export type companiesReadCompanyErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesReadCompanyError = companiesReadCompanyErrors[keyof companiesReadCompanyErrors];
@@ -1836,9 +2216,25 @@ export type companiesUpdateCompanyData = {
 
 export type companiesUpdateCompanyErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesUpdateCompanyError = companiesUpdateCompanyErrors[keyof companiesUpdateCompanyErrors];
@@ -1866,9 +2262,17 @@ export type companiesReadCompanyAdminsData = {
 
 export type companiesReadCompanyAdminsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesReadCompanyAdminsError = companiesReadCompanyAdminsErrors[keyof companiesReadCompanyAdminsErrors];
@@ -1896,9 +2300,17 @@ export type companiesReadCompanyJurisdictionsData = {
 
 export type companiesReadCompanyJurisdictionsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesReadCompanyJurisdictionsError = companiesReadCompanyJurisdictionsErrors[keyof companiesReadCompanyJurisdictionsErrors];
@@ -1926,9 +2338,21 @@ export type companiesSetCompanyJurisdictionsData = {
 
 export type companiesSetCompanyJurisdictionsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesSetCompanyJurisdictionsError = companiesSetCompanyJurisdictionsErrors[keyof companiesSetCompanyJurisdictionsErrors];
@@ -1956,9 +2380,17 @@ export type companiesReadCompanyJurisdictionIdsData = {
 
 export type companiesReadCompanyJurisdictionIdsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesReadCompanyJurisdictionIdsError = companiesReadCompanyJurisdictionIdsErrors[keyof companiesReadCompanyJurisdictionIdsErrors];
@@ -1986,9 +2418,21 @@ export type companiesToggleCompanyJurisdictionSubtreeData = {
 
 export type companiesToggleCompanyJurisdictionSubtreeErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesToggleCompanyJurisdictionSubtreeError = companiesToggleCompanyJurisdictionSubtreeErrors[keyof companiesToggleCompanyJurisdictionSubtreeErrors];
@@ -2016,9 +2460,17 @@ export type companiesReadCompanyJurisdictionUserCountsData = {
 
 export type companiesReadCompanyJurisdictionUserCountsErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesReadCompanyJurisdictionUserCountsError = companiesReadCompanyJurisdictionUserCountsErrors[keyof companiesReadCompanyJurisdictionUserCountsErrors];
@@ -2046,9 +2498,17 @@ export type companiesReadCompanyJurisdictionAffectedUsersData = {
 
 export type companiesReadCompanyJurisdictionAffectedUsersErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type companiesReadCompanyJurisdictionAffectedUsersError = companiesReadCompanyJurisdictionAffectedUsersErrors[keyof companiesReadCompanyJurisdictionAffectedUsersErrors];
@@ -2076,9 +2536,21 @@ export type serviceReadUserJurisdictionIdsForServiceData = {
 
 export type serviceReadUserJurisdictionIdsForServiceErrors = {
     /**
-     * Validation Error
+     * Unauthorized
      */
-    422: HTTPValidationError;
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type serviceReadUserJurisdictionIdsForServiceError = serviceReadUserJurisdictionIdsForServiceErrors[keyof serviceReadUserJurisdictionIdsForServiceErrors];
@@ -2103,9 +2575,17 @@ export type privateCreateUserData = {
 
 export type privateCreateUserErrors = {
     /**
-     * Validation Error
+     * Not Found
      */
-    422: HTTPValidationError;
+    404: ErrorResponse;
+    /**
+     * Conflict
+     */
+    409: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
 };
 
 export type privateCreateUserError = privateCreateUserErrors[keyof privateCreateUserErrors];

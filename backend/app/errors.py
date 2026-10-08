@@ -1,5 +1,20 @@
 from typing import Any
 
+from app.models import ErrorResponse
+
+
+def errors(*status_codes: int) -> dict[int | str, dict[str, Any]]:
+    """OpenAPI `responses` documenting these statuses with the ErrorResponse body."""
+    return {status: {"model": ErrorResponse} for status in status_codes}
+
+
+# FastAPI files a model under the route's media type, so a route with a non-JSON
+# response_class references the schema directly to keep its errors under JSON
+def json_errors(*status_codes: int) -> dict[int | str, dict[str, Any]]:
+    schema = {"$ref": "#/components/schemas/ErrorResponse"}
+    content = {"application/json": {"schema": schema}}
+    return {status: {"content": content} for status in status_codes}
+
 
 # Raised anywhere in the app; app.main maps it onto the HTTP error envelope
 class ApiError(Exception):
