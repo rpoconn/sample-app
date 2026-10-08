@@ -25,7 +25,30 @@ The API is available at `http://localhost:8000`, with automatic interactive docs
 
 Run backend commands from `./backend/` with `uv run`. Make sure your editor uses the Python interpreter in the project root's `.venv` (`.venv/Scripts/python.exe` on Windows, `.venv/bin/python` on macOS/Linux).
 
-Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
+### Code Layout
+
+The code in `./backend/app/` is organized by business domain first, and by kind of code within each domain:
+
+```
+app/
+  main.py            FastAPI app and error handlers
+  api.py             mounts every domain's router
+  tables.py          imports every table module, for Alembic
+  seed.py            first-run data: superuser, jurisdictions, sample plan
+  core/              shared: config, db engine, errors, schemas, generic deps
+  auth/              login, tokens, password reset, current-user deps
+  users/             accounts
+  companies/         tenants and their admins
+  jurisdictions/     the jurisdiction tree
+    grid/            the grid view: filtering, facets, paging
+  selections/        company and user opt-ins, versions, change previews
+  mail/              email rendering and sending
+  internal/          health check, service-to-service and dev-only routes
+```
+
+A domain package holds the files it needs out of `models.py` (tables and API schemas), `service.py` (business logic), `deps.py` (FastAPI dependencies) and `routes.py` (endpoints). When a service grows past one use case, or about 200 lines, it becomes a `service/` package with one module per use case (for example `selections/service/` has `reading.py`, `writing.py`, `versions.py` and `impact.py`). Its `__init__.py` re-exports the public functions, so routes call `service.apply_change(...)`. Inside the domains, import from the concrete module, not the package, to keep import cycles out.
+
+A new table module must also be imported in `app/tables.py`. Tests mirror the layout under `./backend/tests/`, with shared builders in `tests/utils/factories.py`.
 
 ## VS Code
 
@@ -59,7 +82,7 @@ When the tests run, they generate `htmlcov/index.html`. Open it in your browser 
 
 Make sure you create a revision of your models and upgrade the database with that revision every time you change them. From the `backend` directory, use `uv` to run Alembic against the SQLite database:
 
-* Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
+* Alembic is already configured to import your SQLModel models through `./backend/app/tables.py`.
 
 * After changing a model (for example, adding a column), create a revision:
 
@@ -75,7 +98,7 @@ $ uv run alembic revision --autogenerate -m "Add column last_name to User model"
 $ uv run alembic upgrade head
 ```
 
-If you don't want to use migrations at all, uncomment the lines in the file at `./backend/app/core/db.py` that end in:
+If you don't want to use migrations at all, add this to `init_db()` in `./backend/app/seed.py`:
 
 ```python
 SQLModel.metadata.create_all(engine)
@@ -93,7 +116,7 @@ If you don't want to start with the default models and want to remove them / mod
 
 The email templates are written with [React Email](https://react.email) in `./packages/react-email/`. The `emails` directory holds one component per email and the `ui` directory holds the shared components (layout, heading, button, link, callout).
 
-The rendered HTML in `./backend/app/email-templates/` is generated from those components. It is what the application sends and should not be edited by hand.
+The rendered HTML in `./backend/app/mail/templates/` is generated from those components. It is what the application sends and should not be edited by hand.
 
 To preview the emails while editing them, start the dev server from the root of the project:
 
@@ -101,7 +124,7 @@ To preview the emails while editing them, start the dev server from the root of 
 $ bun run email:dev
 ```
 
-Values coming from the backend are declared as Jinja placeholders in the component props, for example `username = "{{ username }}"`. The context for each email is built in `generate_*_email()` in `./backend/app/utils.py`, so a new placeholder needs to be added there too.
+Values coming from the backend are declared as Jinja placeholders in the component props, for example `username = "{{ username }}"`. The context for each email is built in `generate_*_email()` in `./backend/app/mail/service.py`, so a new placeholder needs to be added there too.
 
 Once you are done, regenerate the templates used by the application:
 
