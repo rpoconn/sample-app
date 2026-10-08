@@ -210,13 +210,11 @@ class Jurisdiction(JurisdictionBase, table=True):
     updated_at: datetime | None = Field(default_factory=get_datetime_utc)
 
 
-# Properties to return via API, id is always required
+# Properties to return via API, id is always required. Storage columns (path, depth,
+# sort_order) stay internal: lists return siblings in display order instead.
 class JurisdictionPublic(JurisdictionBase):
     id: uuid.UUID
     parent_id: uuid.UUID | None = None
-    sort_order: int
-    depth: int
-    path: str
     name_path: str
     child_count: int = 0
 

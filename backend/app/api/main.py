@@ -9,6 +9,7 @@ from app.api.routes import (
     service,
     users,
     utils,
+    views,
 )
 from app.core.config import settings
 
@@ -22,6 +23,7 @@ api_router.include_router(utils.router)
 api_router.include_router(jurisdictions.router)
 api_router.include_router(companies.router)
 api_router.include_router(service.router)
+api_router.include_router(views.router)
 
 
 if settings.FASTAPI_ENV == "development":

@@ -5,7 +5,13 @@ from sqlmodel import Session, func, select
 
 from app import crud
 from app.core.db import JURISDICTIONS_SEED_FILE
-from app.models import Jurisdiction, RegionType
+from app.models import (
+    Jurisdiction,
+    JurisdictionCreate,
+    JurisdictionUpdate,
+    RegionType,
+)
+from tests.utils.utils import random_lower_string
 
 
 def _seed_nodes() -> list[dict]:
@@ -72,3 +78,31 @@ def test_seed_sets_codes(db: Session) -> None:
         select(Jurisdiction).where(Jurisdiction.name == "States")
     ).one()
     assert structural.code is None and structural.region_type is None
+
+
+def test_move_touches_descendants_and_refreshes_the_cached_tree(db: Session) -> None:
+    def create(name: str, parent: Jurisdiction | None = None) -> Jurisdiction:
+        return crud.create_jurisdiction(
+            session=db,
+            jurisdiction_in=JurisdictionCreate(
+                name=name, parent_id=parent.id if parent else None
+            ),
+        )
+
+    a, b = create(random_lower_string()), create(random_lower_string())
+    child = create("Child", a)
+    grandchild = create("Grandchild", child)
+    before = crud.get_canonical_tree(session=db)
+
+    crud.update_jurisdiction(
+        session=db, db_obj=child, jurisdiction_in=JurisdictionUpdate(parent_id=b.id)
+    )
+    db.refresh(grandchild)
+    assert grandchild.updated_at == child.updated_at
+    assert grandchild.path.startswith(b.path)
+
+    after = crud.get_canonical_tree(session=db)
+    assert after.etag != before.etag
+    cached = after.index.by_id[grandchild.id]
+    assert cached.name_path == f"{b.name} / Child / Grandchild"
+    assert crud.get_canonical_tree(session=db) is after

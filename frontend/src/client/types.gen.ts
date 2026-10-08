@@ -330,18 +330,6 @@ export type JurisdictionGridRow = {
      */
     parent_id?: string | null;
     /**
-     * Sort Order
-     */
-    sort_order: number;
-    /**
-     * Depth
-     */
-    depth: number;
-    /**
-     * Path
-     */
-    path: string;
-    /**
      * Name Path
      */
     name_path: string;
@@ -413,18 +401,6 @@ export type JurisdictionPublic = {
      * Parent Id
      */
     parent_id?: string | null;
-    /**
-     * Sort Order
-     */
-    sort_order: number;
-    /**
-     * Depth
-     */
-    depth: number;
-    /**
-     * Path
-     */
-    path: string;
     /**
      * Name Path
      */
@@ -2210,21 +2186,14 @@ export type jurisdictionsCreateJurisdictionResponse = jurisdictionsCreateJurisdi
 
 export type jurisdictionsReadJurisdictionTreeData = {
     body?: never;
-    path?: never;
-    query?: {
+    headers?: {
         /**
-         * Sort By
+         * If-None-Match
          */
-        sort_by?: 'name' | 'enabled' | null;
-        /**
-         * Sort Dir
-         */
-        sort_dir?: 'asc' | 'desc';
-        /**
-         * Scope
-         */
-        scope?: 'company' | 'user';
+        'if-none-match'?: string | null;
     };
+    path?: never;
+    query?: never;
     url: '/api/v1/jurisdictions/tree';
 };
 
@@ -2253,72 +2222,6 @@ export type jurisdictionsReadJurisdictionTreeResponses = {
 };
 
 export type jurisdictionsReadJurisdictionTreeResponse = jurisdictionsReadJurisdictionTreeResponses[keyof jurisdictionsReadJurisdictionTreeResponses];
-
-export type jurisdictionsReadJurisdictionRowsData = {
-    body: JurisdictionRowsQuery;
-    path?: never;
-    query?: never;
-    url: '/api/v1/jurisdictions/rows';
-};
-
-export type jurisdictionsReadJurisdictionRowsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type jurisdictionsReadJurisdictionRowsError = jurisdictionsReadJurisdictionRowsErrors[keyof jurisdictionsReadJurisdictionRowsErrors];
-
-export type jurisdictionsReadJurisdictionRowsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionRowsPage;
-};
-
-export type jurisdictionsReadJurisdictionRowsResponse = jurisdictionsReadJurisdictionRowsResponses[keyof jurisdictionsReadJurisdictionRowsResponses];
-
-export type jurisdictionsReadJurisdictionFacetsData = {
-    body: JurisdictionFacetsQuery;
-    path?: never;
-    query?: never;
-    url: '/api/v1/jurisdictions/facets';
-};
-
-export type jurisdictionsReadJurisdictionFacetsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type jurisdictionsReadJurisdictionFacetsError = jurisdictionsReadJurisdictionFacetsErrors[keyof jurisdictionsReadJurisdictionFacetsErrors];
-
-export type jurisdictionsReadJurisdictionFacetsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionFacets;
-};
-
-export type jurisdictionsReadJurisdictionFacetsResponse = jurisdictionsReadJurisdictionFacetsResponses[keyof jurisdictionsReadJurisdictionFacetsResponses];
 
 export type jurisdictionsDeleteJurisdictionData = {
     body?: never;
@@ -2702,6 +2605,72 @@ export type serviceReadUserJurisdictionIdsForServiceResponses = {
 };
 
 export type serviceReadUserJurisdictionIdsForServiceResponse = serviceReadUserJurisdictionIdsForServiceResponses[keyof serviceReadUserJurisdictionIdsForServiceResponses];
+
+export type viewsReadJurisdictionRowsData = {
+    body: JurisdictionRowsQuery;
+    path?: never;
+    query?: never;
+    url: '/api/v1/views/jurisdiction-grid/rows';
+};
+
+export type viewsReadJurisdictionRowsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type viewsReadJurisdictionRowsError = viewsReadJurisdictionRowsErrors[keyof viewsReadJurisdictionRowsErrors];
+
+export type viewsReadJurisdictionRowsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionRowsPage;
+};
+
+export type viewsReadJurisdictionRowsResponse = viewsReadJurisdictionRowsResponses[keyof viewsReadJurisdictionRowsResponses];
+
+export type viewsReadJurisdictionFacetsData = {
+    body: JurisdictionFacetsQuery;
+    path?: never;
+    query?: never;
+    url: '/api/v1/views/jurisdiction-grid/facets';
+};
+
+export type viewsReadJurisdictionFacetsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type viewsReadJurisdictionFacetsError = viewsReadJurisdictionFacetsErrors[keyof viewsReadJurisdictionFacetsErrors];
+
+export type viewsReadJurisdictionFacetsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionFacets;
+};
+
+export type viewsReadJurisdictionFacetsResponse = viewsReadJurisdictionFacetsResponses[keyof viewsReadJurisdictionFacetsResponses];
 
 export type privateCreateUserData = {
     body: PrivateUserCreate;

@@ -11,6 +11,7 @@ import {
     type SelectionChange,
     type UserPublic,
     UsersService,
+    ViewsService,
 } from "@/client"
 import { flagUrlForKeys } from "./flags"
 import type {
@@ -94,7 +95,7 @@ export class JurisdictionGridService {
             queryKey: JurisdictionGridService.keys.facetsFor(mode, filters),
             queryFn: async () =>
                 (
-                    await JurisdictionsService.readJurisdictionFacets({
+                    await ViewsService.readJurisdictionFacets({
                         body: {
                             scope: mode,
                             filters:
@@ -106,7 +107,7 @@ export class JurisdictionGridService {
     }
 
     static async fetchRows(body: JurisdictionRowsQuery) {
-        return (await JurisdictionsService.readJurisdictionRows({ body })).data
+        return (await ViewsService.readJurisdictionRows({ body })).data
     }
 
     static companyQuery(companyId: string) {

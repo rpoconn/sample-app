@@ -21,9 +21,9 @@ type Expansion = { ids: string[] | null; all: boolean }
 
 const serverDefault = (): Expansion => ({ ids: null, all: false })
 
-// Feeds the grid's infinite row model from POST /jurisdictions/rows, one block per
-// request. Browsing and filtering keep separate expansion: a filter opens the
-// ancestors of its matches, and clearing it returns to what was open before.
+// Feeds the grid's infinite row model from POST /views/jurisdiction-grid/rows, one
+// block per request. Browsing and filtering keep separate expansion: a filter opens
+// the ancestors of its matches, and clearing it returns to what was open before.
 export class JurisdictionRowSource implements IDatasource {
     private mode: JurisdictionMode
     private filters: JurisdictionFilters

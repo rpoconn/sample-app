@@ -90,7 +90,8 @@ def test_openapi_documents_errors_as_error_response(client: TestClient) -> None:
     for path, ops in spec["paths"].items():
         for method, op in ops.items():
             for status, response in op["responses"].items():
-                if status.startswith("2"):
+                # 2xx carry the route's model; 304 has no body
+                if status.startswith(("2", "3")):
                     continue
                 schema = response["content"]["application/json"]["schema"]
                 assert schema == {"$ref": ref}, f"{method.upper()} {path} {status}"

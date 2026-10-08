@@ -1,6 +1,8 @@
+import hashlib
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Literal
 
 from sqlalchemy import update
@@ -8,7 +10,7 @@ from sqlmodel import Session, case, col, delete, func, or_, select
 
 from app.core.security import get_password_hash, verify_password
 from app.errors import Conflict, InvalidInput, NotFound, PreconditionFailed
-from app.jurisdiction_query import Selection
+from app.jurisdiction_query import Selection, TreeIndex
 from app.models import (
     DEFAULT_COMPANY_ID,
     Company,
@@ -361,6 +363,8 @@ def update_jurisdiction(
             d.path = db_obj.path + d.path[len(old_path) :]
             d.name_path = db_obj.name_path + d.name_path[len(old_name_path) :]
             d.depth += db_obj.depth - old_depth
+            # The tree cache keys on max(updated_at), so rewritten rows count as edits
+            d.updated_at = db_obj.updated_at
             session.add(d)
 
     session.add(db_obj)
@@ -436,6 +440,51 @@ def update_company(
     return db_obj
 
 
+# Parents before children, siblings in display order
+CANONICAL_ORDER: list[Any] = [
+    col(Jurisdiction.depth),
+    col(Jurisdiction.sort_order),
+    col(Jurisdiction.name),
+]
+
+
+@dataclass(frozen=True)
+class CanonicalTree:
+    """Every jurisdiction in canonical order, as of `key`: (row count, last edit)."""
+
+    key: tuple[int, datetime | None]
+    index: TreeIndex
+
+    @property
+    def etag(self) -> str:
+        digest = hashlib.sha1(repr(self.key).encode()).hexdigest()[:16]
+        return f'W/"tree-{digest}"'
+
+
+# Holds the latest tree only. The key comes from the database, so a worker that
+# missed an edit rebuilds rather than serving stale rows.
+_tree_cache: dict[tuple[int, datetime | None], CanonicalTree] = {}
+
+
+def get_canonical_tree(*, session: Session) -> CanonicalTree:
+    """The tree in canonical order, rebuilt only when a jurisdiction is added,
+    edited or deleted. Sorted views still query: see get_jurisdiction_tree."""
+    count, last_edit = session.exec(
+        select(func.count(), func.max(Jurisdiction.updated_at))
+    ).one()
+    key = (count, last_edit)
+    tree = _tree_cache.get(key)
+    if tree is None:
+        rows = session.exec(select(Jurisdiction).order_by(*CANONICAL_ORDER)).all()
+        # Copies, so the cache never holds rows bound to a closed session
+        tree = CanonicalTree(
+            key=key, index=TreeIndex([Jurisdiction.model_validate(j) for j in rows])
+        )
+        _tree_cache.clear()
+        _tree_cache[key] = tree
+    return tree
+
+
 def get_jurisdiction_tree(
     *,
     session: Session,
@@ -448,11 +497,7 @@ def get_jurisdiction_tree(
     statement = select(Jurisdiction)
     name_key = func.lower(Jurisdiction.name)
     if sort_by is None:
-        order: list[Any] = [
-            col(Jurisdiction.depth),
-            col(Jurisdiction.sort_order),
-            col(Jurisdiction.name),
-        ]
+        order: list[Any] = CANONICAL_ORDER
     elif sort_by == "name":
         key = name_key.desc() if sort_dir == "desc" else name_key.asc()
         order = [key, col(Jurisdiction.sort_order)]
