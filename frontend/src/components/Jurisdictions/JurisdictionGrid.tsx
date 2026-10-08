@@ -49,7 +49,7 @@ const noFilters: JurisdictionFilters = {
     status: "all",
 }
 
-const searchDelay = 250
+const searchDelay = 300
 const searchSettled = (prev: JurisdictionFilters, next: JurisdictionFilters) =>
     prev.search === next.search || next.search === ""
 
@@ -281,7 +281,7 @@ export function JurisdictionGrid({
                     }}
                     onViewSelection={() => setSelectionOpen(true)}
                 />
-                <div className="relative h-[max(24rem,calc(100vh-26rem))] overflow-hidden rounded-md">
+                <div className="relative overflow-hidden rounded-md">
                     <JurisdictionTable
                         gridRef={gridRef}
                         datasource={source}

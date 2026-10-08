@@ -123,10 +123,17 @@ export function idOf(
 }
 
 // The grid only renders rows near the viewport, so narrow it by search first.
-// Matches stay visible under their ancestors.
+// Matches stay visible under their ancestors. Waits for this term's highlight,
+// since the last search's rows linger until the debounced query lands.
 export async function searchFor(page: Page, term: string) {
     await page.getByRole("textbox", { name: "Search jurisdictions" }).fill(term)
-    await expect(page.getByRole("grid").locator("mark").first()).toBeVisible()
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    await expect(
+        page
+            .getByRole("grid")
+            .locator("mark", { hasText: new RegExp(`^${escaped}$`, "i") })
+            .first(),
+    ).toBeVisible()
 }
 
 // A single jurisdiction's switch; subtree switches start "Enable all of"

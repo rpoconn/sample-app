@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test"
-import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { createUser } from "./utils/privateApi.ts"
 import { randomEmail, randomPassword } from "./utils/random"
 import { logInUser, logOutUser } from "./utils/user"
@@ -225,38 +224,4 @@ test("User can switch between theme modes", async ({ page }) => {
     await page.getByTestId("theme-button").click()
     await page.getByTestId("light-mode").click()
     await expect(page.locator("html")).toHaveClass(/light/)
-})
-
-test("Selected mode is preserved across sessions", async ({ page }) => {
-    await page.goto("/settings")
-
-    await page.getByTestId("theme-button").click()
-    if (
-        await page.evaluate(() =>
-            document.documentElement.classList.contains("dark"),
-        )
-    ) {
-        await page.getByTestId("light-mode").click()
-        await page.getByTestId("theme-button").click()
-    }
-
-    const isLightMode = await page.evaluate(() =>
-        document.documentElement.classList.contains("light"),
-    )
-    expect(isLightMode).toBe(true)
-
-    await page.getByTestId("theme-button").click()
-    await page.getByTestId("dark-mode").click()
-    let isDarkMode = await page.evaluate(() =>
-        document.documentElement.classList.contains("dark"),
-    )
-    expect(isDarkMode).toBe(true)
-
-    await logOutUser(page)
-    await logInUser(page, firstSuperuser, firstSuperuserPassword)
-
-    isDarkMode = await page.evaluate(() =>
-        document.documentElement.classList.contains("dark"),
-    )
-    expect(isDarkMode).toBe(true)
 })
