@@ -15,8 +15,13 @@ from typing import Any
 
 from fastapi import APIRouter, Response
 
-from app.core.deps import IfMatchVersion, SessionDep
-from app.core.errors import InvalidInput, PreconditionRequired, errors
+from app.core.deps import IfMatch, IfMatchDep, SessionDep
+from app.core.errors import (
+    InvalidInput,
+    PreconditionFailed,
+    PreconditionRequired,
+    errors,
+)
 from app.selections import selection_service
 from app.selections.selection_deps import (
     CompanyReader,
@@ -47,7 +52,20 @@ def _out(
     return selection
 
 
-def _require_if_match(version: int | None) -> int:
+def _version(owner: SelectionOwner, if_match: IfMatch | None) -> int | None:
+    """The If-Match version, once any ETag in it is known to be this owner's."""
+    if if_match is None:
+        return None
+    if if_match.tag is not None and if_match.tag != owner.tag:
+        raise PreconditionFailed(
+            "If-Match is the ETag of another selection",
+            code="etag_owner_mismatch",
+        )
+    return if_match.version
+
+
+def _require_if_match(owner: SelectionOwner, if_match: IfMatch | None) -> int:
+    version = _version(owner, if_match)
     if version is None:
         raise PreconditionRequired(
             "Send If-Match with the selection's ETag; read it first with GET"
@@ -68,9 +86,9 @@ def _put(
     response: Response,
     owner: SelectionOwner,
     body: JurisdictionSelection,
-    version: int | None,
+    if_match: IfMatch | None,
 ) -> JurisdictionSelectionOut:
-    expected = _require_if_match(version)
+    expected = _require_if_match(owner, if_match)
     if not body.jurisdiction_ids:
         raise InvalidInput(
             "Clear the selection with DELETE instead", code="use_delete_to_clear"
@@ -89,10 +107,13 @@ def _patch(
     response: Response,
     owner: SelectionOwner,
     change: SelectionChange,
-    version: int | None,
+    if_match: IfMatch | None,
 ) -> JurisdictionSelectionOut:
     selection = selection_service.apply_change(
-        session=session, owner=owner, change=change, expected_version=version
+        session=session,
+        owner=owner,
+        change=change,
+        expected_version=_version(owner, if_match),
     )
     return _out(response, owner, selection)
 
@@ -101,13 +122,13 @@ def _delete(
     session: SessionDep,
     response: Response,
     owner: SelectionOwner,
-    version: int | None,
+    if_match: IfMatch | None,
 ) -> JurisdictionSelectionOut:
     selection = selection_service.apply_selection(
         session=session,
         owner=owner,
         wanted=[],
-        expected_version=_require_if_match(version),
+        expected_version=_require_if_match(owner, if_match),
     )
     return _out(response, owner, selection)
 
@@ -137,12 +158,12 @@ def set_my_jurisdictions(
     response: Response,
     owner: MyOwner,
     body: JurisdictionSelection,
-    version: IfMatchVersion,
+    if_match: IfMatchDep,
 ) -> Any:
     """
     Replace the current user's opt-ins; each must be opted into by their company.
     """
-    return _put(session, response, owner, body, version)
+    return _put(session, response, owner, body, if_match)
 
 
 @users_router.patch(
@@ -153,25 +174,25 @@ def patch_my_jurisdictions(
     response: Response,
     owner: MyOwner,
     body: SelectionChange,
-    version: IfMatchVersion,
+    if_match: IfMatchDep,
 ) -> Any:
     """
     Add or remove opt-ins for the current user. add_subtrees skips jurisdictions
     their company hasn't opted into.
     """
-    return _patch(session, response, owner, body, version)
+    return _patch(session, response, owner, body, if_match)
 
 
 @users_router.delete(
     "/me/jurisdictions", response_model=JurisdictionSelectionOut, responses=PUT_ERRORS
 )
 def clear_my_jurisdictions(
-    session: SessionDep, response: Response, owner: MyOwner, version: IfMatchVersion
+    session: SessionDep, response: Response, owner: MyOwner, if_match: IfMatchDep
 ) -> Any:
     """
     Clear the current user's opt-ins.
     """
-    return _delete(session, response, owner, version)
+    return _delete(session, response, owner, if_match)
 
 
 @users_router.get(
@@ -198,12 +219,12 @@ def set_user_jurisdictions(
     response: Response,
     owner: UserOwner,
     body: JurisdictionSelection,
-    version: IfMatchVersion,
+    if_match: IfMatchDep,
 ) -> Any:
     """
     Replace a user's opt-ins. Allowed for superusers and admins of the user's company.
     """
-    return _put(session, response, owner, body, version)
+    return _put(session, response, owner, body, if_match)
 
 
 @users_router.patch(
@@ -216,13 +237,13 @@ def patch_user_jurisdictions(
     response: Response,
     owner: UserOwner,
     body: SelectionChange,
-    version: IfMatchVersion,
+    if_match: IfMatchDep,
 ) -> Any:
     """
     Add or remove a user's opt-ins. Allowed for superusers and admins of the user's
     company.
     """
-    return _patch(session, response, owner, body, version)
+    return _patch(session, response, owner, body, if_match)
 
 
 @users_router.delete(
@@ -231,12 +252,12 @@ def patch_user_jurisdictions(
     responses=PUT_ERRORS,
 )
 def clear_user_jurisdictions(
-    session: SessionDep, response: Response, owner: UserOwner, version: IfMatchVersion
+    session: SessionDep, response: Response, owner: UserOwner, if_match: IfMatchDep
 ) -> Any:
     """
     Clear a user's opt-ins. Allowed for superusers and admins of the user's company.
     """
-    return _delete(session, response, owner, version)
+    return _delete(session, response, owner, if_match)
 
 
 @companies_router.get(
@@ -263,12 +284,12 @@ def set_company_jurisdictions(
     response: Response,
     owner: CompanyWriter,
     body: JurisdictionSelection,
-    version: IfMatchVersion,
+    if_match: IfMatchDep,
 ) -> Any:
     """
     Replace the company's opt-ins. Users lose any opt-in the company drops.
     """
-    return _put(session, response, owner, body, version)
+    return _put(session, response, owner, body, if_match)
 
 
 @companies_router.patch(
@@ -281,13 +302,13 @@ def patch_company_jurisdictions(
     response: Response,
     owner: CompanyWriter,
     body: SelectionChange,
-    version: IfMatchVersion,
+    if_match: IfMatchDep,
 ) -> Any:
     """
     Add or remove the company's opt-ins. Users lose any opt-in the company drops;
     preview the change first to see who.
     """
-    return _patch(session, response, owner, body, version)
+    return _patch(session, response, owner, body, if_match)
 
 
 @companies_router.delete(
@@ -299,12 +320,12 @@ def clear_company_jurisdictions(
     session: SessionDep,
     response: Response,
     owner: CompanyWriter,
-    version: IfMatchVersion,
+    if_match: IfMatchDep,
 ) -> Any:
     """
     Clear the company's opt-ins, and with them every opt-in of its users.
     """
-    return _delete(session, response, owner, version)
+    return _delete(session, response, owner, if_match)
 
 
 # POST so a large change doesn't overflow the URL; nothing is written

@@ -98,10 +98,7 @@ def update_user_me(
             raise Conflict("User with this email already exists", code="email_taken")
     user_data = user_in.model_dump(exclude_unset=True)
     current_user.sqlmodel_update(user_data)
-    session.add(current_user)
-    session.commit()
-    session.refresh(current_user)
-    return current_user
+    return user_service.save_user(session=session, user=current_user)
 
 
 @router.patch("/me/password", response_model=Message, responses=errors(400))

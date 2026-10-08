@@ -1,9 +1,11 @@
 from typing import Any
 
-from sqlmodel import Session, col, delete, select
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, col, delete, func, select
 
 from app.companies.company_models import DEFAULT_COMPANY_ID, CompanyRole
 from app.companies.company_service import get_company
+from app.core.errors import Conflict
 from app.core.security import get_password_hash
 from app.selections.selection_models import UserJurisdiction
 from app.selections.selection_service.versions import bump_user_versions
@@ -24,10 +26,7 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
             "company_id": company_id,
         },
     )
-    session.add(db_obj)
-    session.commit()
-    session.refresh(db_obj)
-    return db_obj
+    return save_user(session=session, user=db_obj)
 
 
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
@@ -56,10 +55,20 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
         )
         bump_user_versions(session=session, user_ids=[db_user.id])
     db_user.sqlmodel_update(user_data, update=extra_data)
-    session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
-    return db_user
+    return save_user(session=session, user=db_user)
+
+
+def save_user(*, session: Session, user: User) -> User:
+    """Commit the user. The callers check the email first, but a concurrent write
+    can still take it, and the unique index then answers 409, not 500."""
+    session.add(user)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise Conflict("User with this email already exists", code="email_taken")
+    session.refresh(user)
+    return user
 
 
 def delete_user(*, session: Session, db_user: User) -> None:
@@ -71,6 +80,6 @@ def delete_user(*, session: Session, db_user: User) -> None:
 
 
 def get_user_by_email(*, session: Session, email: str) -> User | None:
-    statement = select(User).where(User.email == email)
+    statement = select(User).where(func.lower(User.email) == email.lower())
     session_user = session.exec(statement).first()
     return session_user

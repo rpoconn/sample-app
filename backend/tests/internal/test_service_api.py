@@ -96,3 +96,9 @@ def test_inactive_user_or_company_monitors_nothing(
     r = client.get(url(other.id), headers=headers)
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_non_ascii_api_key_is_rejected(client: TestClient, db: Session) -> None:
+    user = make_user(db, make_company(db))
+    r = client.get(url(user.id), headers={"X-API-Key": b"cl\xe9"})
+    assert_error(r, 401, "invalid_api_key")

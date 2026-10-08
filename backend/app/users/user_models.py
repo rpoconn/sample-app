@@ -1,12 +1,17 @@
 import uuid
 from datetime import datetime
 
-from pydantic import EmailStr
+from pydantic import EmailStr, field_validator
 from sqlalchemy import CheckConstraint, String, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.companies.company_models import DEFAULT_COMPANY_ID, CompanyRole
 from app.core.schemas import get_datetime_utc
+
+
+def lower_email(email: str | None) -> str | None:
+    """Emails are stored and looked up lowercased, so case never makes a new account."""
+    return email.lower() if email else email
 
 
 # Shared properties
@@ -15,6 +20,8 @@ class UserBase(SQLModel):
     is_active: bool = True
     is_superuser: bool = False
     full_name: str | None = Field(default=None, max_length=255)
+
+    normalize_email = field_validator("email")(lower_email)
 
 
 # Properties to receive via API on creation
@@ -30,6 +37,8 @@ class UserRegister(SQLModel):
     password: str = Field(min_length=8, max_length=128)
     full_name: str | None = Field(default=None, max_length=255)
 
+    normalize_email = field_validator("email")(lower_email)
+
 
 # Properties to receive via API on update, all are optional
 class UserUpdate(SQLModel):
@@ -41,10 +50,14 @@ class UserUpdate(SQLModel):
     company_id: uuid.UUID | None = None
     company_role: CompanyRole | None = None
 
+    normalize_email = field_validator("email")(lower_email)
+
 
 class UserUpdateMe(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
     email: EmailStr | None = Field(default=None, max_length=255)
+
+    normalize_email = field_validator("email")(lower_email)
 
 
 class UpdatePassword(SQLModel):

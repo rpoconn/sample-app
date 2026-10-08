@@ -3,7 +3,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.companies import company_service as companies
 from app.companies.company_models import DEFAULT_COMPANY_ID, CompanyRole
@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.jurisdictions import jurisdiction_service as jurisdictions
 from app.selections import selection_service as selections
 from app.users import user_service as users
-from app.users.user_models import User, UserCreate
+from app.users.user_models import UserCreate
 
 JURISDICTIONS_SEED_FILE = Path(__file__).parent / "data" / "jurisdictions.json"
 
@@ -54,9 +54,7 @@ def init_db(session: Session) -> None:
     # Normally created by the migration; recreated here if it was removed
     companies.ensure_default_company(session=session, name="[Company Name]")
 
-    user = session.exec(
-        select(User).where(User.email == settings.FIRST_SUPERUSER)
-    ).first()
+    user = users.get_user_by_email(session=session, email=settings.FIRST_SUPERUSER)
     if not user:
         user_in = UserCreate(
             email=settings.FIRST_SUPERUSER,

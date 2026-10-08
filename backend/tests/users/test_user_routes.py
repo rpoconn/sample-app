@@ -375,6 +375,29 @@ def test_register_user(client: TestClient, db: Session) -> None:
     assert verified
 
 
+def test_email_ignores_case(client: TestClient) -> None:
+    email = random_email()
+    password = random_lower_string()
+    r = client.post(
+        f"{settings.API_V1_STR}/users/signup",
+        json={"email": email.upper(), "password": password},
+    )
+    assert r.status_code == 200
+    assert r.json()["email"] == email
+
+    r = client.post(
+        f"{settings.API_V1_STR}/users/signup",
+        json={"email": email.capitalize(), "password": password},
+    )
+    assert_error(r, 409, "email_taken")
+
+    r = client.post(
+        f"{settings.API_V1_STR}/login/access-token",
+        data={"username": email.title(), "password": password},
+    )
+    assert r.status_code == 200
+
+
 def test_register_user_already_exists_error(client: TestClient) -> None:
     password = random_lower_string()
     full_name = random_lower_string()

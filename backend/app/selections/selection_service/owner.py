@@ -22,8 +22,13 @@ class SelectionOwner:
     def of_user(cls, user: User) -> SelectionOwner:
         return cls("user", user.id, user.company_id)
 
+    @property
+    def tag(self) -> str:
+        """The owner part of the ETag, "c-<id>" or "u-<id>"."""
+        return f"{self.kind[0]}-{self.id}"
+
     def etag(self, version: int) -> str:
-        return f'W/"{self.kind[0]}-{self.id}-{version}"'
+        return f'W/"{self.tag}-{version}"'
 
 
 def owner_table(owner: SelectionOwner) -> type[Company] | type[User]:

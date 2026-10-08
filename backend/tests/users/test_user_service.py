@@ -1,8 +1,10 @@
+import pytest
 from fastapi.encoders import jsonable_encoder
 from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlmodel import Session
 
 from app.auth.auth_service import authenticate
+from app.core.errors import Conflict
 from app.core.security import verify_password
 from app.users.user_models import User, UserCreate, UserUpdate
 from app.users.user_service import create_user, update_user
@@ -129,3 +131,13 @@ def test_authenticate_user_with_bcrypt_upgrades_to_argon2(db: Session) -> None:
     assert verified
     # Should not need another update since it's already argon2
     assert updated_hash is None
+
+
+def test_duplicate_email_is_a_conflict(db: Session) -> None:
+    """A concurrent write can take the email after a route checks it; the unique
+    index then answers 409 instead of 500."""
+    user_in = UserCreate(email=random_email(), password=random_lower_string())
+    create_user(session=db, user_create=user_in)
+    with pytest.raises(Conflict) as exc:
+        create_user(session=db, user_create=user_in)
+    assert exc.value.code == "email_taken"

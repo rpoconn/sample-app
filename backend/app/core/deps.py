@@ -1,6 +1,6 @@
 import re
 from collections.abc import Generator
-from typing import Annotated
+from typing import Annotated, NamedTuple
 
 from fastapi import Depends, Header
 from sqlmodel import Session
@@ -18,13 +18,19 @@ SessionDep = Annotated[Session, Depends(get_db)]
 
 
 # A selection's ETag, W/"c-<id>-<version>", or the bare version number
-_IF_MATCH = re.compile(r'^(?:W/)?"?(?:[cu]-[0-9a-fA-F-]{36}-)?(\d+)"?$')
+_IF_MATCH = re.compile(r'^(?:W/)?"?(?:([cu]-[0-9a-fA-F-]{36})-)?(\d+)"?$')
 
 
-def if_match_version(
+class IfMatch(NamedTuple):
+    version: int
+    # The ETag's owner, "c-<id>" or "u-<id>"; None for a bare version number
+    tag: str | None
+
+
+def if_match_header(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
-) -> int | None:
-    """The version an If-Match header names, or None when it wasn't sent."""
+) -> IfMatch | None:
+    """The version and owner an If-Match header names, or None when it wasn't sent."""
     if if_match is None:
         return None
     match = _IF_MATCH.match(if_match.strip())
@@ -33,7 +39,8 @@ def if_match_version(
             "If-Match must be the selection's ETag or version",
             code="invalid_if_match",
         )
-    return int(match.group(1))
+    tag, version = match.groups()
+    return IfMatch(int(version), tag.lower() if tag else None)
 
 
-IfMatchVersion = Annotated[int | None, Depends(if_match_version)]
+IfMatchDep = Annotated[IfMatch | None, Depends(if_match_header)]

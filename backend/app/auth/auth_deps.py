@@ -73,7 +73,9 @@ def require_service_caller(
     """Let in another service holding SERVICE_API_KEY, or a superuser's bearer token."""
     if api_key is not None:
         expected = settings.SERVICE_API_KEY
-        if not expected or not secrets.compare_digest(api_key, expected):
+        if not expected or not secrets.compare_digest(
+            api_key.encode(), expected.encode()
+        ):
             raise Unauthorized("Invalid API key", code="invalid_api_key")
         return
     if token is None:

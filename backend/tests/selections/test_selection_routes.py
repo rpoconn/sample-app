@@ -83,6 +83,28 @@ def test_put_requires_matching_if_match(client: TestClient, s: Setup) -> None:
     assert_error(r, 412, "invalid_if_match")
 
 
+def test_etag_of_another_selection_is_rejected(client: TestClient, s: Setup) -> None:
+    url, h = company_url(s), s.admin.headers
+    body = {"jurisdiction_ids": ids(s.allowed)}
+    # Same version number, but the ETag names the member's selection
+    other = f'W/"u-{s.member.user.id}-0"'
+
+    for r in (
+        client.put(url, headers={**h, "If-Match": other}, json=body),
+        client.patch(
+            url, headers={**h, "If-Match": other}, json={"add": ids(s.allowed)}
+        ),
+        client.delete(url, headers={**h, "If-Match": other}),
+    ):
+        assert_error(r, 412, "etag_owner_mismatch")
+    assert read(client, url, h) == (set(), 0)
+
+    # The owner's id is matched regardless of case
+    own = f'W/"c-{str(s.company.id).upper()}-0"'
+    r = client.put(url, headers={**h, "If-Match": own}, json=body)
+    assert selection(r) == ({str(s.allowed.id)}, 1)
+
+
 def test_second_write_from_the_same_snapshot_loses(
     client: TestClient, s: Setup
 ) -> None:
