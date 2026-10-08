@@ -1,7 +1,7 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import EmailStr
 from sqlalchemy import (
@@ -14,18 +14,7 @@ from sqlalchemy import (
 )
 from sqlmodel import Field, SQLModel
 
-
-def get_datetime_utc() -> datetime:
-    return datetime.now(UTC)
-
-
-# Seeded by migration; users created without a company_id are placed here
-DEFAULT_COMPANY_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
-
-
-class CompanyRole(StrEnum):
-    member = "member"
-    admin = "admin"
+from app.models.models import get_datetime_utc
 
 
 # Disambiguates codes that repeat across levels, e.g. "CA" is Canada or California
@@ -33,139 +22,6 @@ class RegionType(StrEnum):
     country = "country"
     subdivision = "subdivision"
     city = "city"
-
-
-# Shared properties
-class CompanyBase(SQLModel):
-    name: str = Field(min_length=1, max_length=255, unique=True, index=True)
-    is_active: bool = True
-
-
-# Properties to receive via API on creation
-class CompanyCreate(CompanyBase):
-    pass
-
-
-# Properties to receive via API on update, all are optional
-class CompanyUpdate(SQLModel):
-    name: str | None = Field(default=None, min_length=1, max_length=255)
-    is_active: bool | None = None
-
-
-# Database model, database table inferred from class name
-class Company(CompanyBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    # Bumped on every write to the company's opt-ins; the ETag of its selection
-    jurisdictions_version: int = Field(
-        default=0, sa_column_kwargs={"server_default": "0"}
-    )
-    created_at: datetime | None = Field(default_factory=get_datetime_utc)
-    updated_at: datetime | None = Field(default_factory=get_datetime_utc)
-
-
-# Properties to return via API, id is always required
-class CompanyPublic(CompanyBase):
-    id: uuid.UUID
-    created_at: datetime | None = None
-
-
-class CompaniesPublic(SQLModel):
-    data: list[CompanyPublic]
-    count: int
-
-
-# Shared properties
-class UserBase(SQLModel):
-    email: EmailStr = Field(unique=True, index=True, max_length=255)
-    is_active: bool = True
-    is_superuser: bool = False
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive via API on creation
-class UserCreate(UserBase):
-    password: str = Field(min_length=8, max_length=128)
-    # None places the user in the default company
-    company_id: uuid.UUID | None = None
-    company_role: CompanyRole = CompanyRole.admin
-
-
-class UserRegister(SQLModel):
-    email: EmailStr = Field(max_length=255)
-    password: str = Field(min_length=8, max_length=128)
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive via API on update, all are optional
-class UserUpdate(SQLModel):
-    email: EmailStr | None = Field(default=None, max_length=255)
-    is_active: bool | None = None
-    is_superuser: bool | None = None
-    full_name: str | None = Field(default=None, max_length=255)
-    password: str | None = Field(default=None, min_length=8, max_length=128)
-    company_id: uuid.UUID | None = None
-    company_role: CompanyRole | None = None
-
-
-class UserUpdateMe(SQLModel):
-    full_name: str | None = Field(default=None, max_length=255)
-    email: EmailStr | None = Field(default=None, max_length=255)
-
-
-class UpdatePassword(SQLModel):
-    current_password: str = Field(min_length=8, max_length=128)
-    new_password: str = Field(min_length=8, max_length=128)
-
-
-# Database model, database table inferred from class name
-class User(UserBase, table=True):
-    __table_args__ = (
-        # Target for user_jurisdiction's (user_id, company_id) foreign key
-        UniqueConstraint("id", "company_id", name="uq_user_id_company"),
-        CheckConstraint(
-            "company_role IN ('member', 'admin')", name="ck_user_company_role"
-        ),
-    )
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    hashed_password: str
-    company_id: uuid.UUID = Field(
-        default=DEFAULT_COMPANY_ID,
-        foreign_key="company.id",
-        nullable=False,
-        ondelete="RESTRICT",
-        index=True,
-    )
-    company_role: CompanyRole = Field(default=CompanyRole.admin, sa_type=String(20))
-    created_at: datetime | None = Field(default_factory=get_datetime_utc)
-    # Bumped on every write to the user's opt-ins, cascades included
-    jurisdictions_version: int = Field(
-        default=0, sa_column_kwargs={"server_default": "0"}
-    )
-
-
-# Properties to return via API, id is always required
-class UserPublic(UserBase):
-    id: uuid.UUID
-    company_id: uuid.UUID
-    company_role: CompanyRole
-    created_at: datetime | None = None
-
-
-class UsersPublic(SQLModel):
-    data: list[UserPublic]
-    count: int
-
-
-# Who members can contact to change company settings; only what's needed to reach them
-class CompanyAdmin(SQLModel):
-    email: EmailStr
-    full_name: str | None = None
-
-
-class CompanyAdmins(SQLModel):
-    data: list[CompanyAdmin]
-    count: int
 
 
 # Shared properties
@@ -451,39 +307,3 @@ class JurisdictionFacets(SQLModel):
     by_type: dict[RegionType, list[uuid.UUID]]
     status_counts: JurisdictionStatusCounts
     summary: JurisdictionSummary
-
-
-# Generic message
-class Message(SQLModel):
-    message: str
-
-
-# The body of every error response; see app.errors
-class ErrorResponse(SQLModel):
-    detail: str
-    code: str
-    context: dict[str, Any] = Field(default_factory=dict)
-
-
-# JSON payload containing access token
-class Token(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
-# Contents of JWT token
-class TokenPayload(SQLModel):
-    sub: uuid.UUID | None = None
-    jti: uuid.UUID
-    exp: datetime
-
-
-# Access tokens revoked by logout; rows can be pruned once expires_at has passed
-class RevokedToken(SQLModel, table=True):
-    jti: uuid.UUID = Field(primary_key=True)
-    expires_at: datetime = Field(index=True)
-
-
-class NewPassword(SQLModel):
-    token: str
-    new_password: str = Field(min_length=8, max_length=128)
