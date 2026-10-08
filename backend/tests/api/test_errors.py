@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
 from app.core.config import settings
-from app.models import UserCreate
+from app.users.models import UserCreate
+from app.users.service import create_user
 from tests.utils.user import user_authentication_headers
 from tests.utils.utils import random_email, random_lower_string
 
@@ -70,7 +70,7 @@ def test_bad_token_401_has_www_authenticate(client: TestClient) -> None:
 
 def test_inactive_user_403(client: TestClient, db: Session) -> None:
     email, password = random_email(), random_lower_string()
-    user = crud.create_user(
+    user = create_user(
         session=db, user_create=UserCreate(email=email, password=password)
     )
     headers = user_authentication_headers(client=client, email=email, password=password)

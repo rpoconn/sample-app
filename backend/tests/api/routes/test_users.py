@@ -6,11 +6,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, col, select
 
-from app import crud
 from app.core.config import settings
+from app.core.errors import Conflict
 from app.core.security import verify_password
-from app.errors import Conflict
-from app.models import User, UserCreate
+from app.users.models import User, UserCreate
+from app.users.service import create_user, delete_user, get_user_by_email
 from tests.utils.user import create_random_user
 from tests.utils.utils import assert_error, random_email, random_lower_string
 
@@ -41,7 +41,7 @@ def test_create_user_new_email(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     with (
-        patch("app.utils.send_email", return_value=None),
+        patch("app.users.routes.send_email", return_value=None),
         patch("app.core.config.settings.SMTP_HOST", "smtp.example.com"),
         patch("app.core.config.settings.SMTP_USER", "admin@example.com"),
     ):
@@ -55,7 +55,7 @@ def test_create_user_new_email(
         )
         assert 200 <= r.status_code < 300
         created_user = r.json()
-        user = crud.get_user_by_email(session=db, email=username)
+        user = get_user_by_email(session=db, email=username)
         assert user
         assert user.email == created_user["email"]
 
@@ -66,7 +66,7 @@ def test_get_existing_user_as_superuser(
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_user(session=db, user_create=user_in)
     user_id = user.id
     r = client.get(
         f"{settings.API_V1_STR}/users/{user_id}",
@@ -74,7 +74,7 @@ def test_get_existing_user_as_superuser(
     )
     assert 200 <= r.status_code < 300
     api_user = r.json()
-    existing_user = crud.get_user_by_email(session=db, email=username)
+    existing_user = get_user_by_email(session=db, email=username)
     assert existing_user
     assert existing_user.email == api_user["email"]
 
@@ -98,7 +98,7 @@ def test_get_existing_user_current_user(client: TestClient, db: Session) -> None
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_user(session=db, user_create=user_in)
     user_id = user.id
 
     login_data = {
@@ -116,7 +116,7 @@ def test_get_existing_user_current_user(client: TestClient, db: Session) -> None
     )
     assert 200 <= r.status_code < 300
     api_user = r.json()
-    existing_user = crud.get_user_by_email(session=db, email=username)
+    existing_user = get_user_by_email(session=db, email=username)
     assert existing_user
     assert existing_user.email == api_user["email"]
 
@@ -165,7 +165,7 @@ def test_create_user_existing_username(
     # username = email
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    crud.create_user(session=db, user_create=user_in)
+    create_user(session=db, user_create=user_in)
     data = {"email": username, "password": password}
     r = client.post(
         f"{settings.API_V1_STR}/users",
@@ -196,12 +196,12 @@ def test_retrieve_users(
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    crud.create_user(session=db, user_create=user_in)
+    create_user(session=db, user_create=user_in)
 
     username2 = random_email()
     password2 = random_lower_string()
     user_in2 = UserCreate(email=username2, password=password2)
-    crud.create_user(session=db, user_create=user_in2)
+    create_user(session=db, user_create=user_in2)
 
     r = client.get(f"{settings.API_V1_STR}/users", headers=superuser_token_headers)
     all_users = r.json()
@@ -322,7 +322,7 @@ def test_update_user_me_email_exists(
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_user(session=db, user_create=user_in)
 
     data = {"email": user.email}
     r = client.patch(
@@ -397,7 +397,7 @@ def test_update_user(
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_user(session=db, user_create=user_in)
 
     data = {"full_name": "Updated_full_name"}
     r = client.patch(
@@ -436,12 +436,12 @@ def test_update_user_email_exists(
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_user(session=db, user_create=user_in)
 
     username2 = random_email()
     password2 = random_lower_string()
     user_in2 = UserCreate(email=username2, password=password2)
-    user2 = crud.create_user(session=db, user_create=user_in2)
+    user2 = create_user(session=db, user_create=user_in2)
 
     data = {"email": user2.email}
     r = client.patch(
@@ -457,7 +457,7 @@ def test_delete_user_me(client: TestClient, db: Session) -> None:
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_user(session=db, user_create=user_in)
     user_id = user.id
 
     login_data = {
@@ -501,7 +501,7 @@ def test_delete_user_super_user(
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_user(session=db, user_create=user_in)
     user_id = user.id
     r = client.delete(
         f"{settings.API_V1_STR}/users/{user_id}",
@@ -528,7 +528,7 @@ def test_delete_user_not_found(
 def test_delete_user_current_super_user_error(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    super_user = crud.get_user_by_email(session=db, email=settings.FIRST_SUPERUSER)
+    super_user = get_user_by_email(session=db, email=settings.FIRST_SUPERUSER)
     assert super_user
     user_id = super_user.id
 
@@ -546,7 +546,7 @@ def test_delete_user_without_privileges(
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_user(session=db, user_create=user_in)
 
     r = client.delete(
         f"{settings.API_V1_STR}/users/{user.id}",
@@ -570,7 +570,7 @@ def sole_superuser(db: Session) -> Generator[User]:
         user.is_superuser = False
         db.add(user)
     db.commit()
-    first = crud.get_user_by_email(session=db, email=settings.FIRST_SUPERUSER)
+    first = get_user_by_email(session=db, email=settings.FIRST_SUPERUSER)
     assert first
     yield first
     for user in others:
@@ -593,7 +593,7 @@ def test_last_superuser_is_kept(
 
     # Once a second superuser exists, either one can step down
     email, password = random_email(), random_lower_string()
-    second = crud.create_user(
+    second = create_user(
         session=db,
         user_create=UserCreate(email=email, password=password, is_superuser=True),
     )
@@ -608,5 +608,5 @@ def test_last_superuser_is_kept(
 def test_last_superuser_cannot_be_deleted(db: Session, sole_superuser: User) -> None:
     # The API can't reach this (superusers can't delete themselves), so check crud
     with pytest.raises(Conflict) as exc:
-        crud.delete_user(session=db, db_user=sole_superuser)
+        delete_user(session=db, db_user=sole_superuser)
     assert exc.value.code == "last_superuser"

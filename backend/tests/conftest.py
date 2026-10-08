@@ -15,8 +15,9 @@ from fastapi.testclient import TestClient  # noqa: E402
 from sqlmodel import Session  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
-from app.core.db import engine, init_db  # noqa: E402
+from app.core.db import engine  # noqa: E402
 from app.main import app  # noqa: E402
+from app.seed import init_db  # noqa: E402
 from tests.utils.user import authentication_token_from_email  # noqa: E402
 from tests.utils.utils import get_superuser_token_headers  # noqa: E402
 

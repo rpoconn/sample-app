@@ -3,14 +3,9 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from sqlmodel import Session
 
-from app import crud
+from app.companies.models import DEFAULT_COMPANY_ID, Company, CompanyCreate, CompanyRole
+from app.companies.service import create_company
 from app.core.config import settings
-from app.models import (
-    DEFAULT_COMPANY_ID,
-    Company,
-    CompanyCreate,
-    CompanyRole,
-)
 from tests.api.routes.conftest import Account, Setup, make_account
 from tests.utils.utils import assert_error, random_lower_string
 
@@ -160,7 +155,7 @@ def test_sole_user_admin_can_leave(
     s: Setup,
     how: str,
 ) -> None:
-    company = crud.create_company(
+    company = create_company(
         session=db, company_in=CompanyCreate(name=random_lower_string())
     )
     admin = make_account(client, db, company, CompanyRole.admin)

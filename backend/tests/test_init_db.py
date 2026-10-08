@@ -1,6 +1,6 @@
 import json
 
-from app.core.db import JURISDICTIONS_SEED_FILE, _plan_jurisdiction_ids
+from app.seed import JURISDICTIONS_SEED_FILE, _plan_jurisdiction_ids
 
 
 def _name_paths_by_id(nodes, names=()):

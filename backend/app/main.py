@@ -10,9 +10,9 @@ from fastapi.routing import APIRoute
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 
-from app.api.main import api_router
+from app.api import api_router
 from app.core.config import settings
-from app.errors import ApiError
+from app.core.errors import ApiError
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 

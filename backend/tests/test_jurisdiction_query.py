@@ -3,15 +3,15 @@ from typing import Any
 
 import pytest
 
-from app import jurisdiction_query as jq
-from app.models import (
-    Jurisdiction,
+from app.jurisdictions.grid import query as jq
+from app.jurisdictions.grid.models import (
     JurisdictionFacetsQuery,
     JurisdictionFilters,
     JurisdictionRowsQuery,
-    RegionType,
-    SelectionScope,
 )
+from app.jurisdictions.models import Jurisdiction, RegionType
+from app.jurisdictions.tree_index import TreeIndex
+from app.selections.models import SelectionScope
 
 
 class World:
@@ -42,7 +42,7 @@ class World:
         self.ca = self.add("Canada", None, "CA", RegionType.country)
         self.bc = self.add("British Columbia", self.ca, "BC", RegionType.subdivision)
         self.van = self.add("Vancouver", self.bc, "VAN", RegionType.city)
-        self.index = jq.TreeIndex(self.nodes)
+        self.index = TreeIndex(self.nodes)
 
     def add(
         self,
@@ -85,7 +85,7 @@ def filters(**kwargs: Any) -> JurisdictionFilters:
     return JurisdictionFilters(**kwargs)
 
 
-def names(index: jq.TreeIndex, ids: set[uuid.UUID]) -> set[str]:
+def names(index: TreeIndex, ids: set[uuid.UUID]) -> set[str]:
     return {index.by_id[i].name for i in ids}
 
 

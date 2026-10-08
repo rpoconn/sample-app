@@ -3,14 +3,19 @@ import uuid
 
 from sqlmodel import Session, func, select
 
-from app import crud
-from app.core.db import JURISDICTIONS_SEED_FILE
-from app.models import (
+from app.jurisdictions.models import (
     Jurisdiction,
     JurisdictionCreate,
     JurisdictionUpdate,
     RegionType,
 )
+from app.jurisdictions.service import (
+    create_jurisdiction,
+    get_canonical_tree,
+    seed_jurisdictions,
+    update_jurisdiction,
+)
+from app.seed import JURISDICTIONS_SEED_FILE
 from tests.utils.utils import random_lower_string
 
 
@@ -39,7 +44,7 @@ def test_seed_loads_full_tree(db: Session) -> None:
 
 
 def test_seed_is_idempotent(db: Session) -> None:
-    assert crud.seed_jurisdictions(session=db, nodes=_seed_nodes()) == 0
+    assert seed_jurisdictions(session=db, nodes=_seed_nodes()) == 0
 
 
 def test_seed_derives_tree_columns(db: Session) -> None:
@@ -82,7 +87,7 @@ def test_seed_sets_codes(db: Session) -> None:
 
 def test_move_touches_descendants_and_refreshes_the_cached_tree(db: Session) -> None:
     def create(name: str, parent: Jurisdiction | None = None) -> Jurisdiction:
-        return crud.create_jurisdiction(
+        return create_jurisdiction(
             session=db,
             jurisdiction_in=JurisdictionCreate(
                 name=name, parent_id=parent.id if parent else None
@@ -92,17 +97,17 @@ def test_move_touches_descendants_and_refreshes_the_cached_tree(db: Session) -> 
     a, b = create(random_lower_string()), create(random_lower_string())
     child = create("Child", a)
     grandchild = create("Grandchild", child)
-    before = crud.get_canonical_tree(session=db)
+    before = get_canonical_tree(session=db)
 
-    crud.update_jurisdiction(
+    update_jurisdiction(
         session=db, db_obj=child, jurisdiction_in=JurisdictionUpdate(parent_id=b.id)
     )
     db.refresh(grandchild)
     assert grandchild.updated_at == child.updated_at
     assert grandchild.path.startswith(b.path)
 
-    after = crud.get_canonical_tree(session=db)
+    after = get_canonical_tree(session=db)
     assert after.etag != before.etag
     cached = after.index.by_id[grandchild.id]
     assert cached.name_path == f"{b.name} / Child / Grandchild"
-    assert crud.get_canonical_tree(session=db) is after
+    assert get_canonical_tree(session=db) is after

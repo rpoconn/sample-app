@@ -7,7 +7,7 @@ from httpx import Response
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.models import Jurisdiction
+from app.jurisdictions.models import Jurisdiction
 from tests.api.routes.conftest import Account, Setup, make_jurisdiction
 from tests.utils.selections import set_company_ids, set_user_ids
 from tests.utils.utils import assert_error

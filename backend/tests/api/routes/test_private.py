@@ -3,9 +3,10 @@ import uuid
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app import crud
+from app.companies.models import CompanyCreate, CompanyRole
+from app.companies.service import create_company
 from app.core.config import settings
-from app.models import CompanyCreate, CompanyRole, User
+from app.users.models import User
 from tests.utils.utils import assert_error, random_email, random_lower_string
 
 
@@ -31,7 +32,7 @@ def test_create_user(client: TestClient, db: Session) -> None:
 
 
 def test_create_user_in_company(client: TestClient, db: Session) -> None:
-    company = crud.create_company(
+    company = create_company(
         session=db, company_in=CompanyCreate(name=random_lower_string())
     )
     r = client.post(

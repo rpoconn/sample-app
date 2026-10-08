@@ -3,10 +3,11 @@ import uuid
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
+from app.companies.models import CompanyCreate
+from app.companies.service import create_company
 from app.core.config import settings
-from app.crud import SelectionOwner
-from app.models import CompanyCreate, Jurisdiction
+from app.jurisdictions.models import Jurisdiction
+from app.selections.service import SelectionOwner, get_selection_version
 from tests.api.routes.conftest import Setup, make_jurisdiction
 from tests.utils.selections import set_company_ids, set_user_ids
 from tests.utils.utils import assert_error, random_lower_string
@@ -134,7 +135,7 @@ def test_delete_opted_in_jurisdiction_conflicts(
         headers=superuser_token_headers,
         json={"name": random_lower_string()},
     ).json()
-    company = crud.create_company(
+    company = create_company(
         session=db, company_in=CompanyCreate(name=random_lower_string())
     )
     client.patch(
@@ -162,9 +163,7 @@ def test_move_licensed_subtree_needs_flag(
         SelectionOwner.of_company(s.company.id),
         SelectionOwner.of_user(s.member.user),
     )
-    before = [
-        crud.get_selection_version(session=db, owner=o) for o in (company, member)
-    ]
+    before = [get_selection_version(session=db, owner=o) for o in (company, member)]
     url = f"{API}/jurisdictions/{root.id}"
 
     r = client.patch(
@@ -181,7 +180,7 @@ def test_move_licensed_subtree_needs_flag(
     assert r.status_code == 200
     assert r.json()["parent_id"] == str(target.id)
     db.expire_all()
-    after = [crud.get_selection_version(session=db, owner=o) for o in (company, member)]
+    after = [get_selection_version(session=db, owner=o) for o in (company, member)]
     assert after == [v + 1 for v in before]
     # Renaming without a move needs no flag
     r = client.patch(

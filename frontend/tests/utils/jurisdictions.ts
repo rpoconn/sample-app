@@ -30,7 +30,7 @@ function getSuperuserToken() {
 }
 
 // The PRD's sample plan: all of Canada, US National, every state but Wyoming and
-// Utah, and only San Francisco among cities. Matches the seed in core/db.py.
+// Utah, and only San Francisco among cities. Matches the seed in backend/app/seed.py.
 function inPlan(namePath: string) {
     const [country, group, state, ...rest] = namePath.split(" / ")
     if (country === "Canada") return true

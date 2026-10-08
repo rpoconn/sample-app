@@ -4,16 +4,12 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
-from app.models import (
-    Company,
-    CompanyCreate,
-    CompanyRole,
-    Jurisdiction,
-    JurisdictionCreate,
-    User,
-    UserCreate,
-)
+from app.companies.models import Company, CompanyCreate, CompanyRole
+from app.companies.service import create_company
+from app.jurisdictions.models import Jurisdiction, JurisdictionCreate
+from app.jurisdictions.service import create_jurisdiction
+from app.users.models import User, UserCreate
+from app.users.service import create_user
 from tests.utils.user import user_authentication_headers
 from tests.utils.utils import random_email, random_lower_string
 
@@ -46,7 +42,7 @@ def make_account(
     superuser: bool = False,
 ) -> Account:
     email, password = random_email(), random_lower_string()
-    user = crud.create_user(
+    user = create_user(
         session=db,
         user_create=UserCreate(
             email=email,
@@ -63,7 +59,7 @@ def make_account(
 def make_jurisdiction(
     db: Session, parent: Jurisdiction | None = None, *, structural: bool = False
 ) -> Jurisdiction:
-    return crud.create_jurisdiction(
+    return create_jurisdiction(
         session=db,
         jurisdiction_in=JurisdictionCreate(
             name=random_lower_string(),
@@ -77,10 +73,10 @@ def make_jurisdiction(
 def s(client: TestClient, db: Session) -> Setup:
     """A company with an admin and a member, another company with its own admin, and
     three fresh root jurisdictions."""
-    company = crud.create_company(
+    company = create_company(
         session=db, company_in=CompanyCreate(name=random_lower_string())
     )
-    other = crud.create_company(
+    other = create_company(
         session=db, company_in=CompanyCreate(name=random_lower_string())
     )
     return Setup(
