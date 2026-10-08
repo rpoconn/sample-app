@@ -11,12 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RecoverPasswordRouteImport } from './routes/recoverPassword'
+import { Route as ResetPasswordRouteImport } from './routes/resetPassword'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
-import { Route as LayoutCompanyAdminRouteImport } from './routes/_layout/company-admin'
+import { Route as LayoutCompanyAdminRouteImport } from './routes/_layout/companyAdmin'
 import { Route as LayoutJurisdictionsRouteImport } from './routes/_layout/jurisdictions'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 
@@ -30,13 +30,13 @@ const LoginRoute = LoginRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
-  id: '/recover-password',
-  path: '/recover-password',
+  id: '/recoverPassword',
+  path: '/recoverPassword',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+  id: '/resetPassword',
+  path: '/resetPassword',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -55,8 +55,8 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutCompanyAdminRoute = LayoutCompanyAdminRouteImport.update({
-  id: '/company-admin',
-  path: '/company-admin',
+  id: '/companyAdmin',
+  path: '/companyAdmin',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutJurisdictionsRoute = LayoutJurisdictionsRouteImport.update({
@@ -73,21 +73,21 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
-  '/recover-password': typeof RecoverPasswordRoute
-  '/reset-password': typeof ResetPasswordRoute
+  '/recoverPassword': typeof RecoverPasswordRoute
+  '/resetPassword': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
-  '/company-admin': typeof LayoutCompanyAdminRoute
+  '/companyAdmin': typeof LayoutCompanyAdminRoute
   '/jurisdictions': typeof LayoutJurisdictionsRoute
   '/settings': typeof LayoutSettingsRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/recover-password': typeof RecoverPasswordRoute
-  '/reset-password': typeof ResetPasswordRoute
+  '/recoverPassword': typeof RecoverPasswordRoute
+  '/resetPassword': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
-  '/company-admin': typeof LayoutCompanyAdminRoute
+  '/companyAdmin': typeof LayoutCompanyAdminRoute
   '/jurisdictions': typeof LayoutJurisdictionsRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
@@ -96,11 +96,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
-  '/recover-password': typeof RecoverPasswordRoute
-  '/reset-password': typeof ResetPasswordRoute
+  '/recoverPassword': typeof RecoverPasswordRoute
+  '/resetPassword': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
-  '/_layout/company-admin': typeof LayoutCompanyAdminRoute
+  '/_layout/companyAdmin': typeof LayoutCompanyAdminRoute
   '/_layout/jurisdictions': typeof LayoutJurisdictionsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
@@ -110,21 +110,21 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/recover-password'
-    | '/reset-password'
+    | '/recoverPassword'
+    | '/resetPassword'
     | '/signup'
     | '/admin'
-    | '/company-admin'
+    | '/companyAdmin'
     | '/jurisdictions'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/recover-password'
-    | '/reset-password'
+    | '/recoverPassword'
+    | '/resetPassword'
     | '/signup'
     | '/admin'
-    | '/company-admin'
+    | '/companyAdmin'
     | '/jurisdictions'
     | '/settings'
     | '/'
@@ -132,11 +132,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_layout'
     | '/login'
-    | '/recover-password'
-    | '/reset-password'
+    | '/recoverPassword'
+    | '/resetPassword'
     | '/signup'
     | '/_layout/admin'
-    | '/_layout/company-admin'
+    | '/_layout/companyAdmin'
     | '/_layout/jurisdictions'
     | '/_layout/settings'
     | '/_layout/'
@@ -166,17 +166,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/recover-password': {
-      id: '/recover-password'
-      path: '/recover-password'
-      fullPath: '/recover-password'
+    '/recoverPassword': {
+      id: '/recoverPassword'
+      path: '/recoverPassword'
+      fullPath: '/recoverPassword'
       preLoaderRoute: typeof RecoverPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
+    '/resetPassword': {
+      id: '/resetPassword'
+      path: '/resetPassword'
+      fullPath: '/resetPassword'
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -201,10 +201,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/company-admin': {
-      id: '/_layout/company-admin'
-      path: '/company-admin'
-      fullPath: '/company-admin'
+    '/_layout/companyAdmin': {
+      id: '/_layout/companyAdmin'
+      path: '/companyAdmin'
+      fullPath: '/companyAdmin'
       preLoaderRoute: typeof LayoutCompanyAdminRouteImport
       parentRoute: typeof LayoutRoute
     }

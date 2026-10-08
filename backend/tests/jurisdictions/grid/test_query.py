@@ -4,14 +4,14 @@ from typing import Any
 import pytest
 
 from app.jurisdictions.grid import query as jq
-from app.jurisdictions.grid.models import (
+from app.jurisdictions.grid.grid_models import (
     JurisdictionFacetsQuery,
     JurisdictionFilters,
     JurisdictionRowsQuery,
 )
-from app.jurisdictions.models import Jurisdiction, RegionType
+from app.jurisdictions.jurisdiction_models import Jurisdiction, RegionType
 from app.jurisdictions.tree_index import TreeIndex
-from app.selections.models import SelectionScope
+from app.selections.selection_models import SelectionScope
 
 
 class World:

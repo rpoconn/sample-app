@@ -5,12 +5,12 @@ from dataclasses import dataclass
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.companies.models import Company, CompanyCreate, CompanyRole
-from app.companies.service import create_company
-from app.jurisdictions.models import Jurisdiction, JurisdictionCreate
-from app.jurisdictions.service import create_jurisdiction
-from app.users.models import User, UserCreate
-from app.users.service import create_user
+from app.companies.company_models import Company, CompanyCreate, CompanyRole
+from app.companies.company_service import create_company
+from app.jurisdictions.jurisdiction_models import Jurisdiction, JurisdictionCreate
+from app.jurisdictions.jurisdiction_service import create_jurisdiction
+from app.users.user_models import User, UserCreate
+from app.users.user_service import create_user
 from tests.utils.user import user_authentication_headers
 from tests.utils.utils import random_email, random_lower_string
 

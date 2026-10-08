@@ -87,6 +87,8 @@ The frontend code is structured as follows:
 * `frontend/src/lib` - Shared frontend utilities.
 * `frontend/src/routes` - The frontend routes and pages.
 
+Directories are camelCase (`components/userSettings`). Component files are PascalCase (`JurisdictionTable.tsx`, `ui/Button.tsx`); every other file is camelCase (`flags.ts`, `useAuth.ts`). Route file names become URLs, so `routes/_layout/companyAdmin.tsx` serves `/companyAdmin`. When `bunx shadcn add` creates a kebab-case file in `components/ui`, rename it to PascalCase.
+
 ## End-to-End Testing with Playwright
 
 The frontend includes end-to-end tests using Playwright. They need the backend running at `http://localhost:8000` (see [../development.md](../development.md)) and [Mailpit](../development.md#mailpit) for the password-reset test. Playwright starts the Vite dev server itself.

@@ -235,8 +235,8 @@ test.describe("User scope", () => {
         const member = await createUserInCompany(company.id, "member")
         await logInUser(page, member.email, member.password)
 
-        await page.goto("/company-admin")
-        await expect(page).not.toHaveURL(/\/company-admin/)
+        await page.goto("/companyAdmin")
+        await expect(page).not.toHaveURL(/\/companyAdmin/)
         await expect(
             page.getByText("You're editing jurisdictions licenses"),
         ).toHaveCount(0)
@@ -249,7 +249,7 @@ test.describe("Company scope", () => {
         const admin = await createUserInCompany(company.id, "admin")
         await logInUser(page, admin.email, admin.password)
 
-        await page.goto("/company-admin")
+        await page.goto("/companyAdmin")
         await waitForGrid(page)
         await expect(
             page.getByText(
@@ -267,7 +267,7 @@ test.describe("Company scope", () => {
         const { company, tree } = await createCompanyWithPlan()
         const admin = await createUserInCompany(company.id, "admin")
         await logInUser(page, admin.email, admin.password)
-        await page.goto("/company-admin")
+        await page.goto("/companyAdmin")
         await waitForGrid(page)
 
         await searchFor(page, "Texas")
@@ -287,7 +287,7 @@ test.describe("Company scope", () => {
         const texas = idOf(tree, TEXAS)
         await setUserIds(member, [texas])
         await logInUser(page, admin.email, admin.password)
-        await page.goto("/company-admin")
+        await page.goto("/companyAdmin")
         await waitForGrid(page)
 
         await searchFor(page, "Texas")
@@ -328,7 +328,7 @@ test.describe("Company scope", () => {
         const admin = await createUserInCompany(company.id, "admin")
         const member = await createUserInCompany(company.id, "member")
         await logInUser(page, admin.email, admin.password)
-        await page.goto("/company-admin")
+        await page.goto("/companyAdmin")
         await waitForGrid(page)
 
         await searchFor(page, "Wyoming")

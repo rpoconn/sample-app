@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import type { Body_login_login_access_token as AccessToken } from "@/client"
-import { AuthLayout } from "@/components/Common/AuthLayout"
+import { AuthLayout } from "@/components/common/AuthLayout"
 import {
     Form,
     FormControl,
@@ -16,10 +16,10 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { PasswordInput } from "@/components/ui/password-input"
+} from "@/components/ui/Form"
+import { Input } from "@/components/ui/Input"
+import { LoadingButton } from "@/components/ui/LoadingButton"
+import { PasswordInput } from "@/components/ui/PasswordInput"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 const formSchema = z.object({
@@ -108,7 +108,7 @@ function Login() {
                                     <div className="flex items-center">
                                         <FormLabel>Password</FormLabel>
                                         <RouterLink
-                                            to="/recover-password"
+                                            to="/recoverPassword"
                                             className="ml-auto text-sm underline-offset-4 hover:underline"
                                         >
                                             Forgot your password?

@@ -4,14 +4,18 @@ from typing import Any
 
 from sqlmodel import Session, case, col, func, select
 
-from app.jurisdictions.grid.models import SortDir, TreeSortBy
+from app.jurisdictions.grid.grid_models import SortDir, TreeSortBy
 from app.jurisdictions.grid.query import Selection
-from app.jurisdictions.models import Jurisdiction
-from app.jurisdictions.service.reading import CANONICAL_ORDER
-from app.selections.models import CompanyJurisdiction, SelectionScope, UserJurisdiction
-from app.selections.service.owner import SelectionOwner
-from app.selections.service.reading import selected_ids
-from app.users.models import User
+from app.jurisdictions.jurisdiction_models import Jurisdiction
+from app.jurisdictions.jurisdiction_service.jurisdiction_reading import CANONICAL_ORDER
+from app.selections.selection_models import (
+    CompanyJurisdiction,
+    SelectionScope,
+    UserJurisdiction,
+)
+from app.selections.selection_service.owner import SelectionOwner
+from app.selections.selection_service.selection_reading import selected_ids
+from app.users.user_models import User
 
 
 def get_jurisdiction_tree(

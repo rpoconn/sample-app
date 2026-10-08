@@ -2,12 +2,12 @@ import uuid
 
 from fastapi import APIRouter, Depends
 
-from app.auth.deps import require_service_caller
-from app.companies.deps import is_company_active
+from app.auth.auth_deps import require_service_caller
+from app.companies.company_deps import is_company_active
 from app.core.deps import SessionDep
 from app.core.errors import NotFound, errors
-from app.selections import service as selections
-from app.users.models import User
+from app.selections import selection_service as selections
+from app.users.user_models import User
 
 # Machine-to-machine reads for other services: X-API-Key or a superuser bearer token
 router = APIRouter(

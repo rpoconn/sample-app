@@ -46,9 +46,9 @@ app/
   internal/          health check, service-to-service and dev-only routes
 ```
 
-A domain package holds the files it needs out of `models.py` (tables and API schemas), `service.py` (business logic), `deps.py` (FastAPI dependencies) and `routes.py` (endpoints). When a service grows past one use case, or about 200 lines, it becomes a `service/` package with one module per use case (for example `selections/service/` has `reading.py`, `writing.py`, `versions.py` and `impact.py`). Its `__init__.py` re-exports the public functions, so routes call `service.apply_change(...)`. Inside the domains, import from the concrete module, not the package, to keep import cycles out.
+A domain package holds the files it needs out of `<domain>_models.py` (tables and API schemas), `<domain>_service.py` (business logic), `<domain>_deps.py` (FastAPI dependencies) and `<domain>_routes.py` (endpoints), prefixed with the singular domain name so every file name is unique (for example `users/user_models.py`, `companies/company_service.py`, `jurisdictions/grid/grid_routes.py`). When a service grows past one use case, or about 200 lines, it becomes a `<domain>_service/` package with one module per use case (for example `selections/selection_service/` has `selection_reading.py`, `writing.py`, `versions.py` and `impact.py`). Its `__init__.py` re-exports the public functions, so routes call `selection_service.apply_change(...)`. Inside the domains, import from the concrete module, not the package, to keep import cycles out.
 
-A new table module must also be imported in `app/tables.py`. Tests mirror the layout under `./backend/tests/`, with shared builders in `tests/utils/factories.py`.
+A new table module must also be imported in `app/tables.py`. Tests mirror the layout under `./backend/tests/` with the same prefixes (`tests/users/test_user_service.py`), with shared builders in `tests/utils/factories.py`.
 
 ## VS Code
 

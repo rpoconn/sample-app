@@ -14,8 +14,8 @@ from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlmodel import Session  # noqa: E402
 
-from app.companies.models import CompanyCreate, CompanyRole  # noqa: E402
-from app.companies.service import create_company  # noqa: E402
+from app.companies.company_models import CompanyCreate, CompanyRole  # noqa: E402
+from app.companies.company_service import create_company  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.db import engine  # noqa: E402
 from app.main import app  # noqa: E402

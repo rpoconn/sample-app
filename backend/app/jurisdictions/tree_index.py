@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Sequence
 
-from app.jurisdictions.models import Jurisdiction
+from app.jurisdictions.jurisdiction_models import Jurisdiction
 
 
 class TreeIndex:

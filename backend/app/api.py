@@ -1,13 +1,13 @@
 from fastapi import APIRouter
 
-from app.auth import routes as auth
-from app.companies import routes as companies
+from app.auth import auth_routes as auth
+from app.companies import company_routes as companies
 from app.core.config import settings
 from app.internal import health, private, service_api
-from app.jurisdictions import routes as jurisdictions
-from app.jurisdictions.grid import routes as jurisdiction_grid
-from app.selections import routes as selections
-from app.users import routes as users
+from app.jurisdictions import jurisdiction_routes as jurisdictions
+from app.jurisdictions.grid import grid_routes as jurisdiction_grid
+from app.selections import selection_routes as selections
+from app.users import user_routes as users
 
 api_router = APIRouter()
 api_router.include_router(auth.router)

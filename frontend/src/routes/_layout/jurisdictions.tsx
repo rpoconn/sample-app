@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { JurisdictionGrid } from "@/components/Jurisdictions/JurisdictionGrid"
-import { Skeleton } from "@/components/ui/skeleton"
+import { JurisdictionGrid } from "@/components/jurisdictions/JurisdictionGrid"
+import { Skeleton } from "@/components/ui/Skeleton"
 import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/jurisdictions")({

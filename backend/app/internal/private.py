@@ -3,11 +3,11 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from app.companies.models import CompanyRole
+from app.companies.company_models import CompanyRole
 from app.core.deps import SessionDep
 from app.core.errors import Conflict, errors
-from app.users import service as users
-from app.users.models import UserCreate, UserPublic, UserRegister
+from app.users import user_service as users
+from app.users.user_models import UserCreate, UserPublic, UserRegister
 
 router = APIRouter(tags=["private"], prefix="/private", responses=errors(422))
 

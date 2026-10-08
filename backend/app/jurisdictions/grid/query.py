@@ -8,7 +8,7 @@ flattened in sibling order through the expanded rows.
 import uuid
 from dataclasses import dataclass
 
-from app.jurisdictions.grid.models import (
+from app.jurisdictions.grid.grid_models import (
     JurisdictionFacet,
     JurisdictionFacetOption,
     JurisdictionFacets,
@@ -22,9 +22,9 @@ from app.jurisdictions.grid.models import (
     StatusFilter,
     SubtreeSelection,
 )
-from app.jurisdictions.models import Jurisdiction, RegionType
+from app.jurisdictions.jurisdiction_models import Jurisdiction, RegionType
 from app.jurisdictions.tree_index import TreeIndex
-from app.selections.models import SelectionScope
+from app.selections.selection_models import SelectionScope
 
 TypeFilters = dict[RegionType, list[uuid.UUID]]
 

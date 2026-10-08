@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { AuthLayout } from "@/components/Common/AuthLayout"
+import { AuthLayout } from "@/components/common/AuthLayout"
 import {
     Form,
     FormControl,
@@ -14,10 +14,10 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { PasswordInput } from "@/components/ui/password-input"
+} from "@/components/ui/Form"
+import { Input } from "@/components/ui/Input"
+import { LoadingButton } from "@/components/ui/LoadingButton"
+import { PasswordInput } from "@/components/ui/PasswordInput"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 const formSchema = z

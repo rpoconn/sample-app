@@ -3,9 +3,9 @@ from collections.abc import Iterable
 
 from sqlmodel import Session
 
-from app.selections.models import JurisdictionSelectionOut
-from app.selections.service import SelectionOwner, apply_selection
-from app.users.models import User
+from app.selections.selection_models import JurisdictionSelectionOut
+from app.selections.selection_service import SelectionOwner, apply_selection
+from app.users.user_models import User
 
 
 def set_company_ids(

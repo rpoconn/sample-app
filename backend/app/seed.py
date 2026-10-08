@@ -5,13 +5,13 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from app.companies import service as companies
-from app.companies.models import DEFAULT_COMPANY_ID, CompanyRole
+from app.companies import company_service as companies
+from app.companies.company_models import DEFAULT_COMPANY_ID, CompanyRole
 from app.core.config import settings
-from app.jurisdictions import service as jurisdictions
-from app.selections import service as selections
-from app.users import service as users
-from app.users.models import User, UserCreate
+from app.jurisdictions import jurisdiction_service as jurisdictions
+from app.selections import selection_service as selections
+from app.users import user_service as users
+from app.users.user_models import User, UserCreate
 
 JURISDICTIONS_SEED_FILE = Path(__file__).parent / "data" / "jurisdictions.json"
 
