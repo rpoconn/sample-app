@@ -1,7 +1,7 @@
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import col, func, select
 
 from app import crud
@@ -40,7 +40,11 @@ router = APIRouter(prefix="/users", tags=["users"], responses=errors(401, 403, 4
     dependencies=[Depends(get_current_active_superuser)],
     response_model=UsersPublic,
 )
-def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
+def read_users(
+    session: SessionDep,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> Any:
     """
     Retrieve users.
     """

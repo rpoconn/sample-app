@@ -157,6 +157,7 @@ class CompanyAdmin(SQLModel):
 
 class CompanyAdmins(SQLModel):
     data: list[CompanyAdmin]
+    count: int
 
 
 # Shared properties
@@ -213,6 +214,8 @@ class JurisdictionPublic(JurisdictionBase):
 
 
 class JurisdictionsPublic(SQLModel):
+    """Unpaginated: `count` is the total, so it always equals `len(data)`."""
+
     data: list[JurisdictionPublic]
     count: int
 
@@ -354,7 +357,7 @@ class JurisdictionRowsQuery(JurisdictionFacetsQuery):
     expanded_ids: list[uuid.UUID] | None = None
     # Opens every row with children instead; the response lists them all
     expand_all: bool = False
-    start: int = Field(default=0, ge=0)
+    skip: int = Field(default=0, ge=0)
     limit: int = Field(default=100, ge=1, le=500)
 
 
@@ -393,8 +396,8 @@ class JurisdictionGridRow(JurisdictionPublic):
 class JurisdictionRowsPage(SQLModel):
     data: list[JurisdictionGridRow]
     # Rows in the whole flattened view
-    total: int
-    start: int
+    count: int
+    skip: int
     # The expansion the page was built with, to hold and edit on the client
     expanded_ids: list[uuid.UUID]
 

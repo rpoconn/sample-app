@@ -70,6 +70,10 @@ export type CompanyAdmins = {
      * Data
      */
     data: Array<CompanyAdmin>;
+    /**
+     * Count
+     */
+    count: number;
 };
 
 /**
@@ -468,13 +472,13 @@ export type JurisdictionRowsPage = {
      */
     data: Array<JurisdictionGridRow>;
     /**
-     * Total
+     * Count
      */
-    total: number;
+    count: number;
     /**
-     * Start
+     * Skip
      */
-    start: number;
+    skip: number;
     /**
      * Expanded Ids
      */
@@ -507,9 +511,9 @@ export type JurisdictionRowsQuery = {
      */
     expand_all?: boolean;
     /**
-     * Start
+     * Skip
      */
-    start?: number;
+    skip?: number;
     /**
      * Limit
      */
@@ -637,6 +641,8 @@ export type JurisdictionUserCounts = {
 
 /**
  * JurisdictionsPublic
+ *
+ * Unpaginated: `count` is the total, so it always equals `len(data)`.
  */
 export type JurisdictionsPublic = {
     /**

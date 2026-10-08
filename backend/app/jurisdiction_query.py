@@ -346,7 +346,7 @@ def build_rows_page(
         expanded = set(query.expanded_ids)
     else:
         expanded = default_expanded(index, filtered)
-    page, total = flatten(index, filtered, expanded, query.start, query.limit)
+    page, total = flatten(index, filtered, expanded, query.skip, query.limit)
     subtrees = subtree_selections(index, sel)
 
     # Rows with something to show under them. Every ancestor of a match is walked,
@@ -389,8 +389,8 @@ def build_rows_page(
         )
     return JurisdictionRowsPage(
         data=rows,
-        total=total,
-        start=query.start,
+        count=total,
+        skip=query.skip,
         expanded_ids=[j.id for j in index.nodes if j.id in expanded],
     )
 

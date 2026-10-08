@@ -1,7 +1,7 @@
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import col, func, select
 
 from app import crud
@@ -43,7 +43,11 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_superuser)],
     response_model=CompaniesPublic,
 )
-def read_companies(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
+def read_companies(
+    session: SessionDep,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> Any:
     """
     Retrieve companies.
     """
@@ -109,7 +113,9 @@ def read_company_admins(
     """
     require_company_member(current_user, company_id)
     admins = crud.get_company_admins(session=session, company_id=company_id)
-    return CompanyAdmins(data=[CompanyAdmin.model_validate(a) for a in admins])
+    return CompanyAdmins(
+        data=[CompanyAdmin.model_validate(a) for a in admins], count=len(admins)
+    )
 
 
 @router.get("/{company_id}/jurisdictions", response_model=JurisdictionsPublic)

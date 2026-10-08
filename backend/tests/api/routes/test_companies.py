@@ -220,7 +220,10 @@ def test_company_admins_visible_to_members(
     r = client.get(url, headers=s.member.headers)
     assert r.status_code == 200
     # Members and inactive admins are left out
-    assert r.json()["data"] == [{"email": s.admin.user.email, "full_name": None}]
+    assert r.json() == {
+        "data": [{"email": s.admin.user.email, "full_name": None}],
+        "count": 1,
+    }
     assert client.get(url, headers=s.other_admin.headers).status_code == 403
 
 

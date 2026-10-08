@@ -210,6 +210,31 @@ def test_retrieve_users(
     for item in all_users["data"]:
         assert "email" in item
 
+    r = client.get(
+        f"{settings.API_V1_STR}/users/",
+        headers=superuser_token_headers,
+        params={"skip": 0, "limit": 1},
+    )
+    assert r.status_code == 200
+    page = r.json()
+    # count is the total, not the page length
+    assert len(page["data"]) == 1
+    assert page["count"] == all_users["count"]
+
+
+def test_retrieve_users_limit_bounds(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    for path in ("users/", "companies/"):
+        for params in ({"limit": 0}, {"limit": 501}, {"skip": -1}):
+            r = client.get(
+                f"{settings.API_V1_STR}/{path}",
+                headers=superuser_token_headers,
+                params=params,
+            )
+            assert r.status_code == 422
+            assert r.json()["code"] == "invalid_input"
+
 
 def test_update_user_me(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session

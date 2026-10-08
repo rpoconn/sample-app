@@ -251,7 +251,7 @@ def test_build_rows_page(w: World) -> None:
     )
     rows = {r.name: r for r in page.data}
     assert list(rows) == ["United States", "States", "Washington", "Seattle"]
-    assert page.total == 4
+    assert page.count == 4
     assert set(page.expanded_ids) == {w.us.id, w.states.id, w.wa.id}
     assert rows["Washington"].has_children and rows["Washington"].expanded
     assert not rows["Washington"].is_match and rows["Seattle"].is_match
@@ -320,7 +320,7 @@ def test_build_facets(w: World) -> None:
 
 def test_build_rows_expand_all(w: World) -> None:
     page = jq.build_rows_page(w.index, sel(), JurisdictionRowsQuery(expand_all=True))
-    assert page.total == len(w.nodes)
+    assert page.count == len(w.nodes)
     assert set(page.expanded_ids) == {
         w.us.id,
         w.states.id,

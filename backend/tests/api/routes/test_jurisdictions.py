@@ -229,7 +229,7 @@ def test_rows_pages_the_flattened_tree(
     roots = [row for row in full["data"] if row["parent_id"] is None]
     assert {row["id"] for row in roots} == set(full["expanded_ids"])
     assert all(row["expanded"] for row in roots)
-    assert full["total"] == len(full["data"])
+    assert full["count"] == len(full["data"])
 
     expanded = [row["id"] for row in full["data"]]
     everything = client.post(
@@ -239,17 +239,17 @@ def test_rows_pages_the_flattened_tree(
     ).json()
     ids = [row["id"] for row in everything["data"]]
     pages: list[str] = []
-    for start in range(0, everything["total"], 7):
+    for skip in range(0, everything["count"], 7):
         page = client.post(
             url,
             headers=normal_user_token_headers,
-            json={"expanded_ids": expanded, "start": start, "limit": 7},
+            json={"expanded_ids": expanded, "skip": skip, "limit": 7},
         ).json()
-        assert page["total"] == everything["total"]
+        assert page["count"] == everything["count"]
         pages += [row["id"] for row in page["data"]]
     assert pages == ids[: len(pages)]
 
-    for bad in [{"limit": 0}, {"limit": 501}, {"start": -1}, {"sort_by": "bogus"}]:
+    for bad in [{"limit": 0}, {"limit": 501}, {"skip": -1}, {"sort_by": "bogus"}]:
         assert (
             client.post(url, headers=normal_user_token_headers, json=bad).status_code
             == 422

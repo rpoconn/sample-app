@@ -95,7 +95,7 @@ export class JurisdictionRowSource implements IDatasource {
             sort_dir: sort?.sort ?? "asc",
             expanded_ids: sent.ids,
             expand_all: sent.all,
-            start: params.startRow,
+            skip: params.startRow,
             limit: params.endRow - params.startRow,
         })
             .then((page) => {
@@ -106,7 +106,7 @@ export class JurisdictionRowSource implements IDatasource {
                 }
                 const rows = page.data.map((r) => this.toRow(r, highlight))
                 preloadFlags(rows.map((r) => r.flagUrl))
-                params.successCallback(rows, page.total)
+                params.successCallback(rows, page.count)
             })
             .catch((err) => {
                 params.failCallback()

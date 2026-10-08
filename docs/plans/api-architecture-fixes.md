@@ -2,7 +2,7 @@
 
 ## Status
 
-- In progress. Phase 1 steps 1.1–1.4 done. Findings come from the adversarial API review (2026-10-07).
+- In progress. Phase 1 steps 1.1–1.5 done. Findings come from the adversarial API review (2026-10-07).
 - In scope: review items 2, 3, 7, 9, 10, 11 and all the Low items.
 - Out of scope (not chosen): #1 signup default role, #4 token lifetime / revocation on
   credential change, #5 recovery enumeration, #6 `FASTAPI_ENV` coupling, #8 implicit
@@ -149,6 +149,16 @@ response in the spec is a JSON `ErrorResponse`. Routes whose crud calls raise
   not `HTTPValidationError`.
 
 ### 1.5 One list envelope
+
+**Done (2026-10-07).** `read_users` and `read_companies` bound `skip` to `ge=0` and `limit` to
+`ge=1, le=500` through `Query`. `CompanyAdmins` has `count`, and `JurisdictionsPublic` has the
+docstring. `JurisdictionRowsPage` / `JurisdictionRowsQuery` use `count` / `skip`, and the frontend
+change is limited to `JurisdictionRowSource.ts`. `jq.flatten` keeps its internal `start` / `total`
+names. New test `test_users.py::test_retrieve_users_limit_bounds` covers the 422s on both routers,
+and `test_retrieve_users` checks that `count` is the total and not the page length. e2e: 62 passed,
+3 failed. One is the known theme-dropdown flake. The other two were stale `jurisdictions.spec.ts`
+assertions on summary text that a1503fb moved into the status filter tabs. They now read the tab
+counts instead (`statusTab` / `tabCount` helpers), and all 13 jurisdiction specs pass.
 
 The rule: `{ data: [...], count: <total matching, not page length> }`. Paging is always
 `skip` / `limit`, with `limit` bounded `ge=1, le=500`.

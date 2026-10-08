@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
 
 import {
     createCompanyWithPlan,
@@ -16,6 +16,17 @@ import { logInUser } from "./utils/user"
 
 const TEXAS = "United States / States / Texas"
 const WYOMING = "United States / States / Wyoming"
+
+// The tabs' accessible names are their tooltips, so match the label
+const statusTab = (page: Page, label: string) =>
+    page
+        .getByRole("tablist", { name: "Filter by status" })
+        .getByRole("tab")
+        .filter({ hasText: new RegExp(`^${label}`) })
+
+// The row count shown inside a status tab
+const tabCount = async (page: Page, label: string) =>
+    Number(await statusTab(page, label).locator("span").last().textContent())
 
 // Each test gets its own company and users, so tests can change the license and
 // selections freely and run in parallel
@@ -36,10 +47,9 @@ test.describe("User scope", () => {
         await expect(
             page.getByText("These are your personal jurisdictions"),
         ).toBeVisible()
-        await expect(page.getByText(/0\s+enabled/)).toBeVisible()
-        await expect(
-            page.getByText(/\d+ not enabled for your company/),
-        ).toBeVisible()
+        // Nothing picked yet, and the license leaves some out
+        await expect(statusTab(page, "Enabled")).toHaveText(/^Enabled\s*0$/)
+        expect(await tabCount(page, "Disabled")).toBeGreaterThan(0)
 
         // Outside the plan: visible, but locked
         for (const name of ["Wyoming", "Utah", "Los Angeles"]) {
@@ -173,32 +183,29 @@ test.describe("User scope", () => {
         await waitForGrid(page)
 
         const grid = page.getByRole("grid")
-        // The tabs' accessible names are their tooltips, so match the label
-        const statusTab = (label: string) =>
-            page
-                .getByRole("tablist", { name: "Filter by status" })
-                .getByRole("tab")
-                .filter({ hasText: new RegExp(`^${label}`) })
+        const everything = await tabCount(page, "All")
 
+        // The tab counts follow the search
         await searchFor(page, "san")
         await expect(grid.locator("mark", { hasText: /san/i })).not.toHaveCount(
             0,
         )
-        await expect(page.getByText(/Showing \d+ of \d+/)).toBeVisible()
+        await expect.poll(() => tabCount(page, "All")).toBeLessThan(everything)
+        expect(await tabCount(page, "All")).toBeGreaterThan(0)
 
         await page.getByRole("button", { name: "Clear filters" }).click()
         await expect(
             page.getByRole("textbox", { name: "Search jurisdictions" }),
         ).toHaveValue("")
 
-        await statusTab("Enabled").click()
+        await statusTab(page, "Enabled").click()
         await expect(switchFor(page, "Enable Texas for me")).toBeVisible()
         await expect(switchFor(page, "Enable Ohio for me")).toHaveCount(0)
 
-        await statusTab("Disabled").click()
+        await statusTab(page, "Disabled").click()
         await expect(switchFor(page, "Enable Texas for me")).toHaveCount(0)
 
-        await statusTab("All").click()
+        await statusTab(page, "All").click()
         await page
             .getByRole("textbox", { name: "Search jurisdictions" })
             .fill("zzzz-no-such-place")
