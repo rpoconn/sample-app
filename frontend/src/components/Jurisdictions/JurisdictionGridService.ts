@@ -8,6 +8,7 @@ import {
     type JurisdictionGridRow,
     type JurisdictionRowsQuery,
     JurisdictionsService,
+    type SelectionChange,
     type UserPublic,
     UsersService,
 } from "@/client"
@@ -29,9 +30,6 @@ export type RowInputs = {
     canEditCompany: boolean
     admins?: CompanyAdmin[]
 }
-
-const idsOf = (res: { data: { data: { id: string }[] } }) =>
-    res.data.data.map((j) => j.id)
 
 const pickedTypes = (byType: TypeFilters) =>
     Object.entries(byType).filter(([, ids]) => ids?.length)
@@ -123,15 +121,16 @@ export class JurisdictionGridService {
         })
     }
 
+    // The company's opt-ins and the version they're at
     static companyIdsQuery(companyId: string) {
         return queryOptions({
             queryKey: JurisdictionGridService.keys.companyIds(companyId),
             queryFn: async () =>
-                idsOf(
+                (
                     await CompaniesService.readCompanyJurisdictions({
                         path: { company_id: companyId },
-                    }),
-                ),
+                    })
+                ).data,
         })
     }
 
@@ -139,7 +138,7 @@ export class JurisdictionGridService {
         return queryOptions({
             queryKey: JurisdictionGridService.keys.myIds,
             queryFn: async () =>
-                idsOf(await UsersService.readMyJurisdictions()),
+                (await UsersService.readMyJurisdictions()).data,
         })
     }
 
@@ -156,30 +155,37 @@ export class JurisdictionGridService {
     }
 
     // Turns a jurisdiction and everything selectable under it on or off; a row
-    // without children is a subtree of one
+    // without children is a subtree of one. With a version, the save only lands
+    // if nothing changed since then (412 otherwise).
     static saveSubtree(
         mode: JurisdictionMode,
         companyId: string,
         rootId: string,
         enabled: boolean,
+        version?: number,
     ) {
-        const body = { root_id: rootId, enabled }
+        const body: SelectionChange = enabled
+            ? { add_subtrees: [rootId] }
+            : { remove_subtrees: [rootId] }
+        const headers =
+            version === undefined ? undefined : { "If-Match": String(version) }
         return mode === "company"
-            ? CompaniesService.toggleCompanyJurisdictionSubtree({
+            ? CompaniesService.patchCompanyJurisdictions({
                   path: { company_id: companyId },
                   body,
+                  headers,
               })
-            : UsersService.toggleMyJurisdictionSubtree({ body })
+            : UsersService.patchMyJurisdictions({ body, headers })
     }
 
-    // Who would lose an opt-in if the company dropped the subtree; always fresh
-    static async affectedUsers(companyId: string, rootId: string) {
-        return (
-            await CompaniesService.readCompanyJurisdictionAffectedUsers({
-                path: { company_id: companyId },
-                body: { root_ids: [rootId] },
-            })
-        ).data.data
+    // Who would lose an opt-in if the company dropped the subtree, and the
+    // version to commit exactly that against; always fresh
+    static async previewDisable(companyId: string, rootId: string) {
+        const { data } = await CompaniesService.previewCompanyJurisdictions({
+            path: { company_id: companyId },
+            body: { remove_subtrees: [rootId] },
+        })
+        return { version: data.version, users: data.affected_users.data }
     }
 
     // Asks the company's admins to turn a jurisdiction on, linking to where they'd do it

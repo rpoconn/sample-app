@@ -19,6 +19,8 @@ export type PendingDisable = {
     name: string
     // Each user who'd lose at least one of the ids, once
     users: JurisdictionAffectedUser[]
+    // The license version the users were counted at; confirming commits against it
+    version: number
 }
 
 // Past this many users the list gets a search box

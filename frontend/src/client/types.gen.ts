@@ -152,20 +152,6 @@ export type ErrorResponse = {
 };
 
 /**
- * JurisdictionAffectedQuery
- */
-export type JurisdictionAffectedQuery = {
-    /**
-     * Jurisdiction Ids
-     */
-    jurisdiction_ids?: Array<string>;
-    /**
-     * Root Ids
-     */
-    root_ids?: Array<string>;
-};
-
-/**
  * JurisdictionAffectedUser
  */
 export type JurisdictionAffectedUser = {
@@ -403,20 +389,6 @@ export type JurisdictionGridRow = {
 };
 
 /**
- * JurisdictionIds
- */
-export type JurisdictionIds = {
-    /**
-     * Jurisdiction Ids
-     */
-    jurisdiction_ids: Array<string>;
-    /**
-     * Count
-     */
-    count: number;
-};
-
-/**
  * JurisdictionPublic
  */
 export type JurisdictionPublic = {
@@ -531,6 +503,24 @@ export type JurisdictionSelection = {
 };
 
 /**
+ * JurisdictionSelectionOut
+ */
+export type JurisdictionSelectionOut = {
+    /**
+     * Jurisdiction Ids
+     */
+    jurisdiction_ids: Array<string>;
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Version
+     */
+    version: number;
+};
+
+/**
  * JurisdictionStatusCounts
  */
 export type JurisdictionStatusCounts = {
@@ -550,20 +540,6 @@ export type JurisdictionStatusCounts = {
      * Disabled
      */
     disabled: number;
-};
-
-/**
- * JurisdictionSubtreeToggle
- */
-export type JurisdictionSubtreeToggle = {
-    /**
-     * Root Id
-     */
-    root_id: string;
-    /**
-     * Enabled
-     */
-    enabled: boolean;
 };
 
 /**
@@ -613,30 +589,6 @@ export type JurisdictionUpdate = {
      * Sort Order
      */
     sort_order?: number | null;
-};
-
-/**
- * JurisdictionUserCount
- */
-export type JurisdictionUserCount = {
-    /**
-     * Jurisdiction Id
-     */
-    jurisdiction_id: string;
-    /**
-     * User Count
-     */
-    user_count: number;
-};
-
-/**
- * JurisdictionUserCounts
- */
-export type JurisdictionUserCounts = {
-    /**
-     * Data
-     */
-    data: Array<JurisdictionUserCount>;
 };
 
 /**
@@ -706,6 +658,47 @@ export type PrivateUserCreate = {
  * RegionType
  */
 export type RegionType = 'country' | 'subdivision' | 'city';
+
+/**
+ * SelectionChange
+ */
+export type SelectionChange = {
+    /**
+     * Add
+     */
+    add?: Array<string>;
+    /**
+     * Remove
+     */
+    remove?: Array<string>;
+    /**
+     * Add Subtrees
+     */
+    add_subtrees?: Array<string>;
+    /**
+     * Remove Subtrees
+     */
+    remove_subtrees?: Array<string>;
+};
+
+/**
+ * SelectionPreview
+ */
+export type SelectionPreview = {
+    /**
+     * Version
+     */
+    version: number;
+    /**
+     * Added
+     */
+    added: Array<string>;
+    /**
+     * Removed
+     */
+    removed: Array<string>;
+    affected_users: JurisdictionAffectedUsers;
+};
 
 /**
  * SubtreeSelection
@@ -1088,6 +1081,642 @@ export type loginRecoverPasswordHtmlContentResponses = {
 
 export type loginRecoverPasswordHtmlContentResponse = loginRecoverPasswordHtmlContentResponses[keyof loginRecoverPasswordHtmlContentResponses];
 
+export type usersClearMyJurisdictionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/jurisdictions';
+};
+
+export type usersClearMyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+    /**
+     * Precondition Required
+     */
+    428: ErrorResponse;
+};
+
+export type usersClearMyJurisdictionsError = usersClearMyJurisdictionsErrors[keyof usersClearMyJurisdictionsErrors];
+
+export type usersClearMyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type usersClearMyJurisdictionsResponse = usersClearMyJurisdictionsResponses[keyof usersClearMyJurisdictionsResponses];
+
+export type usersReadMyJurisdictionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/jurisdictions';
+};
+
+export type usersReadMyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type usersReadMyJurisdictionsError = usersReadMyJurisdictionsErrors[keyof usersReadMyJurisdictionsErrors];
+
+export type usersReadMyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type usersReadMyJurisdictionsResponse = usersReadMyJurisdictionsResponses[keyof usersReadMyJurisdictionsResponses];
+
+export type usersPatchMyJurisdictionsData = {
+    body: SelectionChange;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/jurisdictions';
+};
+
+export type usersPatchMyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type usersPatchMyJurisdictionsError = usersPatchMyJurisdictionsErrors[keyof usersPatchMyJurisdictionsErrors];
+
+export type usersPatchMyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type usersPatchMyJurisdictionsResponse = usersPatchMyJurisdictionsResponses[keyof usersPatchMyJurisdictionsResponses];
+
+export type usersSetMyJurisdictionsData = {
+    body: JurisdictionSelection;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/jurisdictions';
+};
+
+export type usersSetMyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+    /**
+     * Precondition Required
+     */
+    428: ErrorResponse;
+};
+
+export type usersSetMyJurisdictionsError = usersSetMyJurisdictionsErrors[keyof usersSetMyJurisdictionsErrors];
+
+export type usersSetMyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type usersSetMyJurisdictionsResponse = usersSetMyJurisdictionsResponses[keyof usersSetMyJurisdictionsResponses];
+
+export type usersClearUserJurisdictionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/jurisdictions';
+};
+
+export type usersClearUserJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+    /**
+     * Precondition Required
+     */
+    428: ErrorResponse;
+};
+
+export type usersClearUserJurisdictionsError = usersClearUserJurisdictionsErrors[keyof usersClearUserJurisdictionsErrors];
+
+export type usersClearUserJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type usersClearUserJurisdictionsResponse = usersClearUserJurisdictionsResponses[keyof usersClearUserJurisdictionsResponses];
+
+export type usersReadUserJurisdictionsData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/jurisdictions';
+};
+
+export type usersReadUserJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type usersReadUserJurisdictionsError = usersReadUserJurisdictionsErrors[keyof usersReadUserJurisdictionsErrors];
+
+export type usersReadUserJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type usersReadUserJurisdictionsResponse = usersReadUserJurisdictionsResponses[keyof usersReadUserJurisdictionsResponses];
+
+export type usersPatchUserJurisdictionsData = {
+    body: SelectionChange;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/jurisdictions';
+};
+
+export type usersPatchUserJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type usersPatchUserJurisdictionsError = usersPatchUserJurisdictionsErrors[keyof usersPatchUserJurisdictionsErrors];
+
+export type usersPatchUserJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type usersPatchUserJurisdictionsResponse = usersPatchUserJurisdictionsResponses[keyof usersPatchUserJurisdictionsResponses];
+
+export type usersSetUserJurisdictionsData = {
+    body: JurisdictionSelection;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/jurisdictions';
+};
+
+export type usersSetUserJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+    /**
+     * Precondition Required
+     */
+    428: ErrorResponse;
+};
+
+export type usersSetUserJurisdictionsError = usersSetUserJurisdictionsErrors[keyof usersSetUserJurisdictionsErrors];
+
+export type usersSetUserJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type usersSetUserJurisdictionsResponse = usersSetUserJurisdictionsResponses[keyof usersSetUserJurisdictionsResponses];
+
+export type companiesClearCompanyJurisdictionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}/jurisdictions';
+};
+
+export type companiesClearCompanyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+    /**
+     * Precondition Required
+     */
+    428: ErrorResponse;
+};
+
+export type companiesClearCompanyJurisdictionsError = companiesClearCompanyJurisdictionsErrors[keyof companiesClearCompanyJurisdictionsErrors];
+
+export type companiesClearCompanyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type companiesClearCompanyJurisdictionsResponse = companiesClearCompanyJurisdictionsResponses[keyof companiesClearCompanyJurisdictionsResponses];
+
+export type companiesReadCompanyJurisdictionsData = {
+    body?: never;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}/jurisdictions';
+};
+
+export type companiesReadCompanyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type companiesReadCompanyJurisdictionsError = companiesReadCompanyJurisdictionsErrors[keyof companiesReadCompanyJurisdictionsErrors];
+
+export type companiesReadCompanyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type companiesReadCompanyJurisdictionsResponse = companiesReadCompanyJurisdictionsResponses[keyof companiesReadCompanyJurisdictionsResponses];
+
+export type companiesPatchCompanyJurisdictionsData = {
+    body: SelectionChange;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}/jurisdictions';
+};
+
+export type companiesPatchCompanyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type companiesPatchCompanyJurisdictionsError = companiesPatchCompanyJurisdictionsErrors[keyof companiesPatchCompanyJurisdictionsErrors];
+
+export type companiesPatchCompanyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type companiesPatchCompanyJurisdictionsResponse = companiesPatchCompanyJurisdictionsResponses[keyof companiesPatchCompanyJurisdictionsResponses];
+
+export type companiesSetCompanyJurisdictionsData = {
+    body: JurisdictionSelection;
+    headers?: {
+        /**
+         * If-Match
+         */
+        'If-Match'?: string | null;
+    };
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}/jurisdictions';
+};
+
+export type companiesSetCompanyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Precondition Failed
+     */
+    412: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+    /**
+     * Precondition Required
+     */
+    428: ErrorResponse;
+};
+
+export type companiesSetCompanyJurisdictionsError = companiesSetCompanyJurisdictionsErrors[keyof companiesSetCompanyJurisdictionsErrors];
+
+export type companiesSetCompanyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionSelectionOut;
+};
+
+export type companiesSetCompanyJurisdictionsResponse = companiesSetCompanyJurisdictionsResponses[keyof companiesSetCompanyJurisdictionsResponses];
+
+export type companiesPreviewCompanyJurisdictionsData = {
+    body: SelectionChange;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}/jurisdictions/preview';
+};
+
+export type companiesPreviewCompanyJurisdictionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Forbidden
+     */
+    403: ErrorResponse;
+    /**
+     * Not Found
+     */
+    404: ErrorResponse;
+    /**
+     * Unprocessable Content
+     */
+    422: ErrorResponse;
+};
+
+export type companiesPreviewCompanyJurisdictionsError = companiesPreviewCompanyJurisdictionsErrors[keyof companiesPreviewCompanyJurisdictionsErrors];
+
+export type companiesPreviewCompanyJurisdictionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: SelectionPreview;
+};
+
+export type companiesPreviewCompanyJurisdictionsResponse = companiesPreviewCompanyJurisdictionsResponses[keyof companiesPreviewCompanyJurisdictionsResponses];
+
 export type usersReadUsersData = {
     body?: never;
     path?: never;
@@ -1315,138 +1944,6 @@ export type usersUpdatePasswordMeResponses = {
 
 export type usersUpdatePasswordMeResponse = usersUpdatePasswordMeResponses[keyof usersUpdatePasswordMeResponses];
 
-export type usersReadMyJurisdictionsData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/users/me/jurisdictions';
-};
-
-export type usersReadMyJurisdictionsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type usersReadMyJurisdictionsError = usersReadMyJurisdictionsErrors[keyof usersReadMyJurisdictionsErrors];
-
-export type usersReadMyJurisdictionsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionsPublic;
-};
-
-export type usersReadMyJurisdictionsResponse = usersReadMyJurisdictionsResponses[keyof usersReadMyJurisdictionsResponses];
-
-export type usersSetMyJurisdictionsData = {
-    body: JurisdictionSelection;
-    path?: never;
-    query?: never;
-    url: '/api/v1/users/me/jurisdictions';
-};
-
-export type usersSetMyJurisdictionsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type usersSetMyJurisdictionsError = usersSetMyJurisdictionsErrors[keyof usersSetMyJurisdictionsErrors];
-
-export type usersSetMyJurisdictionsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionsPublic;
-};
-
-export type usersSetMyJurisdictionsResponse = usersSetMyJurisdictionsResponses[keyof usersSetMyJurisdictionsResponses];
-
-export type usersReadMyJurisdictionIdsData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/users/me/jurisdictions/ids';
-};
-
-export type usersReadMyJurisdictionIdsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type usersReadMyJurisdictionIdsError = usersReadMyJurisdictionIdsErrors[keyof usersReadMyJurisdictionIdsErrors];
-
-export type usersReadMyJurisdictionIdsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionIds;
-};
-
-export type usersReadMyJurisdictionIdsResponse = usersReadMyJurisdictionIdsResponses[keyof usersReadMyJurisdictionIdsResponses];
-
-export type usersToggleMyJurisdictionSubtreeData = {
-    body: JurisdictionSubtreeToggle;
-    path?: never;
-    query?: never;
-    url: '/api/v1/users/me/jurisdictions/subtree';
-};
-
-export type usersToggleMyJurisdictionSubtreeErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type usersToggleMyJurisdictionSubtreeError = usersToggleMyJurisdictionSubtreeErrors[keyof usersToggleMyJurisdictionSubtreeErrors];
-
-export type usersToggleMyJurisdictionSubtreeResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionIds;
-};
-
-export type usersToggleMyJurisdictionSubtreeResponse = usersToggleMyJurisdictionSubtreeResponses[keyof usersToggleMyJurisdictionSubtreeResponses];
-
 export type usersRegisterUserData = {
     body: UserRegister;
     path?: never;
@@ -1617,132 +2114,6 @@ export type usersUpdateUserResponses = {
 };
 
 export type usersUpdateUserResponse = usersUpdateUserResponses[keyof usersUpdateUserResponses];
-
-export type usersReadUserJurisdictionsData = {
-    body?: never;
-    path: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
-    query?: never;
-    url: '/api/v1/users/{user_id}/jurisdictions';
-};
-
-export type usersReadUserJurisdictionsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Not Found
-     */
-    404: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type usersReadUserJurisdictionsError = usersReadUserJurisdictionsErrors[keyof usersReadUserJurisdictionsErrors];
-
-export type usersReadUserJurisdictionsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionsPublic;
-};
-
-export type usersReadUserJurisdictionsResponse = usersReadUserJurisdictionsResponses[keyof usersReadUserJurisdictionsResponses];
-
-export type usersSetUserJurisdictionsData = {
-    body: JurisdictionSelection;
-    path: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
-    query?: never;
-    url: '/api/v1/users/{user_id}/jurisdictions';
-};
-
-export type usersSetUserJurisdictionsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Not Found
-     */
-    404: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type usersSetUserJurisdictionsError = usersSetUserJurisdictionsErrors[keyof usersSetUserJurisdictionsErrors];
-
-export type usersSetUserJurisdictionsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionsPublic;
-};
-
-export type usersSetUserJurisdictionsResponse = usersSetUserJurisdictionsResponses[keyof usersSetUserJurisdictionsResponses];
-
-export type usersReadUserJurisdictionIdsData = {
-    body?: never;
-    path: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
-    query?: never;
-    url: '/api/v1/users/{user_id}/jurisdictions/ids';
-};
-
-export type usersReadUserJurisdictionIdsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Not Found
-     */
-    404: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type usersReadUserJurisdictionIdsError = usersReadUserJurisdictionIdsErrors[keyof usersReadUserJurisdictionIdsErrors];
-
-export type usersReadUserJurisdictionIdsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionIds;
-};
-
-export type usersReadUserJurisdictionIdsResponse = usersReadUserJurisdictionIdsResponses[keyof usersReadUserJurisdictionIdsResponses];
 
 export type utilsHealthCheckData = {
     body?: never;
@@ -2287,242 +2658,6 @@ export type companiesReadCompanyAdminsResponses = {
 };
 
 export type companiesReadCompanyAdminsResponse = companiesReadCompanyAdminsResponses[keyof companiesReadCompanyAdminsResponses];
-
-export type companiesReadCompanyJurisdictionsData = {
-    body?: never;
-    path: {
-        /**
-         * Company Id
-         */
-        company_id: string;
-    };
-    query?: never;
-    url: '/api/v1/companies/{company_id}/jurisdictions';
-};
-
-export type companiesReadCompanyJurisdictionsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type companiesReadCompanyJurisdictionsError = companiesReadCompanyJurisdictionsErrors[keyof companiesReadCompanyJurisdictionsErrors];
-
-export type companiesReadCompanyJurisdictionsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionsPublic;
-};
-
-export type companiesReadCompanyJurisdictionsResponse = companiesReadCompanyJurisdictionsResponses[keyof companiesReadCompanyJurisdictionsResponses];
-
-export type companiesSetCompanyJurisdictionsData = {
-    body: JurisdictionSelection;
-    path: {
-        /**
-         * Company Id
-         */
-        company_id: string;
-    };
-    query?: never;
-    url: '/api/v1/companies/{company_id}/jurisdictions';
-};
-
-export type companiesSetCompanyJurisdictionsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Not Found
-     */
-    404: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type companiesSetCompanyJurisdictionsError = companiesSetCompanyJurisdictionsErrors[keyof companiesSetCompanyJurisdictionsErrors];
-
-export type companiesSetCompanyJurisdictionsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionsPublic;
-};
-
-export type companiesSetCompanyJurisdictionsResponse = companiesSetCompanyJurisdictionsResponses[keyof companiesSetCompanyJurisdictionsResponses];
-
-export type companiesReadCompanyJurisdictionIdsData = {
-    body?: never;
-    path: {
-        /**
-         * Company Id
-         */
-        company_id: string;
-    };
-    query?: never;
-    url: '/api/v1/companies/{company_id}/jurisdictions/ids';
-};
-
-export type companiesReadCompanyJurisdictionIdsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type companiesReadCompanyJurisdictionIdsError = companiesReadCompanyJurisdictionIdsErrors[keyof companiesReadCompanyJurisdictionIdsErrors];
-
-export type companiesReadCompanyJurisdictionIdsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionIds;
-};
-
-export type companiesReadCompanyJurisdictionIdsResponse = companiesReadCompanyJurisdictionIdsResponses[keyof companiesReadCompanyJurisdictionIdsResponses];
-
-export type companiesToggleCompanyJurisdictionSubtreeData = {
-    body: JurisdictionSubtreeToggle;
-    path: {
-        /**
-         * Company Id
-         */
-        company_id: string;
-    };
-    query?: never;
-    url: '/api/v1/companies/{company_id}/jurisdictions/subtree';
-};
-
-export type companiesToggleCompanyJurisdictionSubtreeErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Not Found
-     */
-    404: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type companiesToggleCompanyJurisdictionSubtreeError = companiesToggleCompanyJurisdictionSubtreeErrors[keyof companiesToggleCompanyJurisdictionSubtreeErrors];
-
-export type companiesToggleCompanyJurisdictionSubtreeResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionIds;
-};
-
-export type companiesToggleCompanyJurisdictionSubtreeResponse = companiesToggleCompanyJurisdictionSubtreeResponses[keyof companiesToggleCompanyJurisdictionSubtreeResponses];
-
-export type companiesReadCompanyJurisdictionUserCountsData = {
-    body?: never;
-    path: {
-        /**
-         * Company Id
-         */
-        company_id: string;
-    };
-    query?: never;
-    url: '/api/v1/companies/{company_id}/jurisdictions/user-counts';
-};
-
-export type companiesReadCompanyJurisdictionUserCountsErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type companiesReadCompanyJurisdictionUserCountsError = companiesReadCompanyJurisdictionUserCountsErrors[keyof companiesReadCompanyJurisdictionUserCountsErrors];
-
-export type companiesReadCompanyJurisdictionUserCountsResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionUserCounts;
-};
-
-export type companiesReadCompanyJurisdictionUserCountsResponse = companiesReadCompanyJurisdictionUserCountsResponses[keyof companiesReadCompanyJurisdictionUserCountsResponses];
-
-export type companiesReadCompanyJurisdictionAffectedUsersData = {
-    body: JurisdictionAffectedQuery;
-    path: {
-        /**
-         * Company Id
-         */
-        company_id: string;
-    };
-    query?: never;
-    url: '/api/v1/companies/{company_id}/jurisdictions/affected-users';
-};
-
-export type companiesReadCompanyJurisdictionAffectedUsersErrors = {
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Forbidden
-     */
-    403: ErrorResponse;
-    /**
-     * Unprocessable Content
-     */
-    422: ErrorResponse;
-};
-
-export type companiesReadCompanyJurisdictionAffectedUsersError = companiesReadCompanyJurisdictionAffectedUsersErrors[keyof companiesReadCompanyJurisdictionAffectedUsersErrors];
-
-export type companiesReadCompanyJurisdictionAffectedUsersResponses = {
-    /**
-     * Successful Response
-     */
-    200: JurisdictionAffectedUsers;
-};
-
-export type companiesReadCompanyJurisdictionAffectedUsersResponse = companiesReadCompanyJurisdictionAffectedUsersResponses[keyof companiesReadCompanyJurisdictionAffectedUsersResponses];
 
 export type serviceReadUserJurisdictionIdsForServiceData = {
     body?: never;

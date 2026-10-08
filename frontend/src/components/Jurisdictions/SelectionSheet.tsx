@@ -45,8 +45,8 @@ export function SelectionSheet({
     )
     const endpoint =
         mode === "company"
-            ? `GET /api/v1/companies/${ownerId}/jurisdictions/ids`
-            : "GET /api/v1/users/me/jurisdictions/ids"
+            ? `GET /api/v1/companies/${ownerId}/jurisdictions`
+            : "GET /api/v1/users/me/jurisdictions"
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>

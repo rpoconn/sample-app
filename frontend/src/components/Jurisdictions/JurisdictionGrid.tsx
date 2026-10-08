@@ -82,10 +82,12 @@ export function JurisdictionGrid({
     const gridRef = useRef<AgGridReact<JurisdictionRow>>(null)
 
     const { data: company } = useSuspenseQuery(Service.companyQuery(companyId))
-    const { data: companyIds } = useSuspenseQuery(
-        Service.companyIdsQuery(companyId),
-    )
-    const { data: myIds } = useSuspenseQuery(Service.myIdsQuery())
+    const {
+        data: { jurisdiction_ids: companyIds },
+    } = useSuspenseQuery(Service.companyIdsQuery(companyId))
+    const {
+        data: { jurisdiction_ids: myIds },
+    } = useSuspenseQuery(Service.myIdsQuery())
     const { data: facets } = useSuspenseQuery(
         Service.facetsQuery(mode, queried),
     )
@@ -147,63 +149,75 @@ export function JurisdictionGrid({
         )
     }, [facets, queried.byType])
 
-    const mutation = useSelectionMutation(mode, companyId, () => {
-        queryClient.invalidateQueries({ queryKey: Service.keys.facets })
-        queryClient.invalidateQueries({
-            queryKey: Service.keys.companyIds(companyId),
-        })
-        // Dropping a company opt-in also drops it for every user in the company
-        queryClient.invalidateQueries({ queryKey: Service.keys.myIds })
-        // Ancestors' select-all counts and user counts change too
-        gridRef.current?.api.refreshInfiniteCache()
-    })
+    // Turning company opt-ins off asks first when users would lose them; named
+    // after the clicked row. Reads live state via a ref, so it never changes.
+    const apply = useCallback(
+        async (rowId: string, enabled: boolean, subtree: boolean) => {
+            const { mode, companyId, showErrorToast } = latest.current
+            if (mode === "company" && !enabled) {
+                // Fetch fresh: someone may have opted in since the page loaded
+                let preview: Awaited<ReturnType<typeof Service.previewDisable>>
+                try {
+                    preview = await Service.previewDisable(companyId, rowId)
+                } catch (err) {
+                    handleError.call(showErrorToast, err as Error)
+                    return
+                }
+                if (preview.users.length > 0) {
+                    const name =
+                        gridRef.current?.api.getRowNode(rowId)?.data
+                            ?.jurisdiction.name ?? ""
+                    setPendingDisable({
+                        open: true,
+                        item: { rootId: rowId, subtree, name, ...preview },
+                    })
+                    return
+                }
+            }
+            latest.current.save(rowId, enabled, subtree)
+        },
+        [],
+    )
+
+    const mutation = useSelectionMutation(
+        mode,
+        companyId,
+        () => {
+            queryClient.invalidateQueries({ queryKey: Service.keys.facets })
+            queryClient.invalidateQueries({
+                queryKey: Service.keys.companyIds(companyId),
+            })
+            // Dropping a company opt-in also drops it for every user in the company
+            queryClient.invalidateQueries({ queryKey: Service.keys.myIds })
+            // Ancestors' select-all counts and user counts change too
+            gridRef.current?.api.refreshInfiniteCache()
+        },
+        // The license moved on while the dialog was open: review it again
+        ({ rootId, enabled, subtree }) => apply(rootId, enabled, subtree),
+    )
 
     // Saves a row, or the row and everything under it. A single row's switch
-    // flips right away; the refresh after saving settles the rest.
-    const save = (rootId: string, enabled: boolean, subtree: boolean) => {
+    // flips right away; the refresh after saving settles the rest. A version
+    // only commits if the license is still at it.
+    const save = (
+        rootId: string,
+        enabled: boolean,
+        subtree: boolean,
+        version?: number,
+    ) => {
         const node = gridRef.current?.api.getRowNode(rootId)
         if (!subtree && node?.data) {
             node.setData({ ...node.data, checked: enabled })
         }
-        mutation.mutate({ rootId, enabled })
+        mutation.mutate({ rootId, enabled, subtree, version })
     }
 
     // The grid may keep the first context it is given, so handlers read live state via a ref
     const latest = useRef({ mode, companyId, save, showErrorToast })
     latest.current = { mode, companyId, save, showErrorToast }
 
-    const context = useMemo<JurisdictionGridContext>(() => {
-        // Turning company opt-ins off asks first when users would lose them;
-        // named after the clicked row
-        const apply = async (
-            rowId: string,
-            enabled: boolean,
-            subtree: boolean,
-        ) => {
-            const { mode, companyId, showErrorToast } = latest.current
-            if (mode === "company" && !enabled) {
-                // Fetch fresh: someone may have opted in since the page loaded
-                let users: PendingDisable["users"]
-                try {
-                    users = await Service.affectedUsers(companyId, rowId)
-                } catch (err) {
-                    handleError.call(showErrorToast, err as Error)
-                    return
-                }
-                if (users.length > 0) {
-                    const name =
-                        gridRef.current?.api.getRowNode(rowId)?.data
-                            ?.jurisdiction.name ?? ""
-                    setPendingDisable({
-                        open: true,
-                        item: { rootId: rowId, subtree, name, users },
-                    })
-                    return
-                }
-            }
-            latest.current.save(rowId, enabled, subtree)
-        }
-        return {
+    const context = useMemo<JurisdictionGridContext>(
+        () => ({
             toggleExpanded: (id) => {
                 if (source.toggleExpanded(id)) {
                     gridRef.current?.api.refreshInfiniteCache()
@@ -211,8 +225,9 @@ export function JurisdictionGrid({
             },
             toggleEnabled: (id, enabled) => apply(id, enabled, false),
             toggleSubtree: (id, enabled) => apply(id, enabled, true),
-        }
-    }, [source])
+        }),
+        [source, apply],
+    )
 
     const enabledIds = mode === "company" ? companyIds : myIds
     const selectionGroups = useMemo(() => {
@@ -322,7 +337,7 @@ export function JurisdictionGrid({
                     }
                     onConfirm={(item) => {
                         setPendingDisable((p) => ({ ...p, open: false }))
-                        save(item.rootId, false, item.subtree)
+                        save(item.rootId, false, item.subtree, item.version)
                     }}
                 />
             </div>

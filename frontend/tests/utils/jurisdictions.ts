@@ -6,6 +6,7 @@ import {
     JurisdictionsService,
     LoginService,
     PrivateService,
+    type SelectionChange,
     type UserPublic,
     UsersService,
 } from "../../src/client"
@@ -54,10 +55,10 @@ export async function createCompanyWithPlan() {
     const planIds = tree.data
         .filter((j) => !j.is_structural && inPlan(j.name_path))
         .map((j) => j.id)
-    await CompaniesService.setCompanyJurisdictions({
+    await CompaniesService.patchCompanyJurisdictions({
         headers,
         path: { company_id: company.id },
-        body: { jurisdiction_ids: planIds },
+        body: { add: planIds },
     })
     return { company, planIds, tree: tree.data }
 }
@@ -91,24 +92,37 @@ async function tokenFor(user: TestUser) {
 
 // What the API has saved, checked independently of what the page shows
 export async function savedUserIds(user: TestUser) {
-    const { data } = await UsersService.readMyJurisdictionIds({
+    const { data } = await UsersService.readMyJurisdictions({
         headers: bearer(await tokenFor(user)),
     })
     return data.jurisdiction_ids
 }
 
 export async function savedCompanyIds(companyId: string) {
-    const { data } = await CompaniesService.readCompanyJurisdictionIds({
+    const { data } = await CompaniesService.readCompanyJurisdictions({
         headers: bearer(await getSuperuserToken()),
         path: { company_id: companyId },
     })
     return data.jurisdiction_ids
 }
 
+// Changes the company's license as someone else would, e.g. from another tab
+export async function changeCompanyIds(
+    companyId: string,
+    change: SelectionChange,
+) {
+    await CompaniesService.patchCompanyJurisdictions({
+        headers: bearer(await getSuperuserToken()),
+        path: { company_id: companyId },
+        body: change,
+    })
+}
+
+// Turns the ids on for the user, on top of what they already have
 export async function setUserIds(user: TestUser, ids: string[]) {
-    await UsersService.setMyJurisdictions({
+    await UsersService.patchMyJurisdictions({
         headers: bearer(await tokenFor(user)),
-        body: { jurisdiction_ids: ids },
+        body: { add: ids },
     })
 }
 
