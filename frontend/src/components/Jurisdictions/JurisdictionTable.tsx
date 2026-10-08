@@ -28,6 +28,9 @@ const pageSize = 100
 // The grid's wrapper border, above and below
 const borderHeight = 2
 
+// Body kept open with no rows, for the no-matches message over it
+const emptyBodyHeight = 192
+
 export function JurisdictionTable({
     gridRef,
     datasource,
@@ -61,7 +64,7 @@ export function JurisdictionTable({
 
     return (
         <div
-            className="h-[max(24rem,calc(100vh-26rem))] max-h-[max(24rem,calc(100vh-26rem))] min-h-64"
+            className="h-[max(24rem,calc(100vh-26rem))] max-h-[max(24rem,calc(100vh-26rem))]"
             style={{ height: fitHeight }}
         >
             <AgGridReact<JurisdictionRow>
@@ -93,9 +96,10 @@ export function JurisdictionTable({
                 onModelUpdated={({ api }) => {
                     const { headerHeight, rowHeight } =
                         api.getSizesForCurrentTheme()
+                    const rows = api.getDisplayedRowCount()
                     setFitHeight(
                         headerHeight +
-                            api.getDisplayedRowCount() * rowHeight +
+                            (rows > 0 ? rows * rowHeight : emptyBodyHeight) +
                             borderHeight,
                     )
                 }}
