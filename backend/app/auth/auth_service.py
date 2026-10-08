@@ -4,6 +4,7 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 from sqlmodel import Session
 
+from app.auth.auth_models import Token
 from app.core import security
 from app.core.config import settings
 from app.core.security import verify_password
@@ -33,24 +34,37 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
     return db_user
 
 
-def generate_password_reset_token(email: str) -> str:
+def issue_token(user: User) -> Token:
+    """A fresh access token for the user, valid until their next password change."""
+    return Token(
+        access_token=security.create_access_token(
+            user.id,
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            auth_version=user.auth_version,
+        )
+    )
+
+
+def generate_password_reset_token(email: str, auth_version: int) -> str:
     delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
     now = datetime.now(UTC)
     expires = now + delta
     exp = expires.timestamp()
     encoded_jwt = jwt.encode(
-        {"exp": exp, "nbf": now, "sub": email},
+        # ver makes the token single-use: resetting bumps the user's auth_version
+        {"exp": exp, "nbf": now, "sub": email, "ver": auth_version},
         settings.SECRET_KEY,
         algorithm=security.ALGORITHM,
     )
     return encoded_jwt
 
 
-def verify_password_reset_token(token: str) -> str | None:
+def verify_password_reset_token(token: str) -> tuple[str, int] | None:
+    """Return the token's (email, auth_version), or None if it is invalid."""
     try:
         decoded_token = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
         )
-        return str(decoded_token["sub"])
-    except InvalidTokenError:
+        return str(decoded_token["sub"]), int(decoded_token.get("ver", 0))
+    except InvalidTokenError, KeyError, TypeError, ValueError:
         return None

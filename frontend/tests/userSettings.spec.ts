@@ -147,6 +147,11 @@ test.describe("Change password", () => {
             page.getByText("Password updated successfully"),
         ).toBeVisible()
 
+        // The response's new token keeps this tab signed in
+        await page.reload()
+        await expect(page.getByRole("tab", { name: "Password" })).toBeVisible()
+        await expect(page).toHaveURL(/\/settings/)
+
         await logOutUser(page)
         await logInUser(page, email, newPassword)
     })

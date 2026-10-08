@@ -5,11 +5,13 @@ from fastapi import APIRouter, Depends, Query
 from sqlmodel import col, func, select
 
 from app.auth.auth_deps import CurrentUser, get_current_active_superuser
+from app.auth.auth_models import Token
+from app.auth.auth_service import issue_token
 from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.errors import ApiError, Conflict, Forbidden, NotFound, errors
 from app.core.schemas import Message
-from app.core.security import get_password_hash, verify_password
+from app.core.security import verify_password
 from app.mail.mail_service import generate_new_account_email, send_email
 from app.users import user_service
 from app.users.user_models import (
@@ -101,12 +103,13 @@ def update_user_me(
     return user_service.save_user(session=session, user=current_user)
 
 
-@router.patch("/me/password", response_model=Message, responses=errors(400))
+@router.patch("/me/password", responses=errors(400))
 def update_password_me(
     *, session: SessionDep, body: UpdatePassword, current_user: CurrentUser
-) -> Any:
+) -> Token:
     """
-    Update own password.
+    Update own password. This revokes every existing token, the caller's
+    included, so the response carries a new one.
     """
     verified, _ = verify_password(body.current_password, current_user.hashed_password)
     if not verified:
@@ -116,11 +119,12 @@ def update_password_me(
             "New password cannot be the same as the current one",
             code="password_unchanged",
         )
-    hashed_password = get_password_hash(body.new_password)
-    current_user.hashed_password = hashed_password
-    session.add(current_user)
-    session.commit()
-    return Message(message="Password updated successfully")
+    user = user_service.update_user(
+        session=session,
+        db_user=current_user,
+        user_in=UserUpdate(password=body.new_password),
+    )
+    return issue_token(user)
 
 
 @router.get("/me", response_model=UserPublic)

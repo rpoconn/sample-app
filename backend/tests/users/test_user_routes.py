@@ -11,7 +11,7 @@ from app.core.errors import Conflict
 from app.core.security import verify_password
 from app.users.user_models import User, UserCreate
 from app.users.user_service import create_user, delete_user, get_user_by_email
-from tests.utils.user import create_random_user
+from tests.utils.user import create_random_user, user_authentication_headers
 from tests.utils.utils import assert_error, random_email, random_lower_string
 
 
@@ -259,47 +259,64 @@ def test_update_user_me(
     assert user_db.full_name == full_name
 
 
-def test_update_password_me(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
+def test_update_password_me(client: TestClient, db: Session) -> None:
+    email, password = random_email(), random_lower_string()
+    create_user(session=db, user_create=UserCreate(email=email, password=password))
+    old_headers = user_authentication_headers(
+        client=client, email=email, password=password
+    )
     new_password = random_lower_string()
-    data = {
-        "current_password": settings.FIRST_SUPERUSER_PASSWORD,
-        "new_password": new_password,
-    }
+    data = {"current_password": password, "new_password": new_password}
     r = client.patch(
-        f"{settings.API_V1_STR}/users/me/password",
-        headers=superuser_token_headers,
-        json=data,
+        f"{settings.API_V1_STR}/users/me/password", headers=old_headers, json=data
     )
     assert r.status_code == 200
-    updated_user = r.json()
-    assert updated_user["message"] == "Password updated successfully"
+    new_headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
 
-    user_query = select(User).where(User.email == settings.FIRST_SUPERUSER)
-    user_db = db.exec(user_query).first()
+    user_db = get_user_by_email(session=db, email=email)
     assert user_db
-    assert user_db.email == settings.FIRST_SUPERUSER
+    db.refresh(user_db)
     verified, _ = verify_password(new_password, user_db.hashed_password)
     assert verified
 
-    # Revert to the old password to keep consistency in test
-    old_data = {
-        "current_password": new_password,
-        "new_password": settings.FIRST_SUPERUSER_PASSWORD,
-    }
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/me/password",
-        headers=superuser_token_headers,
-        json=old_data,
-    )
-    db.refresh(user_db)
-
+    # The change logs out every older session, the caller's included
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=old_headers)
+    assert_error(r, 401, "token_revoked")
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=new_headers)
     assert r.status_code == 200
-    verified, _ = verify_password(
-        settings.FIRST_SUPERUSER_PASSWORD, user_db.hashed_password
+    login_headers = user_authentication_headers(
+        client=client, email=email, password=new_password
     )
-    assert verified
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=login_headers)
+    assert r.status_code == 200
+
+
+def test_update_user_email_revokes_sessions(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    email, password = random_email(), random_lower_string()
+    user = create_user(
+        session=db, user_create=UserCreate(email=email, password=password)
+    )
+    headers = user_authentication_headers(client=client, email=email, password=password)
+
+    r = client.patch(
+        f"{settings.API_V1_STR}/users/{user.id}",
+        headers=superuser_token_headers,
+        json={"full_name": random_lower_string()},
+    )
+    assert r.status_code == 200
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
+    assert r.status_code == 200
+
+    r = client.patch(
+        f"{settings.API_V1_STR}/users/{user.id}",
+        headers=superuser_token_headers,
+        json={"email": random_email()},
+    )
+    assert r.status_code == 200
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
+    assert_error(r, 401, "token_revoked")
 
 
 def test_update_password_me_incorrect_password(

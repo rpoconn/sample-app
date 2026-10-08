@@ -20,10 +20,18 @@ password_hash = PasswordHash(
 ALGORITHM = "HS256"
 
 
-def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
+def create_access_token(
+    subject: str | Any, expires_delta: timedelta, auth_version: int
+) -> str:
     expire = datetime.now(UTC) + expires_delta
-    # jti identifies this token so logout can revoke it
-    to_encode = {"exp": expire, "sub": str(subject), "jti": str(uuid.uuid4())}
+    # jti identifies this token so logout can revoke it; ver ties it to the
+    # user's auth_version so a password change revokes every older token
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "jti": str(uuid.uuid4()),
+        "ver": auth_version,
+    }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 

@@ -95,6 +95,8 @@ class User(UserBase, table=True):
     jurisdictions_version: int = Field(
         default=0, sa_column_kwargs={"server_default": "0"}
     )
+    # Bumped on password and email changes; tokens carrying an older one are rejected
+    auth_version: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
 
 
 # Properties to return via API, id is always required

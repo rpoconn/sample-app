@@ -15,6 +15,7 @@ class TokenPayload(SQLModel):
     sub: uuid.UUID | None = None
     jti: uuid.UUID
     exp: datetime
+    ver: int = 0
 
 
 # Access tokens revoked by logout; rows can be pruned once expires_at has passed

@@ -54,7 +54,9 @@ const ChangePassword = () => {
     const mutation = useMutation({
         mutationFn: (data: UpdatePassword) =>
             UsersService.updatePasswordMe({ body: data }),
-        onSuccess: () => {
+        onSuccess: ({ data }) => {
+            // The change revoked every older token, this tab's included
+            localStorage.setItem("access_token", data.access_token)
             showSuccessToast("Password updated successfully")
             form.reset()
         },

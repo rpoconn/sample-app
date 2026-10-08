@@ -118,6 +118,24 @@ bunx playwright test jurisdictions
 - **Accessibility pass.** The status tabs' accessible names come from their tooltips ("On for you. These are the jurisdictions you manage.") rather than their labels. Use `describeChild` on those tooltips, then do a full keyboard and screen-reader review of the grid.
 - **Service API hardening.** Replace the single shared `SERVICE_API_KEY` with keys scoped per service, and add a bulk "ids for these users" endpoint for consumers that fan out.
 
+## Security: what's hardened and what's left open
+
+This is a sample app built for an interview, not a production deployment. A code review found a list of security issues. I fixed the ones that cost nothing in convenience and left the rest open on purpose, so reviewers can sign up, change licenses, reset the database and try things without getting stuck.
+
+**Hardened:**
+
+- **Reset tokens work once, and a password change ends old sessions.** Every user has an `auth_version`, and access tokens and reset tokens both carry it. A password reset, a password change or a superuser editing a user's password or email bumps the version, so older tokens get 401 `token_revoked`. `/me/password` returns a new token, so you stay logged in on the tab where you changed it.
+- **Smaller fixes.** An ETag has to belong to the selection it's sent for. Password recovery sends its email after the response, so response timing doesn't show whether an account exists. Emails are compared case-insensitively. A duplicate email returns 409 `email_taken` instead of a 500. The service API key is compared in constant time.
+
+**Left open on purpose:**
+
+- **Phase 1: signups become company admins.** `POST /users/signup` puts the new user in the seeded company as an *admin*. In production, a stranger could then rewrite the company's license and every member's selections. Here it lets a reviewer sign up and use both the Jurisdictions and Company Admin pages without a superuser promoting them first. The fix is to sign people up as *member*.
+- **Phase 2: the seed can run again.** `init_db` treats "no user with the `FIRST_SUPERUSER` email" as first setup. If that superuser changes their email, the next backend start creates the superuser again and resets the default company's license to the sample plan. Here that's a handy way to get the sample data back. In production, the superuser and the sample license should be seeded in two separate steps, and each should run only once.
+- **No rate limiting** on login, signup or password recovery.
+- **The access token is kept in `localStorage`**, not in an httpOnly cookie, and lasts 8 days.
+- **Changing your own email doesn't ask for your password**, and doesn't end your other sessions.
+- **The secrets are local defaults.** `.env` ships `SECRET_KEY=changethis` and a known admin password. The backend refuses to start with them unless `FASTAPI_ENV=development`, which the local `.env` sets.
+
 ## License
 
 MIT, inherited from the Full Stack FastAPI Template.

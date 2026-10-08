@@ -7,9 +7,9 @@ from sqlmodel import Session
 from app.auth.auth_service import generate_password_reset_token
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
-from app.users.user_models import User, UserCreate
-from app.users.user_service import create_user
-from tests.utils.user import user_authentication_headers
+from app.users.user_models import User, UserCreate, UserUpdate
+from app.users.user_service import create_user, update_user
+from tests.utils.user import create_random_user, user_authentication_headers
 from tests.utils.utils import (
     assert_error,
     get_superuser_token_headers,
@@ -124,7 +124,7 @@ def test_reset_password(client: TestClient, db: Session) -> None:
         is_superuser=False,
     )
     user = create_user(session=db, user_create=user_create)
-    token = generate_password_reset_token(email=email)
+    token = generate_password_reset_token(email=email, auth_version=user.auth_version)
     headers = user_authentication_headers(client=client, email=email, password=password)
     data = {"new_password": new_password, "token": token}
 
@@ -140,6 +140,63 @@ def test_reset_password(client: TestClient, db: Session) -> None:
     db.refresh(user)
     verified, _ = verify_password(new_password, user.hashed_password)
     assert verified
+
+
+def test_reset_token_works_once(client: TestClient, db: Session) -> None:
+    user = create_random_user(db)
+    token = generate_password_reset_token(
+        email=user.email, auth_version=user.auth_version
+    )
+    data = {"new_password": random_lower_string(), "token": token}
+    r = client.post(f"{settings.API_V1_STR}/reset-password", json=data)
+    assert r.status_code == 200
+
+    data = {"new_password": random_lower_string(), "token": token}
+    r = client.post(f"{settings.API_V1_STR}/reset-password", json=data)
+    assert_error(r, 400, "invalid_reset_token")
+
+
+def test_reset_password_revokes_sessions(client: TestClient, db: Session) -> None:
+    email, password = random_email(), random_lower_string()
+    user = create_user(
+        session=db, user_create=UserCreate(email=email, password=password)
+    )
+    old_headers = user_authentication_headers(
+        client=client, email=email, password=password
+    )
+    token = generate_password_reset_token(email=email, auth_version=user.auth_version)
+    new_password = random_lower_string()
+    r = client.post(
+        f"{settings.API_V1_STR}/reset-password",
+        json={"new_password": new_password, "token": token},
+    )
+    assert r.status_code == 200
+
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=old_headers)
+    assert_error(r, 401, "token_revoked")
+
+    new_headers = user_authentication_headers(
+        client=client, email=email, password=new_password
+    )
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=new_headers)
+    assert r.status_code == 200
+
+
+def test_reset_token_void_after_password_change(
+    client: TestClient, db: Session
+) -> None:
+    user = create_random_user(db)
+    token = generate_password_reset_token(
+        email=user.email, auth_version=user.auth_version
+    )
+    update_user(
+        session=db,
+        db_user=user,
+        user_in=UserUpdate(password=random_lower_string()),
+    )
+    data = {"new_password": random_lower_string(), "token": token}
+    r = client.post(f"{settings.API_V1_STR}/reset-password", json=data)
+    assert_error(r, 400, "invalid_reset_token")
 
 
 def test_reset_password_invalid_token(

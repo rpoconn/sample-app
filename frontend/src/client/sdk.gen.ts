@@ -322,7 +322,8 @@ export class UsersService {
     /**
      * Update Password Me
      *
-     * Update own password.
+     * Update own password. This revokes every existing token, the caller's
+     * included, so the response carries a new one.
      */
     public static updatePasswordMe<ThrowOnError extends boolean = true>(options: Options<usersUpdatePasswordMeData, ThrowOnError>) {
         return (options.client ?? client).patch<usersUpdatePasswordMeResponses, usersUpdatePasswordMeErrors, ThrowOnError>({

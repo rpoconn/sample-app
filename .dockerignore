@@ -1,0 +1,17 @@
+.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+**/.tanstack
+**/*.db
+**/.env
+**/.coverage
+backend/htmlcov
+backend/app/frontend
+frontend/dist
+frontend/test-results
+frontend/playwright
+img

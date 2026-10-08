@@ -43,11 +43,17 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
         user_data.setdefault("company_role", CompanyRole.member)
     ensure_company_keeps_admin(session=session, user=db_user, after=user_data)
     ensure_keeps_superuser(session=session, user=db_user, after=user_data)
-    extra_data = {}
+    extra_data: dict[str, Any] = {}
     if "password" in user_data:
         password = user_data["password"]
         hashed_password = get_password_hash(password)
         extra_data["hashed_password"] = hashed_password
+    if (
+        "password" in user_data
+        or user_data.get("email", db_user.email) != db_user.email
+    ):
+        # Log out every session and void outstanding reset links
+        extra_data["auth_version"] = db_user.auth_version + 1
     if moving:
         # Opt-ins belong to the old company; the FK rejects the move while they exist
         session.exec(

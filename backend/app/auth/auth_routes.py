@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from email.header import Header
 from typing import Annotated, Any
 
@@ -16,11 +16,10 @@ from app.auth.auth_models import RevokedToken, Token
 from app.auth.auth_service import (
     authenticate,
     generate_password_reset_token,
+    issue_token,
     verify_password_reset_token,
 )
 from app.companies.company_deps import is_company_active
-from app.core import security
-from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.errors import ApiError, NotFound, errors, json_errors
 from app.core.schemas import Message
@@ -47,12 +46,7 @@ def login_access_token(
         raise ApiError("Inactive user", code="invalid_grant")
     elif not user.is_superuser and not is_company_active(session, user):
         raise ApiError("Company is inactive", code="invalid_grant")
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    return Token(
-        access_token=security.create_access_token(
-            user.id, expires_delta=access_token_expires
-        )
-    )
+    return issue_token(user)
 
 
 @router.post("/logout", responses=errors(401))
@@ -90,7 +84,9 @@ def recover_password(
     # Only send email if user actually exists, and after the response so its
     # timing doesn't reveal that either
     if user:
-        password_reset_token = generate_password_reset_token(email=email)
+        password_reset_token = generate_password_reset_token(
+            email=email, auth_version=user.auth_version
+        )
         email_data = generate_reset_password_email(
             email_to=user.email, email=email, token=password_reset_token
         )
@@ -110,11 +106,13 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
     """
     Reset password
     """
-    email = verify_password_reset_token(token=body.token)
-    if not email:
+    claims = verify_password_reset_token(token=body.token)
+    if not claims:
         raise ApiError("Invalid token", code="invalid_reset_token")
+    email, auth_version = claims
     user = users.get_user_by_email(session=session, email=email)
-    if not user:
+    # A used token, or one issued before a password or email change, is stale
+    if not user or user.auth_version != auth_version:
         # Don't reveal that the user doesn't exist - use same error as invalid token
         raise ApiError("Invalid token", code="invalid_reset_token")
     elif not user.is_active:
@@ -145,7 +143,9 @@ def recover_password_html_content(email: str, session: SessionDep) -> Any:
             "The user with this username does not exist in the system.",
             code="user_not_found",
         )
-    password_reset_token = generate_password_reset_token(email=email)
+    password_reset_token = generate_password_reset_token(
+        email=email, auth_version=user.auth_version
+    )
     email_data = generate_reset_password_email(
         email_to=user.email, email=email, token=password_reset_token
     )

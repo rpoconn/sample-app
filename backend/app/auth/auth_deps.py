@@ -43,6 +43,9 @@ def get_current_user(session: SessionDep, token_data: TokenPayloadDep) -> User:
     if not user:
         # 401 (not 404) so clients drop stale tokens, e.g. after a DB reset
         raise Unauthorized("User not found", code="invalid_token")
+    if token_data.ver != user.auth_version:
+        # Issued before the user's last password or email change
+        raise Unauthorized("Token has been revoked", code="token_revoked")
     if not user.is_active:
         raise Forbidden("Inactive user", code="user_inactive")
     if not user.is_superuser and not is_company_active(session, user):
