@@ -85,6 +85,6 @@ def validation_error_handler(
 
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
-# The built frontend only exists in the Docker image; locally, Vite serves it
+# The built frontend only exists after `bun run build`; in development, Vite serves it
 if FRONTEND_DIR.is_dir():
     app.frontend("/", directory=FRONTEND_DIR)

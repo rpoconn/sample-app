@@ -2,20 +2,13 @@
 
 ## Requirements
 
-* [Docker](https://www.docker.com/).
 * [uv](https://docs.astral.sh/uv/) for Python package and environment management.
 
 ## Local Development
 
 Run the backend locally. The database is a SQLite file at `backend/app.db` (set by `DATABASE_URL`).
 
-From the project root, start Mailpit:
-
-```console
-$ docker compose up -d mailpit
-```
-
-Then, from `./backend/`, install the dependencies, prepare the database (creates `app.db` and the first superuser), and start the development server:
+From `./backend/`, install the dependencies, prepare the database (creates `app.db` and the first superuser), and start the development server:
 
 ```console
 $ uv sync
@@ -36,30 +29,9 @@ Modify or add SQLModel models for data and SQL tables in `./backend/app/models.p
 
 ## VS Code
 
-There are already configurations in place to run the backend through the VS Code debugger, so that you can use breakpoints, pause and explore variables, etc. **Backend: Debug FastAPI** starts Mailpit, syncs dependencies, migrates and seeds the database, then starts the server. See [../development.md](../development.md#vs-code) for the full list.
+There are already configurations in place to run the backend through the VS Code debugger, so that you can use breakpoints, pause and explore variables, etc. **Backend: Debug FastAPI** syncs dependencies, migrates and seeds the database, then starts the server. See [../development.md](../development.md#vs-code) for the full list.
 
 The setup is also already configured so you can run the tests through the VS Code Python tests tab.
-
-## Full Stack with Docker Compose
-
-To run the backend and built frontend in Docker Compose:
-
-```console
-$ docker compose run --rm backend bash scripts/prestart.sh
-$ docker compose watch
-```
-
-The application is available at `http://localhost:8000`.
-
-### Docker Compose Override
-
-The `compose.override.yml` file contains local settings for published ports, source synchronization, automatic image rebuilds, and backend reloads. Docker Compose applies it automatically when you run `docker compose` without an explicit file list.
-
-To open a shell in the backend container:
-
-```console
-$ docker compose exec backend bash
-```
 
 ## Backend Tests
 
@@ -73,20 +45,10 @@ The tests run with Pytest. Modify existing tests or add new ones in `./backend/t
 
 If you use GitHub Actions, the tests will run automatically.
 
-### Test a Running Stack
+Extra arguments are forwarded to `pytest`. For example, to stop on the first error:
 
-If your stack is already up and you just want to run the tests, you can use:
-
-```bash
-docker compose exec backend bash scripts/tests-start.sh
-```
-
-The `/app/backend/scripts/tests-start.sh` script calls `pytest`. If you need to pass extra arguments to `pytest`, you can pass them to that command and they will be forwarded.
-
-For example, to stop on first error:
-
-```bash
-docker compose exec backend bash scripts/tests-start.sh -x
+```console
+$ uv run bash scripts/test.sh -x
 ```
 
 ### Test Coverage

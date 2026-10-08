@@ -31,10 +31,6 @@ If you are developing an API-only app and want to remove the frontend, you can d
 
 * In the `backend/app/main.py` file, remove the `app.frontend()` call.
 
-* In the `backend/Dockerfile` file, remove the frontend build stage and the `COPY --from=frontend-build` instruction.
-
-* In the `compose.override.yml` file, remove the `playwright` service.
-
 * In the `.github/workflows/deploy.yml` file, remove the **Set up Bun**, **Install frontend dependencies**, and **Build frontend** steps.
 
 * In the `.fastapicloudignore` file, remove the `!backend/app/frontend/` entry.
@@ -93,14 +89,15 @@ The frontend code is structured as follows:
 
 ## End-to-End Testing with Playwright
 
-The frontend includes initial end-to-end tests using Playwright. To run the tests, you need to have the Docker Compose stack running. Start the stack with the following command:
+The frontend includes end-to-end tests using Playwright. They need the backend running at `http://localhost:8000` (see [../development.md](../development.md)) and [Mailpit](../development.md#mailpit) for the password-reset test. Playwright starts the Vite dev server itself.
+
+From the `frontend` directory, install the browsers once:
 
 ```bash
-docker compose run --rm backend bash scripts/prestart.sh
-docker compose up -d --wait backend
+bunx playwright install chromium
 ```
 
-Then, you can run the tests with the following command:
+Then run the tests:
 
 ```bash
 bunx playwright test
@@ -112,11 +109,7 @@ You can also run your tests in UI mode to see the browser and interact with it r
 bunx playwright test --ui
 ```
 
-To stop and remove the Docker Compose stack and clean the data created in tests, use the following command:
-
-```bash
-docker compose down -v
-```
+The tests create their own users and companies in `backend/app.db`. To clear that data, [reset the database](../development.md#database).
 
 To update the tests, navigate to the tests directory and modify the existing test files or add new ones as needed.
 

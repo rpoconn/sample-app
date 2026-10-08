@@ -128,7 +128,6 @@ bunx playwright test jurisdictions
 - **Scale testing.** Paging, filtering and subtree toggles already run on the server, but nothing has been tested against a tree of thousands of rows. Load-test it and check the SQLite queries, then move to Postgres for production.
 - **License changes over time.** Record who changed a company's license and when, notify users who lose an opt-in, and offer a "re-enable for everyone who had it" undo.
 - **Accessibility pass.** The status tabs' accessible names come from their tooltips ("Jurisdictions you've turned on…") rather than their labels. Use `describeChild` on those tooltips, then do a full keyboard and screen-reader review of the grid.
-- **CI.** The Playwright workflow comes from the template and still builds with Docker Compose. Point it at the local SQLite setup so the end-to-end suite runs on every PR.
 - **Service API hardening.** Replace the single shared `SERVICE_API_KEY` with keys scoped per service, and add a bulk "ids for these users" endpoint for consumers that fan out.
 
 ## License

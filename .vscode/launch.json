@@ -36,7 +36,6 @@
             "cwd": "${workspaceFolder}/backend",
             "envFile": "${workspaceFolder}/.env",
             "justMyCode": false,
-            "preLaunchTask": "services: up (mailpit)",
             "presentation": { "group": "1-backend", "order": 3 }
         },
         {
