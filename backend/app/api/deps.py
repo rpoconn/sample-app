@@ -1,10 +1,11 @@
+import re
 import secrets
 import uuid
 from collections.abc import Generator
 from typing import Annotated
 
 import jwt
-from fastapi import Depends
+from fastapi import Depends, Header
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
@@ -13,7 +14,7 @@ from sqlmodel import Session
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
-from app.errors import Forbidden, Unauthorized
+from app.errors import Forbidden, PreconditionFailed, Unauthorized
 from app.models import Company, CompanyRole, RevokedToken, TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -107,3 +108,25 @@ def require_company_admin(current_user: User, company_id: uuid.UUID) -> None:
     )
     if not current_user.is_superuser and not is_admin:
         raise Forbidden("The user doesn't have enough privileges")
+
+
+# A selection's ETag, W/"c-<id>-<version>", or the bare version number
+_IF_MATCH = re.compile(r'^(?:W/)?"?(?:[cu]-[0-9a-fA-F-]{36}-)?(\d+)"?$')
+
+
+def if_match_version(
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
+) -> int | None:
+    """The version an If-Match header names, or None when it wasn't sent."""
+    if if_match is None:
+        return None
+    match = _IF_MATCH.match(if_match.strip())
+    if not match:
+        raise PreconditionFailed(
+            "If-Match must be the selection's ETag or version",
+            code="invalid_if_match",
+        )
+    return int(match.group(1))
+
+
+IfMatchVersion = Annotated[int | None, Depends(if_match_version)]

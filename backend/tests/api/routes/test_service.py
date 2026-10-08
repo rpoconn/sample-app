@@ -4,13 +4,13 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
 from app.core.config import settings
 from tests.crud.test_company_jurisdiction import (
     make_company,
     make_jurisdiction,
     make_user,
 )
+from tests.utils.selections import set_company_ids, set_user_ids
 from tests.utils.utils import assert_error
 
 API = settings.API_V1_STR
@@ -30,10 +30,8 @@ def test_returns_plain_id_list_with_api_key(client: TestClient, db: Session) -> 
     company = make_company(db)
     user = make_user(db, company)
     j1, j2 = make_jurisdiction(db), make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[j1.id, j2.id]
-    )
-    crud.set_user_jurisdictions(session=db, user=user, jurisdiction_ids=[j1.id])
+    set_company_ids(db, company.id, [j1.id, j2.id])
+    set_user_ids(db, user, [j1.id])
 
     r = client.get(url(user.id), headers={"X-API-Key": SERVICE_KEY})
     assert r.status_code == 200
@@ -81,11 +79,9 @@ def test_inactive_user_or_company_monitors_nothing(
     company = make_company(db)
     user, other = make_user(db, company), make_user(db, company)
     j = make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[j.id]
-    )
+    set_company_ids(db, company.id, [j.id])
     for u in (user, other):
-        crud.set_user_jurisdictions(session=db, user=u, jurisdiction_ids=[j.id])
+        set_user_ids(db, u, [j.id])
     headers = {"X-API-Key": SERVICE_KEY}
 
     user.is_active = False

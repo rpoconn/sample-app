@@ -55,6 +55,10 @@ class CompanyUpdate(SQLModel):
 # Database model, database table inferred from class name
 class Company(CompanyBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # Bumped on every write to the company's opt-ins; the ETag of its selection
+    jurisdictions_version: int = Field(
+        default=0, sa_column_kwargs={"server_default": "0"}
+    )
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
     updated_at: datetime | None = Field(default_factory=get_datetime_utc)
 
@@ -134,6 +138,10 @@ class User(UserBase, table=True):
     )
     company_role: CompanyRole = Field(default=CompanyRole.admin, sa_type=String(20))
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
+    # Bumped on every write to the user's opt-ins, cascades included
+    jurisdictions_version: int = Field(
+        default=0, sa_column_kwargs={"server_default": "0"}
+    )
 
 
 # Properties to return via API, id is always required
@@ -278,16 +286,6 @@ class UserJurisdiction(SQLModel, table=True):
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
 
 
-# How many of a company's users have opted into a jurisdiction
-class JurisdictionUserCount(SQLModel):
-    jurisdiction_id: uuid.UUID
-    user_count: int
-
-
-class JurisdictionUserCounts(SQLModel):
-    data: list[JurisdictionUserCount]
-
-
 # A company user who has opted into some of a given set of jurisdictions
 class JurisdictionAffectedUser(SQLModel):
     id: uuid.UUID
@@ -302,28 +300,37 @@ class JurisdictionAffectedUsers(SQLModel):
     count: int
 
 
-# Just the selected ids, for callers that don't need the full jurisdictions
-class JurisdictionIds(SQLModel):
-    jurisdiction_ids: list[uuid.UUID]
-    count: int
-
-
 # Full set of jurisdiction ids to opt into; replaces the existing set
 class JurisdictionSelection(SQLModel):
     jurisdiction_ids: list[uuid.UUID]
 
 
-# Jurisdictions to check for affected users: the ids, plus every selectable
-# jurisdiction under each root
-class JurisdictionAffectedQuery(SQLModel):
-    jurisdiction_ids: list[uuid.UUID] = Field(default_factory=list)
-    root_ids: list[uuid.UUID] = Field(default_factory=list)
+# A company's or user's opt-ins. version is also sent as the ETag; pass it back as
+# If-Match so a write only lands on the selection it was based on.
+class JurisdictionSelectionOut(SQLModel):
+    jurisdiction_ids: list[uuid.UUID]
+    count: int
+    version: int
 
 
-# Turns every selectable jurisdiction under root_id (itself included) on or off
-class JurisdictionSubtreeToggle(SQLModel):
-    root_id: uuid.UUID
-    enabled: bool
+# Applied in order: add, add_subtrees, remove, remove_subtrees. A subtree is every
+# selectable jurisdiction under the root, itself included. Ids in both add and remove
+# (or in both subtree lists) are rejected.
+class SelectionChange(SQLModel):
+    add: list[uuid.UUID] = Field(default_factory=list)
+    remove: list[uuid.UUID] = Field(default_factory=list)
+    add_subtrees: list[uuid.UUID] = Field(default_factory=list)
+    remove_subtrees: list[uuid.UUID] = Field(default_factory=list)
+
+
+# What a change to the company's opt-ins would do; nothing is written
+class SelectionPreview(SQLModel):
+    # Pass back as If-Match to commit exactly this preview
+    version: int
+    added: list[uuid.UUID]
+    removed: list[uuid.UUID]
+    # Users who would lose an opt-in
+    affected_users: JurisdictionAffectedUsers
 
 
 TreeSortBy = Literal["name", "enabled"]

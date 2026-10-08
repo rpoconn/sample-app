@@ -88,8 +88,9 @@ def init_db(session: Session) -> None:
         # Seed only on first setup, so later edits to jurisdictions are not undone
         nodes = json.loads(JURISDICTIONS_SEED_FILE.read_text(encoding="utf-8"))
         crud.seed_jurisdictions(session=session, nodes=nodes)
-        crud.set_company_jurisdictions(
+        crud.apply_selection(
             session=session,
-            company_id=DEFAULT_COMPANY_ID,
-            jurisdiction_ids=_plan_jurisdiction_ids(nodes),
+            owner=crud.SelectionOwner.of_company(DEFAULT_COMPANY_ID),
+            wanted=_plan_jurisdiction_ids(nodes),
+            expected_version=None,
         )

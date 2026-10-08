@@ -36,6 +36,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Selection responses carry their version as an ETag
+    expose_headers=["ETag"],
 )
 
 

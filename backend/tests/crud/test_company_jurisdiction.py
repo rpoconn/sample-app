@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app import crud, errors
+from app.crud import SelectionOwner
 from app.models import (
     Company,
     CompanyCreate,
@@ -16,6 +17,7 @@ from app.models import (
     UserJurisdiction,
     UserUpdate,
 )
+from tests.utils.selections import set_company_ids, set_user_ids
 from tests.utils.utils import random_email, random_lower_string
 
 
@@ -46,7 +48,8 @@ def make_jurisdiction(
 
 
 def user_optin_ids(db: Session, user: User) -> set[uuid.UUID]:
-    return {j.id for j in crud.get_user_jurisdictions(session=db, user_id=user.id)}
+    owner = SelectionOwner.of_user(user)
+    return set(crud.get_selection(session=db, owner=owner).jurisdiction_ids)
 
 
 def test_db_rejects_user_optin_company_has_not_made(db: Session) -> None:
@@ -66,9 +69,7 @@ def test_db_rejects_user_optin_under_another_company(db: Session) -> None:
     company, other = make_company(db), make_company(db)
     user = make_user(db, company)
     j = make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=other.id, jurisdiction_ids=[j.id]
-    )
+    set_company_ids(db, other.id, [j.id])
 
     # The other company opted in, but the row's company_id is not the user's company
     db.add(UserJurisdiction(user_id=user.id, company_id=other.id, jurisdiction_id=j.id))
@@ -81,14 +82,12 @@ def test_user_can_opt_into_company_jurisdictions(db: Session) -> None:
     company = make_company(db)
     user = make_user(db, company)
     j1, j2 = make_jurisdiction(db), make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[j1.id, j2.id]
-    )
+    set_company_ids(db, company.id, [j1.id, j2.id])
 
-    rows = crud.set_user_jurisdictions(session=db, user=user, jurisdiction_ids=[j1.id])
-    assert [j.id for j in rows] == [j1.id]
+    selection = set_user_ids(db, user, [j1.id])
+    assert selection.jurisdiction_ids == [j1.id]
 
-    crud.set_user_jurisdictions(session=db, user=user, jurisdiction_ids=[j2.id])
+    set_user_ids(db, user, [j2.id])
     assert user_optin_ids(db, user) == {j2.id}
 
 
@@ -96,14 +95,10 @@ def test_user_cannot_opt_into_jurisdiction_outside_company_set(db: Session) -> N
     company = make_company(db)
     user = make_user(db, company)
     allowed, other = make_jurisdiction(db), make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[allowed.id]
-    )
+    set_company_ids(db, company.id, [allowed.id])
 
     with pytest.raises(errors.InvalidInput) as exc:
-        crud.set_user_jurisdictions(
-            session=db, user=user, jurisdiction_ids=[allowed.id, other.id]
-        )
+        set_user_ids(db, user, [allowed.id, other.id])
     assert exc.value.code == "jurisdiction_not_licensed"
     assert user_optin_ids(db, user) == set()
 
@@ -112,16 +107,10 @@ def test_company_optout_cascades_to_users(db: Session) -> None:
     company = make_company(db)
     user = make_user(db, company)
     keep, drop = make_jurisdiction(db), make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[keep.id, drop.id]
-    )
-    crud.set_user_jurisdictions(
-        session=db, user=user, jurisdiction_ids=[keep.id, drop.id]
-    )
+    set_company_ids(db, company.id, [keep.id, drop.id])
+    set_user_ids(db, user, [keep.id, drop.id])
 
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[keep.id]
-    )
+    set_company_ids(db, company.id, [keep.id])
     assert user_optin_ids(db, user) == {keep.id}
 
 
@@ -129,10 +118,8 @@ def test_changing_company_clears_user_optins(db: Session) -> None:
     company, other = make_company(db), make_company(db)
     user = make_user(db, company)
     j = make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[j.id]
-    )
-    crud.set_user_jurisdictions(session=db, user=user, jurisdiction_ids=[j.id])
+    set_company_ids(db, company.id, [j.id])
+    set_user_ids(db, user, [j.id])
 
     crud.update_user(session=db, db_user=user, user_in=UserUpdate(company_id=other.id))
     assert user.company_id == other.id
@@ -143,10 +130,8 @@ def test_deleting_user_removes_optins(db: Session) -> None:
     company = make_company(db)
     user = make_user(db, company)
     j = make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[j.id]
-    )
-    crud.set_user_jurisdictions(session=db, user=user, jurisdiction_ids=[j.id])
+    set_company_ids(db, company.id, [j.id])
+    set_user_ids(db, user, [j.id])
     user_id = user.id
 
     db.delete(user)
@@ -164,21 +149,15 @@ def test_structural_and_unknown_jurisdictions_rejected(db: Session) -> None:
     structural = make_jurisdiction(db, structural=True)
 
     with pytest.raises(errors.InvalidInput):
-        crud.set_company_jurisdictions(
-            session=db, company_id=company.id, jurisdiction_ids=[structural.id]
-        )
+        set_company_ids(db, company.id, [structural.id])
     with pytest.raises(errors.InvalidInput):
-        crud.set_company_jurisdictions(
-            session=db, company_id=company.id, jurisdiction_ids=[company.id]
-        )
+        set_company_ids(db, company.id, [company.id])
 
 
 def test_cannot_make_opted_in_jurisdiction_structural(db: Session) -> None:
     company = make_company(db)
     j = make_jurisdiction(db)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[j.id]
-    )
+    set_company_ids(db, company.id, [j.id])
 
     with pytest.raises(errors.Conflict):
         crud.update_jurisdiction(
@@ -190,18 +169,14 @@ def test_delete_jurisdiction_blocked_by_children_and_optins(db: Session) -> None
     company = make_company(db)
     parent = make_jurisdiction(db)
     child = make_jurisdiction(db, parent)
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[child.id]
-    )
+    set_company_ids(db, company.id, [child.id])
 
     with pytest.raises(errors.Conflict):
         crud.delete_jurisdiction(session=db, db_obj=parent)
     with pytest.raises(errors.Conflict):
         crud.delete_jurisdiction(session=db, db_obj=child)
 
-    crud.set_company_jurisdictions(
-        session=db, company_id=company.id, jurisdiction_ids=[]
-    )
+    set_company_ids(db, company.id, [])
     crud.delete_jurisdiction(session=db, db_obj=child)
     crud.delete_jurisdiction(session=db, db_obj=parent)
     assert db.get(Jurisdiction, parent.id) is None
@@ -271,15 +246,11 @@ def test_company_jurisdiction_user_counts(db: Session) -> None:
     company, other = make_company(db), make_company(db)
     a, b = make_jurisdiction(db), make_jurisdiction(db)
     for c in (company, other):
-        crud.set_company_jurisdictions(
-            session=db, company_id=c.id, jurisdiction_ids=[a.id, b.id]
-        )
+        set_company_ids(db, c.id, [a.id, b.id])
     for user in (make_user(db, company), make_user(db, company)):
-        crud.set_user_jurisdictions(session=db, user=user, jurisdiction_ids=[a.id])
+        set_user_ids(db, user, [a.id])
     # Another company's users don't count
-    crud.set_user_jurisdictions(
-        session=db, user=make_user(db, other), jurisdiction_ids=[a.id, b.id]
-    )
+    set_user_ids(db, make_user(db, other), [a.id, b.id])
 
     counts = crud.get_company_jurisdiction_user_counts(
         session=db, company_id=company.id
@@ -291,17 +262,13 @@ def test_company_jurisdiction_affected_users(db: Session) -> None:
     company, other = make_company(db), make_company(db)
     a, b, c = make_jurisdiction(db), make_jurisdiction(db), make_jurisdiction(db)
     for co in (company, other):
-        crud.set_company_jurisdictions(
-            session=db, company_id=co.id, jurisdiction_ids=[a.id, b.id, c.id]
-        )
+        set_company_ids(db, co.id, [a.id, b.id, c.id])
     both, only_a, only_c = (make_user(db, company) for _ in range(3))
-    crud.set_user_jurisdictions(session=db, user=both, jurisdiction_ids=[a.id, b.id])
-    crud.set_user_jurisdictions(session=db, user=only_a, jurisdiction_ids=[a.id])
-    crud.set_user_jurisdictions(session=db, user=only_c, jurisdiction_ids=[c.id])
+    set_user_ids(db, both, [a.id, b.id])
+    set_user_ids(db, only_a, [a.id])
+    set_user_ids(db, only_c, [c.id])
     # Another company's users aren't affected
-    crud.set_user_jurisdictions(
-        session=db, user=make_user(db, other), jurisdiction_ids=[a.id, b.id]
-    )
+    set_user_ids(db, make_user(db, other), [a.id, b.id])
 
     rows = crud.get_company_jurisdiction_affected_users(
         session=db, company_id=company.id, jurisdiction_ids=[a.id, b.id]

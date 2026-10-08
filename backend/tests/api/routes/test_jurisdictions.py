@@ -126,10 +126,10 @@ def test_delete_opted_in_jurisdiction_conflicts(
     company = crud.create_company(
         session=db, company_in=CompanyCreate(name=random_lower_string())
     )
-    client.put(
+    client.patch(
         f"{API}/companies/{company.id}/jurisdictions",
         headers=superuser_token_headers,
-        json={"jurisdiction_ids": [j["id"]]},
+        json={"add": [j["id"]]},
     )
 
     r = client.delete(f"{API}/jurisdictions/{j['id']}", headers=superuser_token_headers)
@@ -176,22 +176,15 @@ def test_read_tree_sorts_siblings(
     assert tree(sort_by="name", sort_dir="desc") == ["Charlie", "Bravo", "alpha"]
 
     me = client.get(f"{API}/users/me", headers=superuser_token_headers).json()
-    company_ids = [
-        j["id"]
-        for j in client.get(
-            f"{API}/companies/{me['company_id']}/jurisdictions",
-            headers=superuser_token_headers,
-        ).json()["data"]
-    ]
-    client.put(
+    client.patch(
         f"{API}/companies/{me['company_id']}/jurisdictions",
         headers=superuser_token_headers,
-        json={"jurisdiction_ids": [*company_ids, by_id["Charlie"], by_id["Bravo"]]},
+        json={"add": [by_id["Charlie"], by_id["Bravo"]]},
     )
-    client.put(
+    client.patch(
         f"{API}/users/me/jurisdictions",
         headers=superuser_token_headers,
-        json={"jurisdiction_ids": [by_id["Bravo"]]},
+        json={"add": [by_id["Bravo"]]},
     )
 
     assert tree(sort_by="enabled", sort_dir="desc") == ["Bravo", "Charlie", "alpha"]
@@ -294,74 +287,6 @@ def test_facets(client: TestClient, normal_user_token_headers: dict[str, str]) -
     counts = body["status_counts"]
     assert counts["all"] == counts["enabled"] + counts["available"] + counts["disabled"]
     assert body["summary"]["shown"] <= body["summary"]["total"]
-
-
-def test_subtree_toggles(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    def create(name: str, parent_id: str | None = None, **kw: object) -> str:
-        r = client.post(
-            f"{API}/jurisdictions/",
-            headers=superuser_token_headers,
-            json={"name": name, "parent_id": parent_id, **kw},
-        )
-        assert r.status_code == 200
-        return r.json()["id"]
-
-    root = create(random_lower_string())
-    group = create("Group", root, is_structural=True)
-    a = create("A", group)
-    b = create("B", group)
-
-    me = client.get(f"{API}/users/me", headers=superuser_token_headers).json()
-    company_url = f"{API}/companies/{me['company_id']}/jurisdictions"
-
-    r = client.post(
-        f"{company_url}/subtree",
-        headers=superuser_token_headers,
-        json={"root_id": root, "enabled": True},
-    )
-    assert r.status_code == 200
-    company_ids = set(r.json()["jurisdiction_ids"])
-    # Structural rows are never selected
-    assert {root, a, b} <= company_ids and group not in company_ids
-
-    # Users can only pick what the company licensed
-    client.post(
-        f"{company_url}/subtree",
-        headers=superuser_token_headers,
-        json={"root_id": b, "enabled": False},
-    )
-    r = client.post(
-        f"{API}/users/me/jurisdictions/subtree",
-        headers=superuser_token_headers,
-        json={"root_id": root, "enabled": True},
-    )
-    assert r.status_code == 200
-    mine = set(r.json()["jurisdiction_ids"])
-    assert {root, a} <= mine and b not in mine
-
-    r = client.post(
-        f"{company_url}/affected-users",
-        headers=superuser_token_headers,
-        json={"root_ids": [group]},
-    )
-    assert me["id"] in {u["id"] for u in r.json()["data"]}
-
-    r = client.post(
-        f"{API}/users/me/jurisdictions/subtree",
-        headers=superuser_token_headers,
-        json={"root_id": group, "enabled": False},
-    )
-    mine = set(r.json()["jurisdiction_ids"])
-    assert root in mine and a not in mine
-
-    r = client.post(
-        f"{API}/users/me/jurisdictions/subtree",
-        headers=superuser_token_headers,
-        json={"root_id": str(uuid.uuid4()), "enabled": True},
-    )
-    assert_error(r, 422, "unknown_jurisdiction")
 
 
 def test_create_with_unknown_parent(

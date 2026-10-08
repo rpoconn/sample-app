@@ -31,5 +31,5 @@ def read_user_jurisdiction_ids_for_service(
         raise NotFound("User not found", code="user_not_found")
     if not user.is_active or not is_company_active(session, user):
         return []
-    rows = crud.get_user_jurisdictions(session=session, user_id=user_id)
-    return [j.id for j in rows]
+    owner = crud.SelectionOwner.of_user(user)
+    return crud.get_selection(session=session, owner=owner).jurisdiction_ids

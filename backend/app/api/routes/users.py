@@ -9,17 +9,11 @@ from app.api.deps import (
     CurrentUser,
     SessionDep,
     get_current_active_superuser,
-    require_company_admin,
 )
-from app.api.routes.jurisdictions import to_public_list
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.errors import ApiError, Conflict, Forbidden, NotFound, errors
 from app.models import (
-    JurisdictionIds,
-    JurisdictionSelection,
-    JurisdictionsPublic,
-    JurisdictionSubtreeToggle,
     Message,
     UpdatePassword,
     User,
@@ -141,51 +135,6 @@ def read_user_me(current_user: CurrentUser) -> Any:
     return current_user
 
 
-@router.get("/me/jurisdictions", response_model=JurisdictionsPublic)
-def read_my_jurisdictions(session: SessionDep, current_user: CurrentUser) -> Any:
-    """
-    Get the jurisdictions the current user has opted into.
-    """
-    rows = crud.get_user_jurisdictions(session=session, user_id=current_user.id)
-    return to_public_list(session, rows)
-
-
-@router.get("/me/jurisdictions/ids", response_model=JurisdictionIds)
-def read_my_jurisdiction_ids(session: SessionDep, current_user: CurrentUser) -> Any:
-    """
-    Ids of the jurisdictions the current user has opted into.
-    """
-    rows = crud.get_user_jurisdictions(session=session, user_id=current_user.id)
-    return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
-
-
-@router.put("/me/jurisdictions", response_model=JurisdictionsPublic)
-def set_my_jurisdictions(
-    *, session: SessionDep, current_user: CurrentUser, body: JurisdictionSelection
-) -> Any:
-    """
-    Replace the current user's opt-ins; each must be opted into by their company.
-    """
-    rows = crud.set_user_jurisdictions(
-        session=session, user=current_user, jurisdiction_ids=body.jurisdiction_ids
-    )
-    return to_public_list(session, rows)
-
-
-@router.post("/me/jurisdictions/subtree", response_model=JurisdictionIds)
-def toggle_my_jurisdiction_subtree(
-    *, session: SessionDep, current_user: CurrentUser, body: JurisdictionSubtreeToggle
-) -> Any:
-    """
-    Turn a jurisdiction and everything under it on or off for the current user,
-    skipping any their company hasn't opted into.
-    """
-    rows = crud.toggle_user_subtree(
-        session=session, user=current_user, root_id=body.root_id, enabled=body.enabled
-    )
-    return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
-
-
 @router.delete("/me", response_model=Message, responses=errors(409))
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
@@ -285,70 +234,3 @@ def delete_user(
         )
     crud.delete_user(session=session, db_user=user)
     return Message(message="User deleted successfully")
-
-
-def _get_user_for_company_admin(
-    session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
-) -> User:
-    user = session.get(User, user_id)
-    if not user:
-        if not current_user.is_superuser:
-            # Don't reveal whether the id exists to non-superusers
-            raise Forbidden("The user doesn't have enough privileges")
-        raise NotFound("User not found", code="user_not_found")
-    require_company_admin(current_user, user.company_id)
-    return user
-
-
-@router.get(
-    "/{user_id}/jurisdictions",
-    response_model=JurisdictionsPublic,
-    responses=errors(404),
-)
-def read_user_jurisdictions(
-    session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
-) -> Any:
-    """
-    Get a user's opt-ins. Allowed for superusers and admins of the user's company.
-    """
-    user = _get_user_for_company_admin(session, current_user, user_id)
-    rows = crud.get_user_jurisdictions(session=session, user_id=user.id)
-    return to_public_list(session, rows)
-
-
-@router.get(
-    "/{user_id}/jurisdictions/ids",
-    response_model=JurisdictionIds,
-    responses=errors(404),
-)
-def read_user_jurisdiction_ids(
-    session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
-) -> Any:
-    """
-    Ids of a user's opt-ins. Allowed for superusers and admins of the user's company.
-    """
-    user = _get_user_for_company_admin(session, current_user, user_id)
-    rows = crud.get_user_jurisdictions(session=session, user_id=user.id)
-    return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
-
-
-@router.put(
-    "/{user_id}/jurisdictions",
-    response_model=JurisdictionsPublic,
-    responses=errors(404),
-)
-def set_user_jurisdictions(
-    *,
-    session: SessionDep,
-    current_user: CurrentUser,
-    user_id: uuid.UUID,
-    body: JurisdictionSelection,
-) -> Any:
-    """
-    Replace a user's opt-ins. Allowed for superusers and admins of the user's company.
-    """
-    user = _get_user_for_company_admin(session, current_user, user_id)
-    rows = crud.set_user_jurisdictions(
-        session=session, user=user, jurisdiction_ids=body.jurisdiction_ids
-    )
-    return to_public_list(session, rows)

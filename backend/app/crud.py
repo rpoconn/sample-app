@@ -1,11 +1,13 @@
 import uuid
 from collections.abc import Iterable
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Literal
 
+from sqlalchemy import update
 from sqlmodel import Session, case, col, delete, func, or_, select
 
 from app.core.security import get_password_hash, verify_password
-from app.errors import Conflict, InvalidInput, NotFound
+from app.errors import Conflict, InvalidInput, NotFound, PreconditionFailed
 from app.jurisdiction_query import Selection
 from app.models import (
     DEFAULT_COMPANY_ID,
@@ -15,8 +17,13 @@ from app.models import (
     CompanyRole,
     CompanyUpdate,
     Jurisdiction,
+    JurisdictionAffectedUser,
+    JurisdictionAffectedUsers,
     JurisdictionCreate,
+    JurisdictionSelectionOut,
     JurisdictionUpdate,
+    SelectionChange,
+    SelectionPreview,
     SelectionScope,
     SortDir,
     TreeSortBy,
@@ -125,6 +132,7 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
         session.exec(
             delete(UserJurisdiction).where(col(UserJurisdiction.user_id) == db_user.id)
         )
+        _bump_user_versions(session=session, user_ids=[db_user.id])
     db_user.sqlmodel_update(user_data, update=extra_data)
     session.add(db_user)
     session.commit()
@@ -486,21 +494,6 @@ def get_company_admins(*, session: Session, company_id: uuid.UUID) -> list[User]
     return list(session.exec(statement).all())
 
 
-def get_company_jurisdictions(
-    *, session: Session, company_id: uuid.UUID
-) -> list[Jurisdiction]:
-    statement = (
-        select(Jurisdiction)
-        .join(
-            CompanyJurisdiction,
-            col(CompanyJurisdiction.jurisdiction_id) == Jurisdiction.id,
-        )
-        .where(CompanyJurisdiction.company_id == company_id)
-        .order_by(col(Jurisdiction.name_path))
-    )
-    return list(session.exec(statement).all())
-
-
 def get_company_jurisdiction_user_counts(
     *, session: Session, company_id: uuid.UUID
 ) -> list[tuple[uuid.UUID, int]]:
@@ -535,20 +528,6 @@ def get_company_jurisdiction_affected_users(
     return [(u, n) for u, n in session.exec(statement).all()]
 
 
-def get_user_jurisdictions(
-    *, session: Session, user_id: uuid.UUID
-) -> list[Jurisdiction]:
-    statement = (
-        select(Jurisdiction)
-        .join(
-            UserJurisdiction, col(UserJurisdiction.jurisdiction_id) == Jurisdiction.id
-        )
-        .where(UserJurisdiction.user_id == user_id)
-        .order_by(col(Jurisdiction.name_path))
-    )
-    return list(session.exec(statement).all())
-
-
 def _validate_selectable(*, session: Session, ids: set[uuid.UUID]) -> None:
     if not ids:
         return
@@ -572,100 +551,18 @@ def _validate_selectable(*, session: Session, ids: set[uuid.UUID]) -> None:
         )
 
 
-def set_company_jurisdictions(
-    *, session: Session, company_id: uuid.UUID, jurisdiction_ids: Iterable[uuid.UUID]
-) -> list[Jurisdiction]:
-    """Replace the company's opt-ins. Removed ids cascade to its users' opt-ins."""
-    _get_company(session=session, company_id=company_id)
-    wanted = set(jurisdiction_ids)
-    _validate_selectable(session=session, ids=wanted)
-    current = set(
-        session.exec(
-            select(CompanyJurisdiction.jurisdiction_id).where(
-                CompanyJurisdiction.company_id == company_id
-            )
-        ).all()
-    )
-    if removed := current - wanted:
-        session.exec(
-            delete(CompanyJurisdiction).where(
-                col(CompanyJurisdiction.company_id) == company_id,
-                col(CompanyJurisdiction.jurisdiction_id).in_(removed),
-            )
-        )
-    for jurisdiction_id in wanted - current:
-        session.add(
-            CompanyJurisdiction(company_id=company_id, jurisdiction_id=jurisdiction_id)
-        )
-    session.commit()
-    return get_company_jurisdictions(session=session, company_id=company_id)
-
-
-def set_user_jurisdictions(
-    *, session: Session, user: User, jurisdiction_ids: Iterable[uuid.UUID]
-) -> list[Jurisdiction]:
-    """Replace the user's opt-ins; each must already be opted into by the company."""
-    wanted = set(jurisdiction_ids)
-    _validate_selectable(session=session, ids=wanted)
-    allowed = set(
-        session.exec(
-            select(CompanyJurisdiction.jurisdiction_id).where(
-                CompanyJurisdiction.company_id == user.company_id
-            )
-        ).all()
-    )
-    if outside := wanted - allowed:
-        raise InvalidInput(
-            "The company has not opted into these jurisdictions",
-            code="jurisdiction_not_licensed",
-            context={"jurisdiction_ids": sorted(str(i) for i in outside)},
-        )
-    current = set(
-        session.exec(
-            select(UserJurisdiction.jurisdiction_id).where(
-                UserJurisdiction.user_id == user.id
-            )
-        ).all()
-    )
-    if removed := current - wanted:
-        session.exec(
-            delete(UserJurisdiction).where(
-                col(UserJurisdiction.user_id) == user.id,
-                col(UserJurisdiction.jurisdiction_id).in_(removed),
-            )
-        )
-    for jurisdiction_id in wanted - current:
-        session.add(
-            UserJurisdiction(
-                user_id=user.id,
-                company_id=user.company_id,
-                jurisdiction_id=jurisdiction_id,
-            )
-        )
-    session.commit()
-    return get_user_jurisdictions(session=session, user_id=user.id)
-
-
 def get_jurisdiction_selection(
     *, session: Session, user: User, scope: SelectionScope
 ) -> Selection:
     """The company's opt-ins, and those on in the scope shown."""
     licensed = frozenset(
-        session.exec(
-            select(CompanyJurisdiction.jurisdiction_id).where(
-                CompanyJurisdiction.company_id == user.company_id
-            )
-        ).all()
+        _selected_ids(session=session, owner=SelectionOwner.of_company(user.company_id))
     )
     enabled = (
         licensed
         if scope == "company"
         else frozenset(
-            session.exec(
-                select(UserJurisdiction.jurisdiction_id).where(
-                    UserJurisdiction.user_id == user.id
-                )
-            ).all()
+            _selected_ids(session=session, owner=SelectionOwner.of_user(user))
         )
     )
     return Selection(scope=scope, enabled_ids=enabled, licensed_ids=licensed)
@@ -694,31 +591,260 @@ def get_subtree_ids(
     return set(session.exec(statement).all())
 
 
-def toggle_company_subtree(
-    *, session: Session, company_id: uuid.UUID, root_id: uuid.UUID, enabled: bool
-) -> list[Jurisdiction]:
-    """Turn the company's opt-ins on or off for a whole subtree in one save."""
-    ids = get_subtree_ids(session=session, root_ids=[root_id])
-    current = {
-        j.id for j in get_company_jurisdictions(session=session, company_id=company_id)
-    }
-    return set_company_jurisdictions(
-        session=session,
-        company_id=company_id,
-        jurisdiction_ids=current | ids if enabled else current - ids,
+@dataclass(frozen=True)
+class SelectionOwner:
+    """Whose opt-ins: a company's, or a user's within their company."""
+
+    kind: Literal["company", "user"]
+    id: uuid.UUID
+    company_id: uuid.UUID
+
+    @classmethod
+    def of_company(cls, company_id: uuid.UUID) -> SelectionOwner:
+        return cls("company", company_id, company_id)
+
+    @classmethod
+    def of_user(cls, user: User) -> SelectionOwner:
+        return cls("user", user.id, user.company_id)
+
+    def etag(self, version: int) -> str:
+        return f'W/"{self.kind[0]}-{self.id}-{version}"'
+
+
+def _owner_table(owner: SelectionOwner) -> type[Company] | type[User]:
+    return Company if owner.kind == "company" else User
+
+
+def get_selection_version(*, session: Session, owner: SelectionOwner) -> int:
+    table = _owner_table(owner)
+    version = session.exec(
+        select(table.jurisdictions_version).where(table.id == owner.id)
+    ).first()
+    if version is None:
+        raise NotFound(
+            f"{owner.kind.capitalize()} not found", code=f"{owner.kind}_not_found"
+        )
+    return version
+
+
+def _selected_ids(*, session: Session, owner: SelectionOwner) -> set[uuid.UUID]:
+    if owner.kind == "company":
+        statement = select(CompanyJurisdiction.jurisdiction_id).where(
+            CompanyJurisdiction.company_id == owner.id
+        )
+    else:
+        statement = select(UserJurisdiction.jurisdiction_id).where(
+            UserJurisdiction.user_id == owner.id
+        )
+    return set(session.exec(statement).all())
+
+
+def _in_display_order(*, session: Session, ids: set[uuid.UUID]) -> list[uuid.UUID]:
+    if not ids:
+        return []
+    statement = (
+        select(Jurisdiction.id)
+        .where(col(Jurisdiction.id).in_(ids))
+        .order_by(col(Jurisdiction.name_path))
+    )
+    return list(session.exec(statement).all())
+
+
+def get_selection(
+    *, session: Session, owner: SelectionOwner
+) -> JurisdictionSelectionOut:
+    """The owner's opt-ins, ordered by name path, and the version they're at."""
+    version = get_selection_version(session=session, owner=owner)
+    ids = _in_display_order(
+        session=session, ids=_selected_ids(session=session, owner=owner)
+    )
+    return JurisdictionSelectionOut(
+        jurisdiction_ids=ids, count=len(ids), version=version
     )
 
 
-def toggle_user_subtree(
-    *, session: Session, user: User, root_id: uuid.UUID, enabled: bool
-) -> list[Jurisdiction]:
-    """Turn the user's opt-ins on or off for a whole subtree, skipping any the company
-    hasn't opted into."""
-    sel = get_jurisdiction_selection(session=session, user=user, scope="user")
-    ids = get_subtree_ids(session=session, root_ids=[root_id]) & sel.licensed_ids
-    current = set(sel.enabled_ids)
-    return set_user_jurisdictions(
-        session=session,
-        user=user,
-        jurisdiction_ids=current | ids if enabled else current - ids,
+def _bump_version(
+    *, session: Session, owner: SelectionOwner, expected: int | None
+) -> None:
+    """Compare-and-swap the owner's version inside the write transaction, so of two
+    writes from the same snapshot only the first lands. None bumps unconditionally.
+    The UPDATE also takes SQLite's write lock before the current ids are read."""
+    table = _owner_table(owner)
+    statement = (
+        update(table)
+        .where(col(table.id) == owner.id)
+        .values(jurisdictions_version=table.jurisdictions_version + 1)
+    )
+    if expected is not None:
+        statement = statement.where(col(table.jurisdictions_version) == expected)
+    result = session.exec(statement)
+    if result.rowcount != 1:
+        session.rollback()
+        current = get_selection_version(session=session, owner=owner)
+        raise PreconditionFailed(
+            "The selection changed since you loaded it",
+            context={"version": current},
+        )
+
+
+def _bump_user_versions(*, session: Session, user_ids: Any) -> None:
+    session.exec(
+        update(User)
+        .where(col(User.id).in_(user_ids))
+        .values(jurisdictions_version=User.jurisdictions_version + 1)
+    )
+
+
+def _write_selection(
+    *, session: Session, owner: SelectionOwner, wanted: set[uuid.UUID]
+) -> None:
+    _validate_selectable(session=session, ids=wanted)
+    if owner.kind == "user":
+        licensed = _selected_ids(
+            session=session, owner=SelectionOwner.of_company(owner.company_id)
+        )
+        if outside := wanted - licensed:
+            raise InvalidInput(
+                "The company has not opted into these jurisdictions",
+                code="jurisdiction_not_licensed",
+                context={"jurisdiction_ids": sorted(str(i) for i in outside)},
+            )
+    current = _selected_ids(session=session, owner=owner)
+    removed, added = current - wanted, wanted - current
+    if owner.kind == "company":
+        if removed:
+            # The FK cascade drops users' opt-ins without touching their versions
+            _bump_user_versions(
+                session=session,
+                user_ids=select(UserJurisdiction.user_id).where(
+                    col(UserJurisdiction.company_id) == owner.id,
+                    col(UserJurisdiction.jurisdiction_id).in_(removed),
+                ),
+            )
+            session.exec(
+                delete(CompanyJurisdiction).where(
+                    col(CompanyJurisdiction.company_id) == owner.id,
+                    col(CompanyJurisdiction.jurisdiction_id).in_(removed),
+                )
+            )
+        for jurisdiction_id in added:
+            session.add(
+                CompanyJurisdiction(
+                    company_id=owner.id, jurisdiction_id=jurisdiction_id
+                )
+            )
+        return
+    if removed:
+        session.exec(
+            delete(UserJurisdiction).where(
+                col(UserJurisdiction.user_id) == owner.id,
+                col(UserJurisdiction.jurisdiction_id).in_(removed),
+            )
+        )
+    for jurisdiction_id in added:
+        session.add(
+            UserJurisdiction(
+                user_id=owner.id,
+                company_id=owner.company_id,
+                jurisdiction_id=jurisdiction_id,
+            )
+        )
+
+
+def apply_selection(
+    *,
+    session: Session,
+    owner: SelectionOwner,
+    wanted: Iterable[uuid.UUID],
+    expected_version: int | None,
+) -> JurisdictionSelectionOut:
+    """Replace the owner's opt-ins with `wanted`. A company's removed ids cascade to
+    its users' opt-ins and bump those users' versions."""
+    try:
+        _bump_version(session=session, owner=owner, expected=expected_version)
+        _write_selection(session=session, owner=owner, wanted=set(wanted))
+    except Exception:
+        session.rollback()
+        raise
+    session.commit()
+    return get_selection(session=session, owner=owner)
+
+
+def resolve_change(
+    *, session: Session, owner: SelectionOwner, change: SelectionChange
+) -> set[uuid.UUID]:
+    """The opt-ins after the change: current, plus adds, minus removes. A user's
+    add_subtrees skips what the company hasn't licensed; an explicit add doesn't."""
+    pairs = [
+        (change.add, change.remove),
+        (change.add_subtrees, change.remove_subtrees),
+    ]
+    for add, remove in pairs:
+        if both := set(add) & set(remove):
+            raise InvalidInput(
+                "Ids can't be both added and removed",
+                code="selection_conflict",
+                context={"jurisdiction_ids": sorted(str(i) for i in both)},
+            )
+    add_subtrees = get_subtree_ids(session=session, root_ids=change.add_subtrees)
+    if owner.kind == "user":
+        add_subtrees &= _selected_ids(
+            session=session, owner=SelectionOwner.of_company(owner.company_id)
+        )
+    remove_subtrees = get_subtree_ids(session=session, root_ids=change.remove_subtrees)
+    current = _selected_ids(session=session, owner=owner)
+    return (
+        (current | set(change.add) | add_subtrees)
+        - set(change.remove)
+        - remove_subtrees
+    )
+
+
+def apply_change(
+    *,
+    session: Session,
+    owner: SelectionOwner,
+    change: SelectionChange,
+    expected_version: int | None,
+) -> JurisdictionSelectionOut:
+    """Merge a change into the owner's opt-ins. The version is bumped before the
+    current ids are read, so concurrent changes apply one after the other."""
+    try:
+        _bump_version(session=session, owner=owner, expected=expected_version)
+        wanted = resolve_change(session=session, owner=owner, change=change)
+        _write_selection(session=session, owner=owner, wanted=wanted)
+    except Exception:
+        session.rollback()
+        raise
+    session.commit()
+    return get_selection(session=session, owner=owner)
+
+
+def preview_company_change(
+    *, session: Session, company_id: uuid.UUID, change: SelectionChange
+) -> SelectionPreview:
+    """What apply_change would do to the company's opt-ins, and who'd lose one.
+    Nothing is written."""
+    owner = SelectionOwner.of_company(company_id)
+    version = get_selection_version(session=session, owner=owner)
+    current = _selected_ids(session=session, owner=owner)
+    wanted = resolve_change(session=session, owner=owner, change=change)
+    added, removed = wanted - current, current - wanted
+    _validate_selectable(session=session, ids=added)
+    rows = get_company_jurisdiction_affected_users(
+        session=session, company_id=company_id, jurisdiction_ids=removed
+    )
+    return SelectionPreview(
+        version=version,
+        added=_in_display_order(session=session, ids=added),
+        removed=_in_display_order(session=session, ids=removed),
+        affected_users=JurisdictionAffectedUsers(
+            data=[
+                JurisdictionAffectedUser(
+                    id=u.id, email=u.email, full_name=u.full_name, jurisdiction_count=n
+                )
+                for u, n in rows
+            ],
+            count=len(rows),
+        ),
     )
