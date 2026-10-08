@@ -250,14 +250,16 @@ export class JurisdictionGridService {
                 userCount: r.user_count ?? undefined,
             }
         }
+        // A grouping is locked when nothing under it can be enabled
+        const locked = r.locked || (!!r.is_structural && r.subtree?.total === 0)
         return {
             ...base,
             disabled: !r.licensed,
             disabledReason: r.licensed
                 ? undefined
                 : "Not enabled for your license.",
-            locked: r.locked,
-            unlock: !r.locked
+            locked,
+            unlock: !locked
                 ? undefined
                 : canEditCompany
                   ? { kind: "company" }

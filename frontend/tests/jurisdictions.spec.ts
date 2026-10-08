@@ -141,38 +141,27 @@ test.describe("User scope", () => {
         await expect.poll(() => savedUserIds(member)).toEqual([])
     })
 
-    test("View selection shows the saved ids as JSON", async ({ page }) => {
-        const { company, tree } = await createCompanyWithPlan()
+    test("View selection lists every pick, even under a fully-on parent", async ({
+        page,
+    }) => {
+        const { company, tree, planIds } = await createCompanyWithPlan()
         const member = await createUserInCompany(company.id, "member")
-        const picks = [
-            idOf(tree, TEXAS),
-            idOf(tree, "Canada / Provinces / Ontario"),
-        ]
-        await setUserIds(member, picks)
+        // All of Canada, so nothing gets rolled up out of the list
+        const canada = tree
+            .filter((j) => j.name_path.startsWith("Canada / "))
+            .filter((j) => planIds.includes(j.id))
+            .map((j) => j.id)
+        await setUserIds(member, [idOf(tree, TEXAS), ...canada])
         await logInUser(page, member.email, member.password)
         await waitForGrid(page)
 
         await page.getByRole("button", { name: "View selection" }).click()
         const sheet = page.getByRole("dialog")
         await expect(sheet.getByText("Your selection")).toBeVisible()
-        await expect(sheet.getByText("Texas")).toBeVisible()
-        await expect(sheet.getByText("Ontario")).toBeVisible()
-
-        await sheet.getByRole("tab", { name: "IDs (JSON)" }).click()
-        await expect(
-            sheet.getByText("GET /api/v1/users/me/jurisdictions"),
-        ).toBeVisible()
-        const json = JSON.parse(
-            await sheet.getByTestId("selection-json").innerText(),
-        )
-        expect(json).toMatchObject({
-            scope: "user",
-            user_id: member.id,
-            count: 2,
-        })
-        expect([...json.jurisdiction_ids].sort()).toEqual(
-            (await savedUserIds(member)).sort(),
-        )
+        await expect(sheet.getByRole("listitem")).toHaveCount(canada.length + 1)
+        for (const name of ["Texas", "Ontario", "Yukon", "Nunavut"]) {
+            await expect(sheet.getByText(name, { exact: true })).toBeVisible()
+        }
     })
 
     test("Search and status filters narrow the rows", async ({ page }) => {

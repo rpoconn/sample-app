@@ -4,6 +4,7 @@ import {
     colorSchemeLight,
     type IDatasource,
     ModuleRegistry,
+    type RowClassRules,
     themeQuartz,
 } from "ag-grid-community"
 import { AgGridReact } from "ag-grid-react"
@@ -30,6 +31,12 @@ const borderHeight = 3
 
 // Body kept open with no rows, for the no-matches message over it
 const emptyBodyHeight = 192
+
+// Rules, not getRowClass: refreshing the cache hands row nodes new data, and the
+// grid only removes a class it added when a rule for it stops matching
+const rowClassRules: RowClassRules<JurisdictionRow> = {
+    "opacity-60 bg-muted/40": ({ data }) => !!data?.locked,
+}
 
 export function JurisdictionTable({
     gridRef,
@@ -76,9 +83,7 @@ export function JurisdictionTable({
                 columnDefs={columnDefs}
                 context={context}
                 getRowId={({ data }) => data.jurisdiction.id}
-                getRowClass={({ data }) =>
-                    data?.locked ? "opacity-60 bg-muted/40" : undefined
-                }
+                rowClassRules={rowClassRules}
                 suppressNoRowsOverlay
                 onSortChanged={({ api }) => {
                     // Clearing the enabled sort falls back to the default. Any other

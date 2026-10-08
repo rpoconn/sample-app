@@ -61,9 +61,11 @@ export function NameCell({
             ) : (
                 <span className="mx-1 w-5 shrink-0" />
             )}
+            {/* Structural names sit between normal and locked text: a dark grey,
+                while locked names are muted and further faded by the row */}
             <span
                 className={cn(
-                    j.is_structural && "font-semibold text-muted-foreground",
+                    j.is_structural && "font-semibold text-foreground/70",
                     locked && "text-muted-foreground",
                 )}
             >

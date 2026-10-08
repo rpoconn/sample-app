@@ -230,7 +230,7 @@ export function JurisdictionGrid({
     )
 
     const enabledIds = mode === "company" ? companyIds : myIds
-    const selectionGroups = useMemo(() => {
+    const selectionEntries = useMemo(() => {
         if (!tree) return undefined
         const licensed = new Set(companyIds)
         return summarizeSelection(
@@ -324,9 +324,8 @@ export function JurisdictionGrid({
                     open={selectionOpen}
                     onOpenChange={setSelectionOpen}
                     mode={mode}
-                    ownerId={mode === "company" ? companyId : user.id}
-                    groups={selectionGroups}
-                    ids={enabledIds}
+                    entries={selectionEntries}
+                    count={enabledIds.length}
                 />
                 <ConfirmDisableDialog
                     open={pendingDisable.open}

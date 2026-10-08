@@ -16,7 +16,7 @@ export function LockedIcon({ className }: { className?: string }) {
                         href={`mailto:${SUPPORT_EMAIL}`}
                         className="font-medium underline underline-offset-2"
                     >
-                        {SUPPORT_EMAIL}
+                        Daptic
                     </a>{" "}
                     to add more jurisdictions to your license.
                 </span>
@@ -29,7 +29,7 @@ export function LockedIcon({ className }: { className?: string }) {
         >
             <span
                 role="img"
-                aria-label={`Not enabled for your license. Contact ${SUPPORT_EMAIL} to add more jurisdictions to your license.`}
+                aria-label={`Not enabled for your license. Contact Daptic to add more jurisdictions to your license.`}
                 className={cn("flex shrink-0 items-center", className)}
             >
                 <CircleOff className="size-3.5 text-muted-foreground" />
