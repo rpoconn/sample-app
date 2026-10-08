@@ -6,39 +6,60 @@ This app lets each user choose which regulatory jurisdictions they monitor, with
 
 It is built on the [Full Stack FastAPI Template](https://github.com/fastapi/full-stack-fastapi-template): FastAPI, SQLModel and SQLite on the backend, and React, TypeScript, TanStack Router/Query and ag-grid on the frontend.
 
+## Quick start (recommended)
+
+Run the whole app with one script. It needs [Docker](https://docs.docker.com/get-started/get-docker/) and a bash shell. You don't need uv, Bun or Python.
+
+Start Docker, then from the project root run:
+
+```bash
+bash start_app.bash
+```
+
+The script checks that Docker is running and asks you to start it if it isn't. Then it builds the backend and frontend images and starts both containers. The app is at http://localhost:8080 and the backend API at http://localhost:8000.
+
+The build and startup take about 10 seconds; the first build takes longer while Docker downloads the base images. Your web browser opens to the site automatically. If the backend is still starting, the page may not load or login may fail; refresh the browser after a few seconds.
+
+Leave the terminal open while you use the app. Press Ctrl+C to stop both containers. The Docker database lives in its own Docker volume, separate from `backend/app.db`. To reset it, run `docker compose down -v`.
+
+Log in as described [below](#logging-in).
+
 ## Requirements
 
-Install these first:
+To run without Docker, install these first:
 
-| Tool | Why | Install |
-|---|---|---|
-| [Git](https://git-scm.com/downloads) | Cloning the repo. On Windows, [Git for Windows](https://gitforwindows.org) also provides Git Bash, which runs the start scripts | `winget install Git.Git` on Windows; Xcode Command Line Tools on macOS (`xcode-select --install`) |
-| [uv](https://docs.astral.sh/uv/getting-started/installation/) | Runs the backend and manages its Python packages | `powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 \| iex"` on Windows; `curl -LsSf https://astral.sh/uv/install.sh \| sh` on macOS and Linux |
-| [Bun](https://bun.sh/docs/installation) | Runs the frontend and installs its packages | `powershell -c "irm bun.sh/install.ps1 \| iex"` on Windows; `curl -fsSL https://bun.sh/install \| bash` on macOS and Linux |
+| Tool | Why |
+|---|---|
+| [uv](https://docs.astral.sh/uv/getting-started/installation/) | Runs the backend and manages its Python packages |
+| [Bun](https://bun.sh/docs/installation) | Runs the frontend and installs its packages |
 
 You don't need to install Python yourself. The backend needs Python 3.14, and `uv sync` downloads it if it's missing. The database is SQLite, which is a file, so there is no database server to install. The root `.env` already has working local defaults.
 
 After installing uv and Bun, open a new terminal so it picks up the updated `PATH`.
 
-## Running locally
+## Running locally without Docker
 
-The start scripts are bash. On Windows, run them from Git Bash. In VS Code, choose **Git Bash** from the dropdown next to **+** in the terminal panel. Typing `bash` in PowerShell opens WSL instead, which can't see your Windows `uv` or `bun`.
+We recommend `bash start_app.bash` (see [Quick start](#quick-start-recommended)). Use these scripts if you can't run Docker, or want the Vite dev server with hot reload.
+
+The start scripts are bash, so run them from a bash shell.
 
 **Backend.** From the project root, run the start script. It installs dependencies, migrates and seeds the database, and starts the server. It's safe to rerun: seeding only happens on first setup.
 
 ```bash
-./start_backend.bash
+bash start_backend.bash
 ```
 
 **Frontend.** From the project root, in a second terminal, run the start script. It installs dependencies and starts the dev server at http://localhost:5173.  Please wait about ~10 seconds after launching the backend to start the front end.  
 
 ```bash
-./start_ui.bash
+bash start_ui.bash
 ```
+
+### Logging in
 
 Log in as `admin@example.com` / `changethis`. This superuser stands in for a Daptic staff member, so they see **Jurisdictions** (their own selection), **Company Admin** (the seeded company's license) and **Admin** (user management). You can also sign up a new user; they join the seeded company as a company admin, so they see Jurisdictions and Company Admin.
 
-To reset the data, stop the backend, delete `backend/app.db`, and run `./start_backend.bash` again. More detail is in [development.md](development.md).
+To reset the data, stop the backend, delete `backend/app.db`, and run `bash start_backend.bash` again. More detail is in [development.md](development.md).
 
 ## What I built
 
