@@ -4,7 +4,15 @@ import {
     useQueryClient,
     useSuspenseQuery,
 } from "@tanstack/react-query"
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
+import type { AgGridReact } from "ag-grid-react"
+import {
+    useCallback,
+    useDeferredValue,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react"
 
 import type { UserPublic } from "@/client"
 import { useTheme } from "@/components/theme-provider"
@@ -14,15 +22,8 @@ import {
     ConfirmDisableDialog,
     type PendingDisable,
 } from "./ConfirmDisableDialog"
-import {
-    facetsFor,
-    filterTree,
-    isFiltering,
-    statusCounts,
-    withFacet,
-} from "./filterTree"
-import { flagUrlFor, preloadFlags } from "./flags"
 import { JurisdictionGridService as Service } from "./JurisdictionGridService"
+import { JurisdictionRowSource, type RowMapper } from "./JurisdictionRowSource"
 import { JurisdictionTable } from "./JurisdictionTable"
 import { JurisdictionToolbar } from "./JurisdictionToolbar"
 import { muiThemes } from "./muiTheme"
@@ -34,9 +35,9 @@ import type {
     JurisdictionFilters,
     JurisdictionGridContext,
     JurisdictionMode,
-    JurisdictionSort,
+    JurisdictionRow,
+    TypeFilters,
 } from "./types"
-import { useExpandedState } from "./useExpandedState"
 import { useSelectionMutation } from "./useSelectionMutation"
 
 export type { JurisdictionMode } from "./types"
@@ -61,232 +62,176 @@ export function JurisdictionGrid({
     const canEditCompany = user.is_superuser || user.company_role === "admin"
     const showUserCounts = mode === "company" && canEditCompany
 
-    const [sort, setSort] = useState<JurisdictionSort>(Service.defaultSort)
     // Kept across scope switches, so the same slice can be compared in both
     const [filters, setFilters] = useState<JurisdictionFilters>(noFilters)
-    const search = useDeferredValue(filters.search)
+    // What the server filters by; the current rows and counts stay up meanwhile
+    const queried = useDeferredValue(filters)
     const [pendingDisable, setPendingDisable] = useState<{
         open: boolean
         item: PendingDisable | null
     }>({ open: false, item: null })
     const [selectionOpen, setSelectionOpen] = useState(false)
+    const gridRef = useRef<AgGridReact<JurisdictionRow>>(null)
 
-    const { data: tree } = useSuspenseQuery(Service.treeQuery(sort, mode))
     const { data: company } = useSuspenseQuery(Service.companyQuery(companyId))
     const { data: companyIds } = useSuspenseQuery(
         Service.companyIdsQuery(companyId),
     )
     const { data: myIds } = useSuspenseQuery(Service.myIdsQuery())
-    // Admins only; shows who loses an opt-in before the company drops it
-    const { data: userCounts } = useQuery({
-        ...Service.userCountsQuery(companyId),
-        enabled: canEditCompany,
-    })
+    const { data: facets } = useSuspenseQuery(
+        Service.facetsQuery(mode, queried),
+    )
     // Members only; locked rows offer to email them
     const { data: admins } = useQuery({
         ...Service.adminsQuery(companyId),
         enabled: mode === "user" && !canEditCompany,
     })
-
-    const invalidateUserCounts = () =>
-        queryClient.invalidateQueries({
-            queryKey: Service.keys.userCounts(companyId),
-        })
-    const companyMutation = useSelectionMutation(
-        Service.keys.companyIds(companyId),
-        (ids) => Service.saveCompanyIds(companyId, ids),
-        () => {
-            // Dropping a company opt-in also drops it for every user in the company
-            queryClient.invalidateQueries({ queryKey: Service.keys.myIds })
-            invalidateUserCounts()
-        },
-    )
-    const userMutation = useSelectionMutation(
-        Service.keys.myIds,
-        Service.saveMyIds,
-        invalidateUserCounts,
-    )
-
-    const byId = useMemo(() => new Map(tree.map((j) => [j.id, j])), [tree])
-    const childrenOf = useMemo(() => Service.childrenOf(tree), [tree])
-
-    // Flags depend on ancestors (a state's country), which the cell can't see
-    const flagUrls = useMemo(
-        () => new Map(tree.map((j) => [j.id, flagUrlFor(j, byId)])),
-        [tree, byId],
-    )
-    useEffect(() => preloadFlags(flagUrls.values()), [flagUrls])
-
-    const enabledIds = useMemo(
-        () => new Set(mode === "company" ? companyIds : myIds),
-        [mode, companyIds, myIds],
-    )
-    // The company's license; users can only turn these on
-    const licensedIds = useMemo(() => new Set(companyIds), [companyIds])
-    const selectionGroups = useMemo(
-        () =>
-            summarizeSelection(childrenOf, byId, flagUrls, enabledIds, (j) =>
-                Service.isSelectable(j, mode, licensedIds),
-            ),
-        [childrenOf, byId, flagUrls, enabledIds, licensedIds, mode],
-    )
-    const filtered = useMemo(
-        () =>
-            filterTree(
-                tree,
-                byId,
-                { search, byType: filters.byType, status: filters.status },
-                enabledIds,
-                licensedIds,
-            ),
-        [
-            tree,
-            byId,
-            search,
-            filters.byType,
-            filters.status,
-            enabledIds,
-            licensedIds,
-        ],
-    )
-    const counts = useMemo(
-        () =>
-            statusCounts(
-                tree,
-                byId,
-                { search, byType: filters.byType },
-                enabledIds,
-                licensedIds,
-            ),
-        [tree, byId, search, filters.byType, enabledIds, licensedIds],
-    )
-    const facets = useMemo(
-        () => facetsFor(tree, byId, filters.byType, flagUrls),
-        [tree, byId, filters.byType, flagUrls],
-    )
-
-    const { expanded, updateExpanded } = useExpandedState(tree, filtered)
-
-    const { rows, summary } = useMemo(
-        () =>
-            Service.buildRows({
-                tree,
-                childrenOf,
-                flagUrls,
-                filtered,
-                search,
-                expanded,
-                mode,
-                company,
-                companyIds,
-                myIds,
-                canEditCompany,
-                showUserCounts,
-                userCounts,
-                admins,
-                user,
-            }),
-        [
-            tree,
-            childrenOf,
-            flagUrls,
-            filtered,
-            search,
-            expanded,
-            mode,
-            company,
-            companyIds,
-            myIds,
-            canEditCompany,
-            showUserCounts,
-            userCounts,
-            admins,
-            user,
-        ],
-    )
-
-    // The grid may keep the first context it is given, so handlers read live state via a ref
-    const latest = useRef({
-        mode,
-        byId,
-        childrenOf,
-        companyId,
-        companyIds,
-        myIds,
-        companyMutation,
-        userMutation,
-        updateExpanded,
-        showErrorToast,
+    // The sheet rolls fully-on subtrees up, which takes the whole tree; loaded
+    // only once it's opened
+    const { data: tree } = useQuery({
+        ...Service.treeQuery(),
+        enabled: selectionOpen,
     })
-    latest.current = {
-        mode,
-        byId,
-        childrenOf,
-        companyId,
-        companyIds,
-        myIds,
-        companyMutation,
-        userMutation,
-        updateExpanded,
-        showErrorToast,
+
+    const toRow = useCallback<RowMapper>(
+        (r, highlight) =>
+            Service.toRow(
+                r,
+                { mode, company, user, canEditCompany, admins },
+                highlight,
+            ),
+        [mode, company, user, canEditCompany, admins],
+    )
+    const [source] = useState(
+        () =>
+            new JurisdictionRowSource(mode, queried, toRow, (err) =>
+                handleError.call(showErrorToast, err as Error),
+            ),
+    )
+
+    // New filters reload the rows from the top
+    useEffect(() => {
+        if (!source.setQuery(mode, queried)) return
+        const api = gridRef.current?.api
+        if (!api) return
+        if (api.getDisplayedRowCount() > 0) api.ensureIndexVisible(0, "top")
+        api.purgeInfiniteCache()
+    }, [source, mode, queried])
+
+    // Loaded rows are mapped again when what the mapping reads changes
+    useEffect(() => {
+        if (source.toRow === toRow) return
+        source.toRow = toRow
+        gridRef.current?.api.forEachNode((node) => {
+            if (node.data) {
+                node.setData(toRow(node.data.jurisdiction, node.data.highlight))
+            }
+        })
+    }, [source, toRow])
+
+    // Picks the server dropped, because a coarser facet no longer covers them,
+    // leave the filters too, so they don't come back with the coarser pick
+    useEffect(() => {
+        const pruned = facets.by_type as TypeFilters
+        if (Service.sameTypeFilters(pruned, queried.byType)) return
+        setFilters((f) =>
+            f.byType === queried.byType ? { ...f, byType: pruned } : f,
+        )
+    }, [facets, queried.byType])
+
+    const mutation = useSelectionMutation(mode, companyId, () => {
+        queryClient.invalidateQueries({ queryKey: Service.keys.facets })
+        queryClient.invalidateQueries({
+            queryKey: Service.keys.companyIds(companyId),
+        })
+        // Dropping a company opt-in also drops it for every user in the company
+        queryClient.invalidateQueries({ queryKey: Service.keys.myIds })
+        // Ancestors' select-all counts and user counts change too
+        gridRef.current?.api.refreshInfiniteCache()
+    })
+
+    // Saves a row, or the row and everything under it. A single row's switch
+    // flips right away; the refresh after saving settles the rest.
+    const save = (rootId: string, enabled: boolean, subtree: boolean) => {
+        const node = gridRef.current?.api.getRowNode(rootId)
+        if (!subtree && node?.data) {
+            node.setData({ ...node.data, checked: enabled })
+        }
+        mutation.mutate({ rootId, enabled })
     }
 
+    // The grid may keep the first context it is given, so handlers read live state via a ref
+    const latest = useRef({ mode, companyId, save, showErrorToast })
+    latest.current = { mode, companyId, save, showErrorToast }
+
     const context = useMemo<JurisdictionGridContext>(() => {
-        // Saves ids on or off in one request. Turning company opt-ins off asks
-        // first when users would lose them; named after the clicked row.
+        // Turning company opt-ins off asks first when users would lose them;
+        // named after the clicked row
         const apply = async (
             rowId: string,
-            ids: string[],
             enabled: boolean,
+            subtree: boolean,
         ) => {
             const { mode, companyId, showErrorToast } = latest.current
             if (mode === "company" && !enabled) {
                 // Fetch fresh: someone may have opted in since the page loaded
                 let users: PendingDisable["users"]
                 try {
-                    users = await Service.affectedUsers(companyId, ids)
+                    users = await Service.affectedUsers(companyId, rowId)
                 } catch (err) {
                     handleError.call(showErrorToast, err as Error)
                     return
                 }
                 if (users.length > 0) {
-                    const name = latest.current.byId.get(rowId)?.name ?? ""
+                    const name =
+                        gridRef.current?.api.getRowNode(rowId)?.data
+                            ?.jurisdiction.name ?? ""
                     setPendingDisable({
                         open: true,
-                        item: { ids, name, users },
+                        item: { rootId: rowId, subtree, name, users },
                     })
                     return
                 }
             }
-            const l = latest.current
-            if (l.mode === "company") {
-                l.companyMutation.mutate(
-                    Service.nextIds(l.companyIds, ids, enabled),
-                )
-            } else {
-                l.userMutation.mutate(Service.nextIds(l.myIds, ids, enabled))
-            }
+            latest.current.save(rowId, enabled, subtree)
         }
         return {
-            toggleExpanded: (id) =>
-                latest.current.updateExpanded((prev) => {
-                    const next = new Set(prev)
-                    if (!next.delete(id)) next.add(id)
-                    return next
-                }),
-            toggleEnabled: (id, enabled) => apply(id, [id], enabled),
-            toggleSubtree: (id, enabled) => {
-                const { mode, byId, childrenOf, companyIds } = latest.current
-                const root = byId.get(id)
-                if (!root) return
-                const companySet = new Set(companyIds)
-                const ids = Service.subtreeOf(childrenOf, root)
-                    .filter((j) => Service.isSelectable(j, mode, companySet))
-                    .map((j) => j.id)
-                if (ids.length > 0) apply(id, ids, enabled)
+            toggleExpanded: (id) => {
+                if (source.toggleExpanded(id)) {
+                    gridRef.current?.api.refreshInfiniteCache()
+                }
             },
+            toggleEnabled: (id, enabled) => apply(id, enabled, false),
+            toggleSubtree: (id, enabled) => apply(id, enabled, true),
         }
-    }, [])
+    }, [source])
+
+    const enabledIds = mode === "company" ? companyIds : myIds
+    const selectionGroups = useMemo(() => {
+        if (!tree) return undefined
+        const licensed = new Set(companyIds)
+        return summarizeSelection(
+            tree,
+            new Set(enabledIds),
+            (j) =>
+                !j.is_structural && (mode === "company" || licensed.has(j.id)),
+        )
+    }, [tree, enabledIds, companyIds, mode])
+
+    // Shows the live picks while the server catches up; drops any that are no
+    // longer among a facet's options
+    const toolbarFacets = useMemo(
+        () =>
+            facets.facets.map((f) => ({
+                ...f,
+                value: (filters.byType[f.type] ?? []).filter((id) =>
+                    f.options.some((o) => o.id === id),
+                ),
+            })),
+        [facets, filters.byType],
+    )
+
+    const reload = () => gridRef.current?.api.refreshInfiniteCache()
 
     return (
         <MuiThemeProvider
@@ -296,7 +241,7 @@ export function JurisdictionGrid({
                 <ScopeBanner
                     mode={mode}
                     canEditCompany={canEditCompany}
-                    lockedCount={summary.locked ?? 0}
+                    lockedCount={facets.summary.locked ?? 0}
                 />
                 <JurisdictionToolbar
                     mode={mode}
@@ -305,51 +250,53 @@ export function JurisdictionGrid({
                         setFilters((f) => ({ ...f, search: value }))
                     }
                     status={filters.status}
-                    counts={counts}
+                    counts={facets.status_counts}
                     onStatusChange={(status) =>
                         setFilters((f) => ({ ...f, status }))
                     }
-                    facets={facets}
+                    facets={toolbarFacets}
                     onFacetChange={(type, ids) =>
                         setFilters((f) => ({
                             ...f,
-                            byType: withFacet(tree, byId, f.byType, type, ids),
+                            byType: { ...f.byType, [type]: ids },
                         }))
                     }
-                    filtering={!!filtered}
+                    filtering={Service.hasFilters(filters)}
                     onClear={() => setFilters(noFilters)}
-                    summary={summary}
-                    onExpandAll={() =>
-                        updateExpanded(
-                            () =>
-                                new Set(
-                                    tree
-                                        .filter((j) => (j.child_count ?? 0) > 0)
-                                        .map((j) => j.id),
-                                ),
-                        )
-                    }
-                    onCollapseAll={() => updateExpanded(() => new Set())}
+                    summary={facets.summary}
+                    onExpandAll={() => {
+                        source.expandAll()
+                        reload()
+                    }}
+                    onCollapseAll={() => {
+                        source.collapseAll()
+                        reload()
+                    }}
                     onViewSelection={() => setSelectionOpen(true)}
                 />
                 <div className="relative h-[max(24rem,calc(100vh-26rem))] overflow-hidden rounded-md">
                     <JurisdictionTable
-                        rows={rows}
+                        gridRef={gridRef}
+                        datasource={source}
                         mode={mode}
                         showUserCounts={showUserCounts}
                         context={context}
-                        onSortChange={setSort}
                     />
-                    {filtered && rows.length === 0 && (
-                        <NoMatches
-                            allTaken={
-                                filters.status === "available" &&
-                                licensedIds.size > 0 &&
-                                !isFiltering({ ...filters, status: "all" })
-                            }
-                            onClear={() => setFilters(noFilters)}
-                        />
-                    )}
+                    {/* Ancestors only show above a match, so no matches means no rows */}
+                    {Service.hasFilters(queried) &&
+                        facets.summary.shown === 0 && (
+                            <NoMatches
+                                allTaken={
+                                    queried.status === "available" &&
+                                    companyIds.length > 0 &&
+                                    !Service.hasFilters({
+                                        ...queried,
+                                        status: "all",
+                                    })
+                                }
+                                onClear={() => setFilters(noFilters)}
+                            />
+                        )}
                 </div>
                 <SelectionSheet
                     open={selectionOpen}
@@ -357,7 +304,7 @@ export function JurisdictionGrid({
                     mode={mode}
                     ownerId={mode === "company" ? companyId : user.id}
                     groups={selectionGroups}
-                    ids={mode === "company" ? companyIds : myIds}
+                    ids={enabledIds}
                 />
                 <ConfirmDisableDialog
                     open={pendingDisable.open}
@@ -368,9 +315,7 @@ export function JurisdictionGrid({
                     }
                     onConfirm={(item) => {
                         setPendingDisable((p) => ({ ...p, open: false }))
-                        companyMutation.mutate(
-                            Service.nextIds(companyIds, item.ids, false),
-                        )
+                        save(item.rootId, false, item.subtree)
                     }}
                 />
             </div>

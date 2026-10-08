@@ -1,4 +1,4 @@
-import { Building2, Lock, User } from "lucide-react"
+import { Building2, CircleOff, Lock, User } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
@@ -46,23 +46,29 @@ export function ScopeBanner({
                         {lockedCount > 0 && (
                             <span className="text-muted-foreground">
                                 {" "}
-                                To add more jurisdictions company-wide, speak
-                                with your{" "}
+                                Jurisdictions marked{" "}
+                                {/* Same icon as the locked rows in the grid */}
+                                <CircleOff
+                                    role="img"
+                                    aria-label="not enabled"
+                                    className="inline size-3.5 align-[-2px]"
+                                />{" "}
+                                aren't in your company's license.{" "}
                                 <a
                                     href="mailto:sales@daptic.com"
                                     className="underline underline-offset-4 hover:text-foreground"
                                 >
-                                    Daptic
+                                    Contact Daptic
                                 </a>{" "}
-                                sales associate.
+                                to add more jurisdictions.
                             </span>
                         )}
                     </p>
                 ) : canEditCompany ? (
                     <p>
-                        Changes apply to every user of this company. Turning a
-                        jurisdiction off also removes it from anyone who
-                        selected it.
+                        Changes apply to every user of this company. Disabling a
+                        jurisdiction also removes it from anyone who selected
+                        it.
                     </p>
                 ) : (
                     <p>

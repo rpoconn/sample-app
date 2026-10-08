@@ -1,10 +1,11 @@
 import uuid
 from collections.abc import Iterable
-from typing import Any, Literal
+from typing import Any
 
-from sqlmodel import Session, case, col, delete, func, select
+from sqlmodel import Session, case, col, delete, func, or_, select
 
 from app.core.security import get_password_hash, verify_password
+from app.jurisdiction_query import Selection
 from app.models import (
     DEFAULT_COMPANY_ID,
     Company,
@@ -17,6 +18,9 @@ from app.models import (
     Jurisdiction,
     JurisdictionCreate,
     JurisdictionUpdate,
+    SelectionScope,
+    SortDir,
+    TreeSortBy,
     User,
     UserCreate,
     UserJurisdiction,
@@ -376,11 +380,6 @@ def update_company(
     return db_obj
 
 
-TreeSortBy = Literal["name", "enabled"]
-SortDir = Literal["asc", "desc"]
-SelectionScope = Literal["company", "user"]
-
-
 def get_jurisdiction_tree(
     *,
     session: Session,
@@ -589,3 +588,79 @@ def set_user_jurisdictions(
         )
     session.commit()
     return get_user_jurisdictions(session=session, user_id=user.id)
+
+
+def get_jurisdiction_selection(
+    *, session: Session, user: User, scope: SelectionScope
+) -> Selection:
+    """The company's opt-ins, and those on in the scope shown."""
+    licensed = frozenset(
+        session.exec(
+            select(CompanyJurisdiction.jurisdiction_id).where(
+                CompanyJurisdiction.company_id == user.company_id
+            )
+        ).all()
+    )
+    enabled = (
+        licensed
+        if scope == "company"
+        else frozenset(
+            session.exec(
+                select(UserJurisdiction.jurisdiction_id).where(
+                    UserJurisdiction.user_id == user.id
+                )
+            ).all()
+        )
+    )
+    return Selection(scope=scope, enabled_ids=enabled, licensed_ids=licensed)
+
+
+def get_subtree_ids(
+    *, session: Session, root_ids: Iterable[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Every non-structural jurisdiction under the roots, the roots included."""
+    ids = set(root_ids)
+    if not ids:
+        return set()
+    roots = session.exec(
+        select(Jurisdiction).where(col(Jurisdiction.id).in_(ids))
+    ).all()
+    if missing := ids - {r.id for r in roots}:
+        raise NotFoundError(
+            f"Unknown jurisdiction ids: {sorted(str(i) for i in missing)}"
+        )
+    statement = select(Jurisdiction.id).where(
+        or_(*(col(Jurisdiction.path).startswith(r.path) for r in roots)),
+        ~col(Jurisdiction.is_structural),
+    )
+    return set(session.exec(statement).all())
+
+
+def toggle_company_subtree(
+    *, session: Session, company_id: uuid.UUID, root_id: uuid.UUID, enabled: bool
+) -> list[Jurisdiction]:
+    """Turn the company's opt-ins on or off for a whole subtree in one save."""
+    ids = get_subtree_ids(session=session, root_ids=[root_id])
+    current = {
+        j.id for j in get_company_jurisdictions(session=session, company_id=company_id)
+    }
+    return set_company_jurisdictions(
+        session=session,
+        company_id=company_id,
+        jurisdiction_ids=current | ids if enabled else current - ids,
+    )
+
+
+def toggle_user_subtree(
+    *, session: Session, user: User, root_id: uuid.UUID, enabled: bool
+) -> list[Jurisdiction]:
+    """Turn the user's opt-ins on or off for a whole subtree, skipping any the company
+    hasn't opted into."""
+    sel = get_jurisdiction_selection(session=session, user=user, scope="user")
+    ids = get_subtree_ids(session=session, root_ids=[root_id]) & sel.licensed_ids
+    current = set(sel.enabled_ids)
+    return set_user_jurisdictions(
+        session=session,
+        user=user,
+        jurisdiction_ids=current | ids if enabled else current - ids,
+    )

@@ -1,52 +1,42 @@
 import { queryOptions } from "@tanstack/react-query"
 
 import {
+    type JurisdictionFilters as ApiFilters,
     CompaniesService,
     type CompanyAdmin,
     type CompanyPublic,
-    type JurisdictionPublic,
+    type JurisdictionGridRow,
+    type JurisdictionRowsQuery,
     JurisdictionsService,
     type UserPublic,
     UsersService,
 } from "@/client"
-import type { FilterResult } from "./filterTree"
+import { flagUrlForKeys } from "./flags"
 import type {
+    JurisdictionFilters,
     JurisdictionMode,
     JurisdictionRow,
     JurisdictionSort,
-    SubtreeSelection,
+    TypeFilters,
     Unlock,
 } from "./types"
 
-export type JurisdictionSummary = {
-    total: number
-    shown: number
-    enabled: number
-    locked?: number
-}
-
-export type BuildRowsInput = {
-    tree: JurisdictionPublic[]
-    childrenOf: Map<string | null, JurisdictionPublic[]>
-    flagUrls: Map<string, string | undefined>
-    filtered: FilterResult | null
-    search: string
-    expanded: Set<string>
+// What a server row's grid state depends on beyond the row itself
+export type RowInputs = {
     mode: JurisdictionMode
     company: CompanyPublic
-    companyIds: string[]
-    myIds: string[]
-    canEditCompany: boolean
-    showUserCounts: boolean
-    userCounts?: Map<string, number>
-    admins?: CompanyAdmin[]
     user: UserPublic
+    canEditCompany: boolean
+    admins?: CompanyAdmin[]
 }
 
-const idsOf = (res: { data: { data: JurisdictionPublic[] } }) =>
+const idsOf = (res: { data: { data: { id: string }[] } }) =>
     res.data.data.map((j) => j.id)
 
-// API access, cache keys and row building for the jurisdiction grid
+const pickedTypes = (byType: TypeFilters) =>
+    Object.entries(byType).filter(([, ids]) => ids?.length)
+
+// API access, cache keys and row mapping for the jurisdiction grid
 // biome-ignore lint/complexity/noStaticOnlyClass: groups the grid's service logic in one place
 export class JurisdictionGridService {
     static readonly defaultSort: JurisdictionSort = {
@@ -55,33 +45,70 @@ export class JurisdictionGridService {
     }
 
     static readonly keys = {
-        tree: (sort: JurisdictionSort, mode: JurisdictionMode) => [
+        tree: ["jurisdictions", "tree"],
+        facets: ["jurisdictions", "facets"],
+        facetsFor: (mode: JurisdictionMode, filters: JurisdictionFilters) => [
             "jurisdictions",
-            "tree",
-            sort,
-            // Only the enabled sort depends on which selections are shown
-            sort.sort_by === "enabled" ? mode : null,
+            "facets",
+            mode,
+            filters,
         ],
         company: (companyId: string) => ["company", companyId],
         companyIds: (companyId: string) => ["companyJurisdictions", companyId],
         myIds: ["myJurisdictions"],
-        userCounts: (companyId: string) => [
-            "companyJurisdictionUserCounts",
-            companyId,
-        ],
         admins: (companyId: string) => ["companyAdmins", companyId],
     }
 
-    static treeQuery(sort: JurisdictionSort, mode: JurisdictionMode) {
+    // Whether any filter is set; the server does the filtering itself
+    static hasFilters({ search, byType, status }: JurisdictionFilters) {
+        return (
+            search.trim() !== "" ||
+            pickedTypes(byType).length > 0 ||
+            status !== "all"
+        )
+    }
+
+    static sameTypeFilters(a: TypeFilters, b: TypeFilters) {
+        const key = (t: TypeFilters) => JSON.stringify(pickedTypes(t).sort())
+        return key(a) === key(b)
+    }
+
+    static toApiFilters(filters: JurisdictionFilters): ApiFilters {
+        return {
+            search: filters.search,
+            by_type: filters.byType,
+            status: filters.status,
+        }
+    }
+
+    // Every jurisdiction; only the selection sheet still needs the whole tree
+    static treeQuery() {
         return queryOptions({
-            queryKey: JurisdictionGridService.keys.tree(sort, mode),
+            queryKey: JurisdictionGridService.keys.tree,
+            queryFn: async () =>
+                (await JurisdictionsService.readJurisdictionTree()).data.data,
+        })
+    }
+
+    // Filter options, status tab counts and the summary under the filters
+    static facetsQuery(mode: JurisdictionMode, filters: JurisdictionFilters) {
+        return queryOptions({
+            queryKey: JurisdictionGridService.keys.facetsFor(mode, filters),
             queryFn: async () =>
                 (
-                    await JurisdictionsService.readJurisdictionTree({
-                        query: { ...sort, scope: mode },
+                    await JurisdictionsService.readJurisdictionFacets({
+                        body: {
+                            scope: mode,
+                            filters:
+                                JurisdictionGridService.toApiFilters(filters),
+                        },
                     })
-                ).data.data,
+                ).data,
         })
+    }
+
+    static async fetchRows(body: JurisdictionRowsQuery) {
+        return (await JurisdictionsService.readJurisdictionRows({ body })).data
     }
 
     static companyQuery(companyId: string) {
@@ -116,20 +143,6 @@ export class JurisdictionGridService {
         })
     }
 
-    static userCountsQuery(companyId: string) {
-        return queryOptions({
-            queryKey: JurisdictionGridService.keys.userCounts(companyId),
-            queryFn: async () =>
-                new Map(
-                    (
-                        await CompaniesService.readCompanyJurisdictionUserCounts(
-                            { path: { company_id: companyId } },
-                        )
-                    ).data.data.map((c) => [c.jurisdiction_id, c.user_count]),
-                ),
-        })
-    }
-
     static adminsQuery(companyId: string) {
         return queryOptions({
             queryKey: JurisdictionGridService.keys.admins(companyId),
@@ -142,57 +155,31 @@ export class JurisdictionGridService {
         })
     }
 
-    static saveCompanyIds(companyId: string, ids: string[]) {
-        return CompaniesService.setCompanyJurisdictions({
-            path: { company_id: companyId },
-            body: { jurisdiction_ids: ids },
-        })
+    // Turns a jurisdiction and everything selectable under it on or off; a row
+    // without children is a subtree of one
+    static saveSubtree(
+        mode: JurisdictionMode,
+        companyId: string,
+        rootId: string,
+        enabled: boolean,
+    ) {
+        const body = { root_id: rootId, enabled }
+        return mode === "company"
+            ? CompaniesService.toggleCompanyJurisdictionSubtree({
+                  path: { company_id: companyId },
+                  body,
+              })
+            : UsersService.toggleMyJurisdictionSubtree({ body })
     }
 
-    // Who would lose an opt-in if the company dropped these ids; always fresh
-    static async affectedUsers(companyId: string, ids: string[]) {
+    // Who would lose an opt-in if the company dropped the subtree; always fresh
+    static async affectedUsers(companyId: string, rootId: string) {
         return (
             await CompaniesService.readCompanyJurisdictionAffectedUsers({
                 path: { company_id: companyId },
-                body: { jurisdiction_ids: ids },
+                body: { root_ids: [rootId] },
             })
         ).data.data
-    }
-
-    static saveMyIds(ids: string[]) {
-        return UsersService.setMyJurisdictions({
-            body: { jurisdiction_ids: ids },
-        })
-    }
-
-    static nextIds(current: string[], ids: string[], enabled: boolean) {
-        if (enabled) return [...new Set([...current, ...ids])]
-        const drop = new Set(ids)
-        return current.filter((x) => !drop.has(x))
-    }
-
-    // Whether a row can be switched on in this scope. Users can only pick what the
-    // company has opted into.
-    static isSelectable(
-        j: JurisdictionPublic,
-        mode: JurisdictionMode,
-        companySet: Set<string>,
-    ) {
-        return !j.is_structural && (mode === "company" || companySet.has(j.id))
-    }
-
-    // The jurisdiction and all its descendants
-    static subtreeOf(
-        childrenOf: Map<string | null, JurisdictionPublic[]>,
-        root: JurisdictionPublic,
-    ) {
-        const out: JurisdictionPublic[] = []
-        const stack = [root]
-        for (let j = stack.pop(); j; j = stack.pop()) {
-            out.push(j)
-            stack.push(...(childrenOf.get(j.id) ?? []))
-        }
-        return out
     }
 
     // Asks the company's admins to turn a jurisdiction on, linking to where they'd do it
@@ -228,133 +215,51 @@ export class JurisdictionGridService {
         }
     }
 
-    // Siblings keep the server's order, which reflects the current sort
-    static childrenOf(tree: JurisdictionPublic[]) {
-        const map = new Map<string | null, JurisdictionPublic[]>()
-        for (const j of tree) {
-            const key = j.parent_id ?? null
-            map.set(key, [...(map.get(key) ?? []), j])
+    // A server row as the grid shows it in this scope
+    static toRow(
+        r: JurisdictionGridRow,
+        { mode, company, user, canEditCompany, admins }: RowInputs,
+        highlight?: string,
+    ): JurisdictionRow {
+        const base = {
+            jurisdiction: r,
+            mode,
+            depth: r.display_depth,
+            flagUrl: flagUrlForKeys(r.flag_keys),
+            expanded: r.expanded,
+            hasChildren: r.has_children,
+            checked: r.enabled,
+            highlight,
+            subtree: r.subtree ?? undefined,
         }
-        return map
-    }
-
-    // Flattens the visible, expanded part of the tree into grid rows
-    static buildRows({
-        tree,
-        childrenOf,
-        flagUrls,
-        filtered,
-        search,
-        expanded,
-        mode,
-        company,
-        companyIds,
-        myIds,
-        canEditCompany,
-        showUserCounts,
-        userCounts,
-        admins,
-        user,
-    }: BuildRowsInput): {
-        rows: JurisdictionRow[]
-        summary: JurisdictionSummary
-    } {
-        const companySet = new Set(companyIds)
-        const mySet = new Set(myIds)
-        const highlight = filtered ? search.trim() || undefined : undefined
-        const lockedReason = "Not enabled for your license."
-        const enabledSet = mode === "company" ? companySet : mySet
-
-        // Select-all state per parent, counted over the whole tree so filters
-        // and collapsed rows don't change what "all" means
-        const subtrees = new Map<string, SubtreeSelection>()
-        const count = (j: JurisdictionPublic): SubtreeSelection => {
-            const self = JurisdictionGridService.isSelectable(
-                j,
-                mode,
-                companySet,
-            )
-            const sel = {
-                total: self ? 1 : 0,
-                enabled: self && enabledSet.has(j.id) ? 1 : 0,
-                locked: !self && !j.is_structural ? 1 : 0,
-            }
-            const children = childrenOf.get(j.id) ?? []
-            for (const c of children) {
-                const s = count(c)
-                sel.total += s.total
-                sel.enabled += s.enabled
-                sel.locked += s.locked
-            }
-            if (children.length > 0) subtrees.set(j.id, sel)
-            return sel
-        }
-        for (const root of childrenOf.get(null) ?? []) count(root)
-
-        const result: JurisdictionRow[] = []
-        const walk = (parentId: string | null) => {
-            for (const j of childrenOf.get(parentId) ?? []) {
-                if (filtered && !filtered.visible.has(j.id)) continue
-                const isExpanded = expanded.has(j.id)
-                const base = {
-                    jurisdiction: j,
-                    mode,
-                    flagUrl: flagUrls.get(j.id),
-                    expanded: isExpanded,
-                    highlight,
-                    subtree: subtrees.get(j.id),
-                }
-                if (mode === "company") {
-                    result.push({
-                        ...base,
-                        checked: companySet.has(j.id),
-                        disabled: !canEditCompany,
-                        disabledReason: canEditCompany
-                            ? undefined
-                            : "Only company admins can change this",
-                        locked: false,
-                        userCount: showUserCounts
-                            ? (userCounts?.get(j.id) ?? 0)
-                            : undefined,
-                    })
-                } else {
-                    const allowed = companySet.has(j.id)
-                    const locked = !allowed && !j.is_structural
-                    result.push({
-                        ...base,
-                        checked: mySet.has(j.id),
-                        disabled: !allowed,
-                        disabledReason: allowed ? undefined : lockedReason,
-                        locked,
-                        unlock: !locked
-                            ? undefined
-                            : canEditCompany
-                              ? { kind: "company" }
-                              : JurisdictionGridService.requestUnlock(
-                                    admins ?? [],
-                                    j.name,
-                                    company.name,
-                                    user,
-                                ),
-                    })
-                }
-                if (isExpanded) walk(j.id)
+        if (mode === "company") {
+            return {
+                ...base,
+                disabled: !canEditCompany,
+                disabledReason: canEditCompany
+                    ? undefined
+                    : "Only company admins can change this",
+                locked: false,
+                userCount: r.user_count ?? undefined,
             }
         }
-        walk(null)
-
-        const selectable = tree.filter((j) => !j.is_structural)
         return {
-            rows: result,
-            summary: {
-                total: selectable.length,
-                shown: filtered?.selectableCount ?? selectable.length,
-                enabled: (mode === "company" ? companyIds : myIds).length,
-                locked:
-                    mode === "user"
-                        ? selectable.filter((j) => !companySet.has(j.id)).length
-                        : undefined,
-            },
+            ...base,
+            disabled: !r.licensed,
+            disabledReason: r.licensed
+                ? undefined
+                : "Not enabled for your license.",
+            locked: r.locked,
+            unlock: !r.locked
+                ? undefined
+                : canEditCompany
+                  ? { kind: "company" }
+                  : JurisdictionGridService.requestUnlock(
+                        admins ?? [],
+                        r.name,
+                        company.name,
+                        user,
+                    ),
         }
     }
 }

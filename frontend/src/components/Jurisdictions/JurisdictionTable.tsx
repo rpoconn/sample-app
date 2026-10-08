@@ -2,11 +2,12 @@ import {
     AllCommunityModule,
     colorSchemeDark,
     colorSchemeLight,
+    type IDatasource,
     ModuleRegistry,
     themeQuartz,
 } from "ag-grid-community"
 import { AgGridReact } from "ag-grid-react"
-import { startTransition, useMemo } from "react"
+import { type RefObject, useMemo } from "react"
 
 import { useTheme } from "@/components/theme-provider"
 import { columnsFor } from "./columns"
@@ -15,25 +16,28 @@ import type {
     JurisdictionGridContext,
     JurisdictionMode,
     JurisdictionRow,
-    JurisdictionSort,
 } from "./types"
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
 const { defaultSort } = JurisdictionGridService
 
+// Rows per page request
+const pageSize = 100
+
 export function JurisdictionTable({
-    rows,
+    gridRef,
+    datasource,
     mode,
     showUserCounts,
     context,
-    onSortChange,
 }: {
-    rows: JurisdictionRow[]
+    gridRef: RefObject<AgGridReact<JurisdictionRow> | null>
+    // Pages of rows, filtered and sorted on the server
+    datasource: IDatasource
     mode: JurisdictionMode
     showUserCounts: boolean
     context: JurisdictionGridContext
-    onSortChange: (sort: JurisdictionSort) => void
 }) {
     const { resolvedTheme } = useTheme()
 
@@ -52,8 +56,11 @@ export function JurisdictionTable({
 
     return (
         <AgGridReact<JurisdictionRow>
+            ref={gridRef}
             theme={theme}
-            rowData={rows}
+            rowModelType="infinite"
+            datasource={datasource}
+            cacheBlockSize={pageSize}
             columnDefs={columnDefs}
             context={context}
             getRowId={({ data }) => data.jurisdiction.id}
@@ -62,27 +69,17 @@ export function JurisdictionTable({
             }
             suppressNoRowsOverlay
             onSortChanged={({ api }) => {
-                const col = api.getColumnState().find((c) => c.sort != null)
-                if (!col?.sort) {
-                    // Clearing the enabled sort falls back to the default; this
-                    // fires onSortChanged again with the name column sorted
-                    api.applyColumnState({
-                        state: [
-                            {
-                                colId: defaultSort.sort_by,
-                                sort: defaultSort.sort_dir,
-                            },
-                        ],
-                    })
-                    return
-                }
-                // Keep the current rows on screen while the re-sorted tree loads
-                startTransition(() =>
-                    onSortChange({
-                        sort_by: col.colId as JurisdictionSort["sort_by"],
-                        sort_dir: col.sort as JurisdictionSort["sort_dir"],
-                    }),
-                )
+                // Clearing the enabled sort falls back to the default. Any other
+                // change reloads the rows from the server with the new sort.
+                if (api.getColumnState().some((c) => c.sort != null)) return
+                api.applyColumnState({
+                    state: [
+                        {
+                            colId: defaultSort.sort_by,
+                            sort: defaultSort.sort_dir,
+                        },
+                    ],
+                })
             }}
             suppressCellFocus
         />

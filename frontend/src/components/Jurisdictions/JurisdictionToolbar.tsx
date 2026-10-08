@@ -1,5 +1,4 @@
-import Autocomplete from "@mui/material/Autocomplete"
-import TextField from "@mui/material/TextField"
+import Tooltip from "@mui/material/Tooltip"
 import {
     ChevronsDownUp,
     ChevronsUpDown,
@@ -12,19 +11,41 @@ import {
     X,
 } from "lucide-react"
 
-import type { RegionType } from "@/client"
+import type { JurisdictionFacet, RegionType } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Facet, FacetOption } from "./filterTree"
+import { FacetFilter } from "./FacetFilter"
 import type { JurisdictionMode, StatusFilter } from "./types"
+
+// What each status tab shows, worded for the scope being edited
+const statusHints: Record<JurisdictionMode, Record<StatusFilter, string>> = {
+    user: {
+        all: "Every jurisdiction, whether it's on or off for you.",
+        enabled:
+            "Jurisdictions you've turned on. These are the ones you manage.",
+        available:
+            "Off for you, but included in your company's license. You can turn these on.",
+        disabled:
+            "Locked: your company hasn't turned these on, so you can't select them.",
+    },
+    company: {
+        all: "Every jurisdiction, whether it's on or off for the company.",
+        enabled:
+            "Jurisdictions your company has turned on. Members can pick from these.",
+        // Never shown: the company's selections are its license
+        available: "",
+        disabled:
+            "Jurisdictions your company hasn't turned on. Members can't pick these.",
+    },
+}
 
 export type ToolbarSummary = {
     shown: number
     total: number
     enabled: number
     // User scope only
-    locked?: number
+    locked?: number | null
 }
 
 export function JurisdictionToolbar({
@@ -50,7 +71,7 @@ export function JurisdictionToolbar({
     // Rows each tab would show under the current search and facets
     counts: Record<StatusFilter, number>
     onStatusChange: (status: StatusFilter) => void
-    facets: Facet[]
+    facets: JurisdictionFacet[]
     onFacetChange: (type: RegionType, ids: string[]) => void
     filtering: boolean
     onClear: () => void
@@ -93,106 +114,105 @@ export function JurisdictionToolbar({
                         aria-label="Filter by status"
                         className="h-10 rounded-lg border p-1"
                     >
-                        <TabsTrigger value="all" className="px-3">
-                            <Layers className="text-muted-foreground" />
-                            All
-                            <span className="text-xs tabular-nums text-muted-foreground">
-                                {counts.all}
-                            </span>
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="enabled"
-                            className="group px-3 data-[state=active]:text-primary"
+                        <Tooltip
+                            title={statusHints[mode].all}
+                            placement="bottom"
+                            enterDelay={1500}
+                            arrow
                         >
-                            <CircleCheck className="text-muted-foreground group-data-[state=active]:text-primary" />
-                            Enabled
-                            <span className="text-xs tabular-nums text-muted-foreground">
-                                {counts.enabled}
-                            </span>
-                        </TabsTrigger>
+                            <TabsTrigger value="all" className="px-3">
+                                <Layers className="text-muted-foreground" />
+                                All
+                                <span className="text-xs tabular-nums text-muted-foreground">
+                                    {counts.all}
+                                </span>
+                            </TabsTrigger>
+                        </Tooltip>
+                        <Tooltip
+                            title={statusHints[mode].enabled}
+                            placement="bottom"
+                            enterDelay={1500}
+                            arrow
+                        >
+                            <TabsTrigger
+                                value="enabled"
+                                className="group px-3 data-[state=active]:text-primary"
+                            >
+                                <CircleCheck className="text-muted-foreground group-data-[state=active]:text-primary" />
+                                Enabled
+                                <span className="text-xs tabular-nums text-muted-foreground">
+                                    {counts.enabled}
+                                </span>
+                            </TabsTrigger>
+                        </Tooltip>
                         {/* For the company the license is its own selection, so
                             nothing is ever off but licensed */}
                         {mode === "user" && (
-                            <TabsTrigger
-                                value="available"
-                                title="Off for you, but included in your company's license"
-                                className="group px-3 data-[state=active]:text-primary"
+                            <Tooltip
+                                title={statusHints[mode].available}
+                                placement="bottom"
+                                enterDelay={1500}
+                                arrow
                             >
-                                <CirclePlus className="text-muted-foreground group-data-[state=active]:text-primary" />
-                                Available
+                                <TabsTrigger
+                                    value="available"
+                                    className="group px-3 data-[state=active]:text-primary"
+                                >
+                                    <CirclePlus className="text-muted-foreground group-data-[state=active]:text-primary" />
+                                    Available
+                                    <span className="text-xs tabular-nums text-muted-foreground">
+                                        {counts.available}
+                                    </span>
+                                </TabsTrigger>
+                            </Tooltip>
+                        )}
+                        <Tooltip
+                            title={statusHints[mode].disabled}
+                            placement="bottom"
+                            enterDelay={1500}
+                            arrow
+                        >
+                            <TabsTrigger
+                                value="disabled"
+                                className="group px-3 data-[state=active]:text-destructive"
+                            >
+                                <CircleOff className="text-muted-foreground group-data-[state=active]:text-destructive" />
+                                Disabled
                                 <span className="text-xs tabular-nums text-muted-foreground">
-                                    {counts.available}
+                                    {counts.disabled}
                                 </span>
                             </TabsTrigger>
-                        )}
-                        <TabsTrigger
-                            value="disabled"
-                            className="group px-3 data-[state=active]:text-destructive"
-                        >
-                            <CircleOff className="text-muted-foreground group-data-[state=active]:text-destructive" />
-                            Disabled
-                            <span className="text-xs tabular-nums text-muted-foreground">
-                                {counts.disabled}
-                            </span>
-                        </TabsTrigger>
+                        </Tooltip>
                     </TabsList>
                 </Tabs>
+                <Button
+                    variant="outline"
+                    aria-haspopup="dialog"
+                    className="h-10 sm:ml-auto"
+                    onClick={onViewSelection}
+                >
+                    <ListChecks />
+                    View selection
+                </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
                 {facets.map((facet) => (
-                    <Autocomplete<FacetOption, true>
+                    <FacetFilter
                         key={facet.type}
-                        multiple
-                        size="small"
-                        limitTags={2}
-                        disableCloseOnSelect
-                        className="w-full sm:w-60"
-                        options={facet.options}
-                        // Wider than the input so long names aren't cut off
-                        slotProps={{ popper: { sx: { minWidth: 320 } } }}
-                        value={facet.options.filter((o) =>
-                            facet.value.includes(o.id),
-                        )}
-                        onChange={(_, picked) =>
-                            onFacetChange(
-                                facet.type,
-                                picked.map((o) => o.id),
-                            )
-                        }
-                        getOptionLabel={(o) => o.label}
-                        getOptionKey={(o) => o.id}
-                        isOptionEqualToValue={(a, b) => a.id === b.id}
-                        noOptionsText={`No ${facet.label.toLowerCase()} matches`}
-                        renderOption={({ key, ...props }, o) => (
-                            <li key={key} {...props}>
-                                <span className="flex min-w-0 items-center gap-2">
-                                    {o.flagUrl ? (
-                                        <img
-                                            src={o.flagUrl}
-                                            alt=""
-                                            className="h-3.5 w-5 shrink-0 rounded-[2px] border object-cover"
-                                        />
-                                    ) : (
-                                        <span className="w-5 shrink-0" />
-                                    )}
-                                    <span className="truncate">{o.label}</span>
-                                    {o.context && (
-                                        <span className="truncate text-xs opacity-60">
-                                            · {o.context}
-                                        </span>
-                                    )}
-                                </span>
-                            </li>
-                        )}
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                label={facet.label}
-                                placeholder={
-                                    facet.value.length ? undefined : "Any"
-                                }
-                            />
-                        )}
+                        facet={facet}
+                        onChange={(ids) => onFacetChange(facet.type, ids)}
                     />
                 ))}
+                {filtering && (
+                    <Button
+                        variant="outline"
+                        className="h-10"
+                        onClick={onClear}
+                    >
+                        <X />
+                        Clear filters
+                    </Button>
+                )}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm text-muted-foreground" aria-live="polite">
@@ -215,24 +235,8 @@ export function JurisdictionToolbar({
                     {summary.locked != null && summary.locked > 0 && (
                         <> · {summary.locked} not enabled for your company</>
                     )}
-                    {" · "}
-                    <button
-                        type="button"
-                        aria-haspopup="dialog"
-                        className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
-                        onClick={onViewSelection}
-                    >
-                        <ListChecks className="size-4" />
-                        View selection
-                    </button>
                 </p>
                 <div className="flex shrink-0 gap-2">
-                    {filtering && (
-                        <Button variant="ghost" size="sm" onClick={onClear}>
-                            <X />
-                            Clear filters
-                        </Button>
-                    )}
                     <fieldset
                         aria-label="Expand or collapse rows"
                         className="m-0 flex h-8 min-w-0 items-center rounded-lg border bg-muted p-0.5"

@@ -1,33 +1,30 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { JurisdictionGridService } from "./JurisdictionGridService"
+import type { JurisdictionMode } from "./types"
 
-// Saves a list of selected ids, updating the cached list optimistically
+export type SubtreeChange = { rootId: string; enabled: boolean }
+
+// Turns a jurisdiction and everything selectable under it on or off in this scope
 export function useSelectionMutation(
-    queryKey: string[],
-    save: (ids: string[]) => Promise<unknown>,
-    onSaved?: () => void,
+    mode: JurisdictionMode,
+    companyId: string,
+    onSettled: () => void,
 ) {
-    const queryClient = useQueryClient()
     const { showErrorToast } = useCustomToast()
 
     return useMutation({
-        mutationFn: save,
-        onMutate: async (ids) => {
-            await queryClient.cancelQueries({ queryKey })
-            const previous = queryClient.getQueryData<string[]>(queryKey)
-            queryClient.setQueryData(queryKey, ids)
-            return { previous }
-        },
-        onError: (err, _ids, ctx) => {
-            queryClient.setQueryData(queryKey, ctx?.previous)
-            handleError.call(showErrorToast, err)
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey })
-            onSaved?.()
-        },
+        mutationFn: ({ rootId, enabled }: SubtreeChange) =>
+            JurisdictionGridService.saveSubtree(
+                mode,
+                companyId,
+                rootId,
+                enabled,
+            ),
+        onError: (err) => handleError.call(showErrorToast, err),
+        onSettled,
     })
 }
 

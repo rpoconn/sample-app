@@ -1,4 +1,5 @@
 import type { JurisdictionPublic } from "@/client"
+import { flagUrlFor } from "./flags"
 
 export type SelectionEntry = {
     jurisdiction: JurisdictionPublic
@@ -16,12 +17,17 @@ export type SelectionGroup = {
 // Readable view of the selection: entries grouped under their parent, with any
 // subtree that is fully on rolled up into its root ("California, all 12")
 export function summarizeSelection(
-    childrenOf: Map<string | null, JurisdictionPublic[]>,
-    byId: Map<string, JurisdictionPublic>,
-    flagUrls: Map<string, string | undefined>,
+    tree: JurisdictionPublic[],
     enabledSet: Set<string>,
     isSelectable: (j: JurisdictionPublic) => boolean,
 ): SelectionGroup[] {
+    const byId = new Map(tree.map((j) => [j.id, j]))
+    // Siblings keep the server's order
+    const childrenOf = new Map<string | null, JurisdictionPublic[]>()
+    for (const j of tree) {
+        const key = j.parent_id ?? null
+        childrenOf.set(key, [...(childrenOf.get(key) ?? []), j])
+    }
     const counts = new Map<string, { total: number; enabled: number }>()
     const count = (j: JurisdictionPublic) => {
         const self = isSelectable(j)
@@ -49,7 +55,7 @@ export function summarizeSelection(
         }
         group.entries.push({
             jurisdiction: j,
-            flagUrl: flagUrls.get(j.id),
+            flagUrl: flagUrlFor(j, byId),
             allOf,
         })
     }

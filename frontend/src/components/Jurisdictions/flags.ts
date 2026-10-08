@@ -55,6 +55,14 @@ export function flagUrlFor(j: JurisdictionPublic, byId: ById) {
     }
 }
 
+// The first of the server's flag keys (nearest first) there is an SVG for
+export function flagUrlForKeys(keys: string[]) {
+    for (const key of keys) {
+        const url = flagUrls[aliases[key] ?? key]
+        if (url) return url
+    }
+}
+
 // Held so the browser keeps the decoded bitmaps; rows mounting during scroll or
 // expand then paint their flag on the first frame instead of popping in.
 const preloaded = new Map<string, HTMLImageElement>()

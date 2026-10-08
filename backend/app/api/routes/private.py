@@ -1,11 +1,15 @@
+import uuid
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.api.deps import SessionDep
 from app.core.security import get_password_hash
 from app.models import (
+    DEFAULT_COMPANY_ID,
+    Company,
+    CompanyRole,
     User,
     UserPublic,
 )
@@ -18,6 +22,9 @@ class PrivateUserCreate(BaseModel):
     password: str
     full_name: str
     is_verified: bool = False
+    # None places the user in the default company
+    company_id: uuid.UUID | None = None
+    company_role: CompanyRole = CompanyRole.admin
 
 
 @router.post("/users/", response_model=UserPublic)
@@ -25,11 +32,16 @@ def create_user(user_in: PrivateUserCreate, session: SessionDep) -> Any:
     """
     Create a new user.
     """
+    company_id = user_in.company_id or DEFAULT_COMPANY_ID
+    if not session.get(Company, company_id):
+        raise HTTPException(status_code=404, detail="Company not found")
 
     user = User(
         email=user_in.email,
         full_name=user_in.full_name,
         hashed_password=get_password_hash(user_in.password),
+        company_id=company_id,
+        company_role=user_in.company_role,
     )
 
     session.add(user)

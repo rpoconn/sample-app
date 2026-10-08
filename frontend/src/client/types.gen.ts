@@ -206,6 +206,20 @@ export type ItemsPublic = {
 };
 
 /**
+ * JurisdictionAffectedQuery
+ */
+export type JurisdictionAffectedQuery = {
+    /**
+     * Jurisdiction Ids
+     */
+    jurisdiction_ids?: Array<string>;
+    /**
+     * Root Ids
+     */
+    root_ids?: Array<string>;
+};
+
+/**
  * JurisdictionAffectedUser
  */
 export type JurisdictionAffectedUser = {
@@ -266,6 +280,180 @@ export type JurisdictionCreate = {
      * Sort Order
      */
     sort_order?: number | null;
+};
+
+/**
+ * JurisdictionFacet
+ */
+export type JurisdictionFacet = {
+    type: RegionType;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Options
+     */
+    options: Array<JurisdictionFacetOption>;
+    /**
+     * Value
+     */
+    value: Array<string>;
+};
+
+/**
+ * JurisdictionFacetOption
+ */
+export type JurisdictionFacetOption = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Context
+     */
+    context?: string | null;
+    /**
+     * Flag Keys
+     */
+    flag_keys: Array<string>;
+};
+
+/**
+ * JurisdictionFacets
+ */
+export type JurisdictionFacets = {
+    /**
+     * Facets
+     */
+    facets: Array<JurisdictionFacet>;
+    /**
+     * By Type
+     */
+    by_type: {
+        [key in RegionType]?: Array<string>;
+    };
+    status_counts: JurisdictionStatusCounts;
+    summary: JurisdictionSummary;
+};
+
+/**
+ * JurisdictionFacetsQuery
+ */
+export type JurisdictionFacetsQuery = {
+    /**
+     * Scope
+     */
+    scope?: 'company' | 'user';
+    filters?: JurisdictionFilters;
+};
+
+/**
+ * JurisdictionFilters
+ */
+export type JurisdictionFilters = {
+    /**
+     * Search
+     */
+    search?: string;
+    /**
+     * By Type
+     */
+    by_type?: {
+        [key in RegionType]?: Array<string>;
+    };
+    /**
+     * Status
+     */
+    status?: 'all' | 'enabled' | 'available' | 'disabled';
+};
+
+/**
+ * JurisdictionGridRow
+ */
+export type JurisdictionGridRow = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Is Structural
+     */
+    is_structural?: boolean;
+    /**
+     * Code
+     */
+    code?: string | null;
+    region_type?: RegionType | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Parent Id
+     */
+    parent_id?: string | null;
+    /**
+     * Sort Order
+     */
+    sort_order: number;
+    /**
+     * Depth
+     */
+    depth: number;
+    /**
+     * Path
+     */
+    path: string;
+    /**
+     * Name Path
+     */
+    name_path: string;
+    /**
+     * Child Count
+     */
+    child_count?: number;
+    /**
+     * Display Depth
+     */
+    display_depth: number;
+    /**
+     * Has Children
+     */
+    has_children: boolean;
+    /**
+     * Expanded
+     */
+    expanded: boolean;
+    /**
+     * Is Match
+     */
+    is_match: boolean;
+    /**
+     * Enabled
+     */
+    enabled: boolean;
+    /**
+     * Licensed
+     */
+    licensed: boolean;
+    /**
+     * Locked
+     */
+    locked: boolean;
+    /**
+     * Flag Keys
+     */
+    flag_keys: Array<string>;
+    subtree?: SubtreeSelection | null;
+    /**
+     * User Count
+     */
+    user_count?: number | null;
 };
 
 /**
@@ -330,6 +518,63 @@ export type JurisdictionPublic = {
 };
 
 /**
+ * JurisdictionRowsPage
+ */
+export type JurisdictionRowsPage = {
+    /**
+     * Data
+     */
+    data: Array<JurisdictionGridRow>;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Start
+     */
+    start: number;
+    /**
+     * Expanded Ids
+     */
+    expanded_ids: Array<string>;
+};
+
+/**
+ * JurisdictionRowsQuery
+ */
+export type JurisdictionRowsQuery = {
+    /**
+     * Scope
+     */
+    scope?: 'company' | 'user';
+    filters?: JurisdictionFilters;
+    /**
+     * Sort By
+     */
+    sort_by?: 'name' | 'enabled' | null;
+    /**
+     * Sort Dir
+     */
+    sort_dir?: 'asc' | 'desc';
+    /**
+     * Expanded Ids
+     */
+    expanded_ids?: Array<string> | null;
+    /**
+     * Expand All
+     */
+    expand_all?: boolean;
+    /**
+     * Start
+     */
+    start?: number;
+    /**
+     * Limit
+     */
+    limit?: number;
+};
+
+/**
  * JurisdictionSelection
  */
 export type JurisdictionSelection = {
@@ -337,6 +582,64 @@ export type JurisdictionSelection = {
      * Jurisdiction Ids
      */
     jurisdiction_ids: Array<string>;
+};
+
+/**
+ * JurisdictionStatusCounts
+ */
+export type JurisdictionStatusCounts = {
+    /**
+     * All
+     */
+    all: number;
+    /**
+     * Enabled
+     */
+    enabled: number;
+    /**
+     * Available
+     */
+    available: number;
+    /**
+     * Disabled
+     */
+    disabled: number;
+};
+
+/**
+ * JurisdictionSubtreeToggle
+ */
+export type JurisdictionSubtreeToggle = {
+    /**
+     * Root Id
+     */
+    root_id: string;
+    /**
+     * Enabled
+     */
+    enabled: boolean;
+};
+
+/**
+ * JurisdictionSummary
+ */
+export type JurisdictionSummary = {
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Shown
+     */
+    shown: number;
+    /**
+     * Enabled
+     */
+    enabled: number;
+    /**
+     * Locked
+     */
+    locked?: number | null;
 };
 
 /**
@@ -448,12 +751,35 @@ export type PrivateUserCreate = {
      * Is Verified
      */
     is_verified?: boolean;
+    /**
+     * Company Id
+     */
+    company_id?: string | null;
+    company_role?: CompanyRole;
 };
 
 /**
  * RegionType
  */
 export type RegionType = 'country' | 'subdivision' | 'city';
+
+/**
+ * SubtreeSelection
+ */
+export type SubtreeSelection = {
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Enabled
+     */
+    enabled: number;
+    /**
+     * Locked
+     */
+    locked: number;
+};
 
 /**
  * Token
@@ -994,6 +1320,31 @@ export type usersReadMyJurisdictionIdsResponses = {
 
 export type usersReadMyJurisdictionIdsResponse = usersReadMyJurisdictionIdsResponses[keyof usersReadMyJurisdictionIdsResponses];
 
+export type usersToggleMyJurisdictionSubtreeData = {
+    body: JurisdictionSubtreeToggle;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/jurisdictions/subtree';
+};
+
+export type usersToggleMyJurisdictionSubtreeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type usersToggleMyJurisdictionSubtreeError = usersToggleMyJurisdictionSubtreeErrors[keyof usersToggleMyJurisdictionSubtreeErrors];
+
+export type usersToggleMyJurisdictionSubtreeResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionIds;
+};
+
+export type usersToggleMyJurisdictionSubtreeResponse = usersToggleMyJurisdictionSubtreeResponses[keyof usersToggleMyJurisdictionSubtreeResponses];
+
 export type usersRegisterUserData = {
     body: UserRegister;
     path?: never;
@@ -1489,6 +1840,56 @@ export type jurisdictionsReadJurisdictionTreeResponses = {
 
 export type jurisdictionsReadJurisdictionTreeResponse = jurisdictionsReadJurisdictionTreeResponses[keyof jurisdictionsReadJurisdictionTreeResponses];
 
+export type jurisdictionsReadJurisdictionRowsData = {
+    body: JurisdictionRowsQuery;
+    path?: never;
+    query?: never;
+    url: '/api/v1/jurisdictions/rows';
+};
+
+export type jurisdictionsReadJurisdictionRowsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type jurisdictionsReadJurisdictionRowsError = jurisdictionsReadJurisdictionRowsErrors[keyof jurisdictionsReadJurisdictionRowsErrors];
+
+export type jurisdictionsReadJurisdictionRowsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionRowsPage;
+};
+
+export type jurisdictionsReadJurisdictionRowsResponse = jurisdictionsReadJurisdictionRowsResponses[keyof jurisdictionsReadJurisdictionRowsResponses];
+
+export type jurisdictionsReadJurisdictionFacetsData = {
+    body: JurisdictionFacetsQuery;
+    path?: never;
+    query?: never;
+    url: '/api/v1/jurisdictions/facets';
+};
+
+export type jurisdictionsReadJurisdictionFacetsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type jurisdictionsReadJurisdictionFacetsError = jurisdictionsReadJurisdictionFacetsErrors[keyof jurisdictionsReadJurisdictionFacetsErrors];
+
+export type jurisdictionsReadJurisdictionFacetsResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionFacets;
+};
+
+export type jurisdictionsReadJurisdictionFacetsResponse = jurisdictionsReadJurisdictionFacetsResponses[keyof jurisdictionsReadJurisdictionFacetsResponses];
+
 export type jurisdictionsDeleteJurisdictionData = {
     body?: never;
     path: {
@@ -1818,6 +2219,36 @@ export type companiesReadCompanyJurisdictionIdsResponses = {
 
 export type companiesReadCompanyJurisdictionIdsResponse = companiesReadCompanyJurisdictionIdsResponses[keyof companiesReadCompanyJurisdictionIdsResponses];
 
+export type companiesToggleCompanyJurisdictionSubtreeData = {
+    body: JurisdictionSubtreeToggle;
+    path: {
+        /**
+         * Company Id
+         */
+        company_id: string;
+    };
+    query?: never;
+    url: '/api/v1/companies/{company_id}/jurisdictions/subtree';
+};
+
+export type companiesToggleCompanyJurisdictionSubtreeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type companiesToggleCompanyJurisdictionSubtreeError = companiesToggleCompanyJurisdictionSubtreeErrors[keyof companiesToggleCompanyJurisdictionSubtreeErrors];
+
+export type companiesToggleCompanyJurisdictionSubtreeResponses = {
+    /**
+     * Successful Response
+     */
+    200: JurisdictionIds;
+};
+
+export type companiesToggleCompanyJurisdictionSubtreeResponse = companiesToggleCompanyJurisdictionSubtreeResponses[keyof companiesToggleCompanyJurisdictionSubtreeResponses];
+
 export type companiesReadCompanyJurisdictionUserCountsData = {
     body?: never;
     path: {
@@ -1849,7 +2280,7 @@ export type companiesReadCompanyJurisdictionUserCountsResponses = {
 export type companiesReadCompanyJurisdictionUserCountsResponse = companiesReadCompanyJurisdictionUserCountsResponses[keyof companiesReadCompanyJurisdictionUserCountsResponses];
 
 export type companiesReadCompanyJurisdictionAffectedUsersData = {
-    body: JurisdictionSelection;
+    body: JurisdictionAffectedQuery;
     path: {
         /**
          * Company Id

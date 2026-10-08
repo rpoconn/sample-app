@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -212,3 +214,163 @@ def test_read_tree_sorts_siblings(
         params={"sort_by": "bogus"},
     )
     assert r.status_code == 422
+
+
+def test_rows_pages_the_flattened_tree(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    url = f"{API}/jurisdictions/rows"
+    assert client.post(url, json={}).status_code == 401
+
+    r = client.post(url, headers=normal_user_token_headers, json={"limit": 500})
+    assert r.status_code == 200
+    full = r.json()
+    # Browsing opens the roots
+    roots = [row for row in full["data"] if row["parent_id"] is None]
+    assert {row["id"] for row in roots} == set(full["expanded_ids"])
+    assert all(row["expanded"] for row in roots)
+    assert full["total"] == len(full["data"])
+
+    expanded = [row["id"] for row in full["data"]]
+    everything = client.post(
+        url,
+        headers=normal_user_token_headers,
+        json={"expanded_ids": expanded, "limit": 500},
+    ).json()
+    ids = [row["id"] for row in everything["data"]]
+    pages: list[str] = []
+    for start in range(0, everything["total"], 7):
+        page = client.post(
+            url,
+            headers=normal_user_token_headers,
+            json={"expanded_ids": expanded, "start": start, "limit": 7},
+        ).json()
+        assert page["total"] == everything["total"]
+        pages += [row["id"] for row in page["data"]]
+    assert pages == ids[: len(pages)]
+
+    for bad in [{"limit": 0}, {"limit": 501}, {"start": -1}, {"sort_by": "bogus"}]:
+        assert (
+            client.post(url, headers=normal_user_token_headers, json=bad).status_code
+            == 422
+        )
+    bad_status = {"filters": {"status": "bogus"}}
+    assert (
+        client.post(url, headers=normal_user_token_headers, json=bad_status).status_code
+        == 422
+    )
+
+
+def test_rows_filter_opens_ancestors_of_matches(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    r = client.post(
+        f"{API}/jurisdictions/rows",
+        headers=superuser_token_headers,
+        json={"filters": {"search": "united states"}, "limit": 500},
+    )
+    assert r.status_code == 200
+    rows = r.json()["data"]
+    us = next(row for row in rows if row["name"] == "United States")
+    assert us["is_match"] and us["display_depth"] == 0
+    assert us["flag_keys"] == ["US"]
+    # Superusers see user counts in company scope
+    assert us["user_count"] is not None
+
+    user_scope = client.post(
+        f"{API}/jurisdictions/rows",
+        headers=superuser_token_headers,
+        json={"scope": "user", "filters": {"search": "united states"}},
+    ).json()["data"]
+    assert all(row["user_count"] is None for row in user_scope)
+
+
+def test_facets(client: TestClient, normal_user_token_headers: dict[str, str]) -> None:
+    url = f"{API}/jurisdictions/facets"
+    r = client.post(url, headers=normal_user_token_headers, json={})
+    assert r.status_code == 200
+    facets = {f["type"]: f for f in r.json()["facets"]}
+    us = next(o for o in facets["country"]["options"] if o["label"] == "United States")
+
+    r = client.post(
+        url,
+        headers=normal_user_token_headers,
+        json={"filters": {"by_type": {"country": [us["id"]]}}},
+    )
+    body = r.json()
+    assert body["by_type"] == {"country": [us["id"]]}
+    subdivisions = {f["type"]: f for f in body["facets"]}["subdivision"]["options"]
+    assert subdivisions and all(
+        "US" in o["flag_keys"] or not o["flag_keys"] for o in subdivisions
+    )
+    counts = body["status_counts"]
+    assert counts["all"] == counts["enabled"] + counts["available"] + counts["disabled"]
+    assert body["summary"]["shown"] <= body["summary"]["total"]
+
+
+def test_subtree_toggles(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    def create(name: str, parent_id: str | None = None, **kw: object) -> str:
+        r = client.post(
+            f"{API}/jurisdictions/",
+            headers=superuser_token_headers,
+            json={"name": name, "parent_id": parent_id, **kw},
+        )
+        assert r.status_code == 200
+        return r.json()["id"]
+
+    root = create(random_lower_string())
+    group = create("Group", root, is_structural=True)
+    a = create("A", group)
+    b = create("B", group)
+
+    me = client.get(f"{API}/users/me", headers=superuser_token_headers).json()
+    company_url = f"{API}/companies/{me['company_id']}/jurisdictions"
+
+    r = client.post(
+        f"{company_url}/subtree",
+        headers=superuser_token_headers,
+        json={"root_id": root, "enabled": True},
+    )
+    assert r.status_code == 200
+    company_ids = set(r.json()["jurisdiction_ids"])
+    # Structural rows are never selected
+    assert {root, a, b} <= company_ids and group not in company_ids
+
+    # Users can only pick what the company licensed
+    client.post(
+        f"{company_url}/subtree",
+        headers=superuser_token_headers,
+        json={"root_id": b, "enabled": False},
+    )
+    r = client.post(
+        f"{API}/users/me/jurisdictions/subtree",
+        headers=superuser_token_headers,
+        json={"root_id": root, "enabled": True},
+    )
+    assert r.status_code == 200
+    mine = set(r.json()["jurisdiction_ids"])
+    assert {root, a} <= mine and b not in mine
+
+    r = client.post(
+        f"{company_url}/affected-users",
+        headers=superuser_token_headers,
+        json={"root_ids": [group]},
+    )
+    assert me["id"] in {u["id"] for u in r.json()["data"]}
+
+    r = client.post(
+        f"{API}/users/me/jurisdictions/subtree",
+        headers=superuser_token_headers,
+        json={"root_id": group, "enabled": False},
+    )
+    mine = set(r.json()["jurisdiction_ids"])
+    assert root in mine and a not in mine
+
+    r = client.post(
+        f"{API}/users/me/jurisdictions/subtree",
+        headers=superuser_token_headers,
+        json={"root_id": str(uuid.uuid4()), "enabled": True},
+    )
+    assert r.status_code == 404

@@ -9,16 +9,14 @@ import type { JurisdictionMode, JurisdictionRow } from "./types"
 // value changes. Using the whole row as the value makes expanded/checked changes refresh.
 const rowValue: ColDef<JurisdictionRow>["valueGetter"] = ({ data }) => data
 
-// The server sorts siblings within each parent; a client-side sort would break the
-// tree apart. Headers stay clickable for the arrow, but the (stable) sort is a no-op.
-const serverSorted = () => 0
+// The server sorts siblings within each parent: the infinite row model hands the
+// grid's sort to the row source, which sends it with every page request
 
 const nameColumn: ColDef<JurisdictionRow> = {
     colId: "name",
     headerName: "Jurisdiction",
     valueGetter: rowValue,
     flex: 1,
-    comparator: serverSorted,
     initialSort: JurisdictionGridService.defaultSort.sort_dir,
     // Name is the default sort, so it toggles direction rather than clearing
     sortingOrder: ["asc", "desc"],
@@ -47,7 +45,6 @@ export const columnsFor = (
             mode === "company" ? "Enabled for company" : "Enabled for me",
         valueGetter: rowValue,
         width: 180,
-        comparator: serverSorted,
         cellRenderer: EnabledCell,
     },
     ...(showUserCounts ? [usersColumn] : []),

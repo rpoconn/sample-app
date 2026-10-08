@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { companiesCreateCompanyData, companiesCreateCompanyErrors, companiesCreateCompanyResponses, companiesReadCompaniesData, companiesReadCompaniesErrors, companiesReadCompaniesResponses, companiesReadCompanyAdminsData, companiesReadCompanyAdminsErrors, companiesReadCompanyAdminsResponses, companiesReadCompanyData, companiesReadCompanyErrors, companiesReadCompanyJurisdictionAffectedUsersData, companiesReadCompanyJurisdictionAffectedUsersErrors, companiesReadCompanyJurisdictionAffectedUsersResponses, companiesReadCompanyJurisdictionIdsData, companiesReadCompanyJurisdictionIdsErrors, companiesReadCompanyJurisdictionIdsResponses, companiesReadCompanyJurisdictionsData, companiesReadCompanyJurisdictionsErrors, companiesReadCompanyJurisdictionsResponses, companiesReadCompanyJurisdictionUserCountsData, companiesReadCompanyJurisdictionUserCountsErrors, companiesReadCompanyJurisdictionUserCountsResponses, companiesReadCompanyResponses, companiesSetCompanyJurisdictionsData, companiesSetCompanyJurisdictionsErrors, companiesSetCompanyJurisdictionsResponses, companiesUpdateCompanyData, companiesUpdateCompanyErrors, companiesUpdateCompanyResponses, itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, jurisdictionsCreateJurisdictionData, jurisdictionsCreateJurisdictionErrors, jurisdictionsCreateJurisdictionResponses, jurisdictionsDeleteJurisdictionData, jurisdictionsDeleteJurisdictionErrors, jurisdictionsDeleteJurisdictionResponses, jurisdictionsReadJurisdictionData, jurisdictionsReadJurisdictionErrors, jurisdictionsReadJurisdictionResponses, jurisdictionsReadJurisdictionsData, jurisdictionsReadJurisdictionsErrors, jurisdictionsReadJurisdictionsResponses, jurisdictionsReadJurisdictionTreeData, jurisdictionsReadJurisdictionTreeErrors, jurisdictionsReadJurisdictionTreeResponses, jurisdictionsUpdateJurisdictionData, jurisdictionsUpdateJurisdictionErrors, jurisdictionsUpdateJurisdictionResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginLogoutData, loginLogoutResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, serviceReadUserJurisdictionIdsForServiceData, serviceReadUserJurisdictionIdsForServiceErrors, serviceReadUserJurisdictionIdsForServiceResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadMyJurisdictionIdsData, usersReadMyJurisdictionIdsResponses, usersReadMyJurisdictionsData, usersReadMyJurisdictionsResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserJurisdictionIdsData, usersReadUserJurisdictionIdsErrors, usersReadUserJurisdictionIdsResponses, usersReadUserJurisdictionsData, usersReadUserJurisdictionsErrors, usersReadUserJurisdictionsResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersSetMyJurisdictionsData, usersSetMyJurisdictionsErrors, usersSetMyJurisdictionsResponses, usersSetUserJurisdictionsData, usersSetUserJurisdictionsErrors, usersSetUserJurisdictionsResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { companiesCreateCompanyData, companiesCreateCompanyErrors, companiesCreateCompanyResponses, companiesReadCompaniesData, companiesReadCompaniesErrors, companiesReadCompaniesResponses, companiesReadCompanyAdminsData, companiesReadCompanyAdminsErrors, companiesReadCompanyAdminsResponses, companiesReadCompanyData, companiesReadCompanyErrors, companiesReadCompanyJurisdictionAffectedUsersData, companiesReadCompanyJurisdictionAffectedUsersErrors, companiesReadCompanyJurisdictionAffectedUsersResponses, companiesReadCompanyJurisdictionIdsData, companiesReadCompanyJurisdictionIdsErrors, companiesReadCompanyJurisdictionIdsResponses, companiesReadCompanyJurisdictionsData, companiesReadCompanyJurisdictionsErrors, companiesReadCompanyJurisdictionsResponses, companiesReadCompanyJurisdictionUserCountsData, companiesReadCompanyJurisdictionUserCountsErrors, companiesReadCompanyJurisdictionUserCountsResponses, companiesReadCompanyResponses, companiesSetCompanyJurisdictionsData, companiesSetCompanyJurisdictionsErrors, companiesSetCompanyJurisdictionsResponses, companiesToggleCompanyJurisdictionSubtreeData, companiesToggleCompanyJurisdictionSubtreeErrors, companiesToggleCompanyJurisdictionSubtreeResponses, companiesUpdateCompanyData, companiesUpdateCompanyErrors, companiesUpdateCompanyResponses, itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, jurisdictionsCreateJurisdictionData, jurisdictionsCreateJurisdictionErrors, jurisdictionsCreateJurisdictionResponses, jurisdictionsDeleteJurisdictionData, jurisdictionsDeleteJurisdictionErrors, jurisdictionsDeleteJurisdictionResponses, jurisdictionsReadJurisdictionData, jurisdictionsReadJurisdictionErrors, jurisdictionsReadJurisdictionFacetsData, jurisdictionsReadJurisdictionFacetsErrors, jurisdictionsReadJurisdictionFacetsResponses, jurisdictionsReadJurisdictionResponses, jurisdictionsReadJurisdictionRowsData, jurisdictionsReadJurisdictionRowsErrors, jurisdictionsReadJurisdictionRowsResponses, jurisdictionsReadJurisdictionsData, jurisdictionsReadJurisdictionsErrors, jurisdictionsReadJurisdictionsResponses, jurisdictionsReadJurisdictionTreeData, jurisdictionsReadJurisdictionTreeErrors, jurisdictionsReadJurisdictionTreeResponses, jurisdictionsUpdateJurisdictionData, jurisdictionsUpdateJurisdictionErrors, jurisdictionsUpdateJurisdictionResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginLogoutData, loginLogoutResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, serviceReadUserJurisdictionIdsForServiceData, serviceReadUserJurisdictionIdsForServiceErrors, serviceReadUserJurisdictionIdsForServiceResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadMyJurisdictionIdsData, usersReadMyJurisdictionIdsResponses, usersReadMyJurisdictionsData, usersReadMyJurisdictionsResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserJurisdictionIdsData, usersReadUserJurisdictionIdsErrors, usersReadUserJurisdictionIdsResponses, usersReadUserJurisdictionsData, usersReadUserJurisdictionsErrors, usersReadUserJurisdictionsResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersSetMyJurisdictionsData, usersSetMyJurisdictionsErrors, usersSetMyJurisdictionsResponses, usersSetUserJurisdictionsData, usersSetUserJurisdictionsErrors, usersSetUserJurisdictionsResponses, usersToggleMyJurisdictionSubtreeData, usersToggleMyJurisdictionSubtreeErrors, usersToggleMyJurisdictionSubtreeResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -250,6 +250,25 @@ export class UsersService {
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/users/me/jurisdictions/ids',
             ...options
+        });
+    }
+    
+    /**
+     * Toggle My Jurisdiction Subtree
+     *
+     * Turn a jurisdiction and everything under it on or off for the current user,
+     * skipping any their company hasn't opted into.
+     */
+    public static toggleMyJurisdictionSubtree<ThrowOnError extends boolean = true>(options: Options<usersToggleMyJurisdictionSubtreeData, ThrowOnError>) {
+        return (options.client ?? client).post<usersToggleMyJurisdictionSubtreeResponses, usersToggleMyJurisdictionSubtreeErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/me/jurisdictions/subtree',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
         });
     }
     
@@ -520,6 +539,44 @@ export class JurisdictionsService {
     }
     
     /**
+     * Read Jurisdiction Rows
+     *
+     * A window of the grid: matches plus the ancestors kept for context, flattened in
+     * sibling order through the expanded rows. sort_by=enabled checks the scope's opt-ins.
+     */
+    public static readJurisdictionRows<ThrowOnError extends boolean = true>(options: Options<jurisdictionsReadJurisdictionRowsData, ThrowOnError>) {
+        return (options.client ?? client).post<jurisdictionsReadJurisdictionRowsResponses, jurisdictionsReadJurisdictionRowsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/jurisdictions/rows',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Read Jurisdiction Facets
+     *
+     * The filter options per region type, the picks still valid among them, and counts
+     * per status tab under the current search and facets.
+     */
+    public static readJurisdictionFacets<ThrowOnError extends boolean = true>(options: Options<jurisdictionsReadJurisdictionFacetsData, ThrowOnError>) {
+        return (options.client ?? client).post<jurisdictionsReadJurisdictionFacetsResponses, jurisdictionsReadJurisdictionFacetsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/jurisdictions/facets',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
      * Delete Jurisdiction
      *
      * Delete a leaf jurisdiction that no company has opted into.
@@ -692,6 +749,25 @@ export class CompaniesService {
     }
     
     /**
+     * Toggle Company Jurisdiction Subtree
+     *
+     * Turn a jurisdiction and everything under it on or off for the company in one
+     * save. Users lose any opt-in the company drops.
+     */
+    public static toggleCompanyJurisdictionSubtree<ThrowOnError extends boolean = true>(options: Options<companiesToggleCompanyJurisdictionSubtreeData, ThrowOnError>) {
+        return (options.client ?? client).post<companiesToggleCompanyJurisdictionSubtreeResponses, companiesToggleCompanyJurisdictionSubtreeErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/companies/{company_id}/jurisdictions/subtree',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
      * Read Company Jurisdiction User Counts
      *
      * How many users have opted into each of the company's jurisdictions, so admins can
@@ -709,8 +785,8 @@ export class CompaniesService {
     /**
      * Read Company Jurisdiction Affected Users
      *
-     * Users who would lose an opt-in if the company dropped these jurisdictions, so
-     * admins can see exactly who is affected first.
+     * Users who would lose an opt-in if the company dropped these jurisdictions, and
+     * everything under root_ids, so admins can see exactly who is affected first.
      */
     public static readCompanyJurisdictionAffectedUsers<ThrowOnError extends boolean = true>(options: Options<companiesReadCompanyJurisdictionAffectedUsersData, ThrowOnError>) {
         return (options.client ?? client).post<companiesReadCompanyJurisdictionAffectedUsersResponses, companiesReadCompanyJurisdictionAffectedUsersErrors, ThrowOnError>({

@@ -21,11 +21,13 @@ from app.models import (
     CompanyCreate,
     CompanyPublic,
     CompanyUpdate,
+    JurisdictionAffectedQuery,
     JurisdictionAffectedUser,
     JurisdictionAffectedUsers,
     JurisdictionIds,
     JurisdictionSelection,
     JurisdictionsPublic,
+    JurisdictionSubtreeToggle,
     JurisdictionUserCount,
     JurisdictionUserCounts,
 )
@@ -147,6 +149,28 @@ def set_company_jurisdictions(
     return to_public_list(session, rows)
 
 
+@router.post("/{company_id}/jurisdictions/subtree", response_model=JurisdictionIds)
+def toggle_company_jurisdiction_subtree(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    company_id: uuid.UUID,
+    body: JurisdictionSubtreeToggle,
+) -> Any:
+    """
+    Turn a jurisdiction and everything under it on or off for the company in one
+    save. Users lose any opt-in the company drops.
+    """
+    require_company_admin(current_user, company_id)
+    rows = crud.toggle_company_subtree(
+        session=session,
+        company_id=company_id,
+        root_id=body.root_id,
+        enabled=body.enabled,
+    )
+    return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
+
+
 @router.get(
     "/{company_id}/jurisdictions/user-counts", response_model=JurisdictionUserCounts
 )
@@ -176,15 +200,18 @@ def read_company_jurisdiction_affected_users(
     session: SessionDep,
     current_user: CurrentUser,
     company_id: uuid.UUID,
-    body: JurisdictionSelection,
+    body: JurisdictionAffectedQuery,
 ) -> Any:
     """
-    Users who would lose an opt-in if the company dropped these jurisdictions, so
-    admins can see exactly who is affected first.
+    Users who would lose an opt-in if the company dropped these jurisdictions, and
+    everything under root_ids, so admins can see exactly who is affected first.
     """
     require_company_admin(current_user, company_id)
+    ids = set(body.jurisdiction_ids) | crud.get_subtree_ids(
+        session=session, root_ids=body.root_ids
+    )
     rows = crud.get_company_jurisdiction_affected_users(
-        session=session, company_id=company_id, jurisdiction_ids=body.jurisdiction_ids
+        session=session, company_id=company_id, jurisdiction_ids=ids
     )
     return JurisdictionAffectedUsers(
         data=[

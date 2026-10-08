@@ -1,88 +1,110 @@
-# Full Stack FastAPI Template
+# Daptic: Jurisdiction Settings
 
-[![Test Docker Compose](../../actions/workflows/test-docker-compose.yml/badge.svg)](../../actions/workflows/test-docker-compose.yml)
-[![Test Backend](../../actions/workflows/test-backend.yml/badge.svg)](../../actions/workflows/test-backend.yml)
+This app lets each user choose which regulatory jurisdictions they monitor, within the set their organization has licensed. Jurisdictions outside the license stay visible but locked. Company admins get a second view where they change the license itself.
 
-## Technology Stack and Features
+![Personal jurisdictions view](img/jurisdictions.png)
 
-- ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
-  - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the Python SQL database interactions (ORM).
-  - 🔍 [Pydantic](https://docs.pydantic.dev), used by FastAPI, for the data validation and settings management.
-  - 💾 [SQLite](https://www.sqlite.org) as the SQL database.
-- 🚀 [React](https://react.dev) for the frontend.
-  - 🧩 Built into the backend application and served by FastAPI on the same domain as the API.
-  - 💃 Using TypeScript, hooks, [Vite](https://vitejs.dev), and other parts of a modern frontend stack.
-  - 🎨 [Tailwind CSS](https://tailwindcss.com) and [shadcn/ui](https://ui.shadcn.com) for the frontend components.
-  - 🤖 An automatically generated frontend client.
-  - 🧪 [Playwright](https://playwright.dev) for end-to-end testing.
-  - 🦇 Dark mode support.
-- ☁️ [FastAPI Cloud](https://fastapicloud.com) for deployment.
-- 🐋 [Docker Compose](https://www.docker.com) for local services and self-hosted deployment.
-  - 📞 [Traefik](https://traefik.io) as a reverse proxy with automatic HTTPS.
-- 🔒 Secure password hashing by default.
-- 🔑 JWT (JSON Web Token) authentication.
-- 📫 Email-based password recovery.
-- ✉️ [React Email](https://react.email) for email templates.
-- 📬 [Mailpit](https://mailpit.axllent.org) for local email testing during development.
-- ✅ Tests with [Pytest](https://pytest.org).
-- 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
+It is built on the [Full Stack FastAPI Template](https://github.com/fastapi/full-stack-fastapi-template): FastAPI, SQLModel and SQLite on the backend, and React, TypeScript, TanStack Router/Query and ag-grid on the frontend.
 
-### Dashboard Login
+## Running locally
 
-![Dashboard login screenshot](img/login.png)
+You need [uv](https://docs.astral.sh/uv/) for Python and [Bun](https://bun.sh) for the frontend. The root `.env` already has working local defaults.
 
-### Dashboard - Admin
+**Backend.** From `backend/`:
 
-![Admin dashboard screenshot](img/dashboard.png)
+```bash
+uv sync
+uv run alembic upgrade head        # creates backend/app.db
+uv run python app/initial_data.py  # creates the superuser, seeds the tree and the sample plan
+uv run fastapi dev                 # http://localhost:8000, API docs at /docs
+```
 
-### Dashboard - Items
+**Frontend.** From the project root, in a second terminal:
 
-![Items dashboard screenshot](img/dashboard-items.png)
+```bash
+bun install
+bun run dev                        # http://localhost:5173
+```
 
-### Dashboard - Dark Mode
+Log in as `admin@example.com` / `changethis`. This user is an admin of the seeded company, so they see both **Jurisdictions** (their own selection) and **Company Admin** (the company's license).
 
-![Dark mode dashboard screenshot](img/dashboard-dark.png)
+To reset the data, stop the backend, delete `backend/app.db`, and run the two database commands again. More detail is in [development.md](development.md).
 
-### React Email Templates
+## What I built
 
-![Email templates screenshot](img/react-email.png)
+### The two layers
 
-### Mailpit - Local Email Testing
+| Layer | Who changes it | Where | Stored in |
+|---|---|---|---|
+| Company license | Company admins | Company Admin page | `companyjurisdiction` |
+| Personal selection | Each user | Jurisdictions page | `userjurisdiction` |
 
-![Mailpit screenshot](img/mailpit.png)
+The seed applies the PRD's plan to the default company: all of Canada, US National, every state except Wyoming and Utah, and San Francisco as the only city. Everything else (Wyoming, Utah, Los Angeles, Federal Districts, US Territories) is visible but locked.
 
-### Interactive API Documentation
+### Data model
 
-![API docs](img/docs.png)
+- **`jurisdiction`** is an adjacency list (`parent_id`) plus a materialized `path` of ancestor ids, so a whole subtree is one indexed prefix query. Each row also has `depth`, `sort_order` (keeps the source order), `name_path` (a readable breadcrumb), `code` (ISO 3166 / UN/LOCODE) and `region_type`.
+- **`is_structural`** rows ("States", "Provinces", "Cities") are grouping labels. They can never be selected, by the API or the UI, but their select-all switch covers everything beneath them.
+- **The license is enforced by the database.** A user opt-in has composite foreign keys to `(user, company)` and to `(company, jurisdiction)` in the company's license. A user can't hold a jurisdiction their company hasn't licensed, and when the company drops one, the database cascades it away from every user.
 
-## How to Use It
+### API
 
-Click the **Use this template** button at the top of this page to create a new repository.
+All routes are under `/api/v1`. The ones that matter for this feature:
 
-## Backend Development
+| Endpoint | Purpose |
+|---|---|
+| `GET /users/me/jurisdictions/ids` | The current user's selected ids, as `{ jurisdiction_ids, count }` |
+| `PUT /users/me/jurisdictions` | Replace the user's selection (rejects unlicensed or structural ids) |
+| `POST /users/me/jurisdictions/subtree` | Turn a whole subtree on or off in one save, skipping locked rows |
+| `GET /service/users/{user_id}/jurisdiction-ids` | **For other services:** a plain array of a user's ids. Authenticates with an `X-API-Key` header (`SERVICE_API_KEY` in `.env`) or a superuser token |
+| `GET /companies/{id}/jurisdictions/ids` | The company's licensed ids |
+| `PUT /companies/{id}/jurisdictions` | Replace the license (company admins) |
+| `POST /companies/{id}/jurisdictions/affected-users` | Who would lose an opt-in if these were dropped |
+| `POST /jurisdictions/rows` | One page of the flattened, filtered, sorted tree for the grid |
+| `POST /jurisdictions/facets` | Counts and filter options for the toolbar |
+| `GET /jurisdictions/tree` | The whole tree as a flat list |
 
-Backend docs: [backend/README.md](./backend/README.md).
+Selections are saved by replacing the whole list. That makes a save idempotent, and a subtree toggle is still a single request.
 
-## Frontend Development
+### Frontend
 
-Frontend docs: [frontend/README.md](./frontend/README.md).
+- **Tree grid.** ag-grid's infinite row model loads the flattened tree from the server 100 rows at a time. Filtering, search, sorting and expansion all run on the server, so the page doesn't need the full tree. This is aimed at the thousands of jurisdictions production has.
+- **Three-state switches.** Every parent row has a select-all switch that shows on, off or mixed, plus a count such as `49 / 52`. Locked jurisdictions are counted, so a subtree with locked rows never shows as fully on. One click turns on everything available.
+- **Locked rows** are dimmed, carry a lock icon, and have a tooltip explaining why. For members, the tooltip offers a link to email their company admins.
+- **Finding things.** There is search by name or code with match highlighting, status tabs (All / Enabled / Available / Disabled), and country, state and city filters.
+- **"View selection"** opens a panel with a readable summary (fully selected subtrees collapse to "All …") and the raw JSON of ids, with the matching API endpoint and a copy button.
 
-## Deployment
+  ![Selection panel](img/selection.png)
 
-FastAPI Cloud deployment: [deployment.md](./deployment.md).
+- **Company Admin** uses the same grid against the license, with a per-row count of users who opted in. Turning off something users rely on opens a confirmation that lists exactly who will lose it.
 
-Self-hosted deployment with Docker Compose: [deployment-docker-compose.md](./deployment-docker-compose.md).
+  ![Company admin view](img/company-admin.png)
 
-## Development
+## Tests
 
-General development docs: [development.md](./development.md).
+```bash
+# Backend: pytest, from backend/
+uv run pytest
 
-This includes the local FastAPI and Vite workflow, Docker Compose services, `.env` configuration, and more.
+# End to end: Playwright, from frontend/, with the backend and Vite running
+bunx playwright install chromium   # first time only
+bunx playwright test jurisdictions
+```
 
-## Release Notes
+`frontend/tests/jurisdictions.spec.ts` covers the feature end to end. Each test creates its own company with the PRD plan and its own users, so tests can change licenses and run in parallel without affecting each other.
 
-Check the file [release-notes.md](./release-notes.md).
+- **User view:** locked versus selectable rows, saving a single jurisdiction (checked again after a reload and through the API), select-all for a subtree with and without locked rows, the selection JSON matching the API, search and status filters, expand and collapse all, and members being kept out of Company Admin.
+- **Company view:** the admin scope, dropping an unused jurisdiction, the confirmation when a member would lose one (cancel and confirm), and licensing a new jurisdiction so a member can then pick it.
+
+## Next steps
+
+- **Auth and tenancy.** The PRD allowed skipping auth. The template's JWT login is kept, but every user lands in one seeded company, and new users default to company *admin*. The default should be *member*, and companies need real onboarding.
+- **Scale testing.** Paging, filtering and subtree toggles already run on the server, but nothing has been tested against a tree of thousands of rows. Load-test it and check the SQLite queries, then move to Postgres for production.
+- **License changes over time.** Record who changed a company's license and when, notify users who lose an opt-in, and offer a "re-enable for everyone who had it" undo.
+- **Accessibility pass.** The status tabs' accessible names come from their tooltips ("Jurisdictions you've turned on…") rather than their labels. Use `describeChild` on those tooltips, then do a full keyboard and screen-reader review of the grid.
+- **CI.** The Playwright workflow comes from the template and still builds with Docker Compose. Point it at the local SQLite setup so the end-to-end suite runs on every PR.
+- **Service API hardening.** Replace the single shared `SERVICE_API_KEY` with keys scoped per service, and add a bulk "ids for these users" endpoint for consumers that fan out.
 
 ## License
 
-The Full Stack FastAPI Template is licensed under the terms of the MIT license.
+MIT, inherited from the Full Stack FastAPI Template.

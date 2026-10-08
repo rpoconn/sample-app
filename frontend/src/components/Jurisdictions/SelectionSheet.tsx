@@ -28,7 +28,8 @@ export function SelectionSheet({
     mode: JurisdictionMode
     // The company's id in company scope, the user's otherwise
     ownerId: string
-    groups: SelectionGroup[]
+    // Undefined while the tree loads
+    groups?: SelectionGroup[]
     ids: string[]
 }) {
     const [copied, copy] = useCopyToClipboard()
@@ -75,7 +76,11 @@ export function SelectionSheet({
                         value="summary"
                         className="min-h-0 overflow-y-auto"
                     >
-                        {groups.length === 0 ? (
+                        {!groups ? (
+                            <p className="py-8 text-center text-sm text-muted-foreground">
+                                Loading…
+                            </p>
+                        ) : groups.length === 0 ? (
                             <p className="py-8 text-center text-sm text-muted-foreground">
                                 Nothing selected yet. Turn on jurisdictions in
                                 the table to see them here.
@@ -119,8 +124,18 @@ export function SelectionSheet({
                                                         </span>
                                                     )}
                                                     {allOf != null && (
-                                                        <span className="ml-auto shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                                        <span
+                                                            className="ml-auto shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                                                            title={
+                                                                mode === "user"
+                                                                    ? "Every jurisdiction here that your company has licensed"
+                                                                    : undefined
+                                                            }
+                                                        >
+                                                            {/* Users only count what the company licensed, so "All" alone would overstate it */}
                                                             All {allOf}
+                                                            {mode === "user" &&
+                                                                " available"}
                                                         </span>
                                                     )}
                                                 </dd>

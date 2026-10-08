@@ -13,8 +13,9 @@ import {
 import { Input } from "@/components/ui/input"
 
 export type PendingDisable = {
-    // Every jurisdiction being turned off; more than one when clearing a subtree
-    ids: string[]
+    // The row whose switch was clicked; everything under it goes when subtree
+    rootId: string
+    subtree: boolean
     name: string
     // Each user who'd lose at least one of the ids, once
     users: JurisdictionAffectedUser[]
@@ -38,7 +39,7 @@ export function ConfirmDisableDialog({
     onConfirm: (pending: PendingDisable) => void
 }) {
     const [query, setQuery] = useState("")
-    const subtree = (pending?.ids.length ?? 0) > 1
+    const subtree = pending?.subtree ?? false
     const all = pending?.users ?? []
     const count = all.length
     const users = count === 1 ? "1 user" : `${count.toLocaleString()} users`

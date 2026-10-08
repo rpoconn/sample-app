@@ -21,16 +21,24 @@ export function NameCell({
     context,
 }: ICellRendererParams<JurisdictionRow, unknown, JurisdictionGridContext>) {
     if (!data) return null
-    const { jurisdiction: j, flagUrl, expanded, locked, highlight } = data
+    const {
+        jurisdiction: j,
+        depth,
+        flagUrl,
+        expanded,
+        hasChildren,
+        locked,
+        highlight,
+    } = data
     const Chevron = expanded ? ChevronDown : ChevronRight
     const nameParts = splitMatch(j.name, highlight)
     const codeParts = j.code ? splitMatch(j.code, highlight) : null
     return (
         <div
             className="flex h-full items-center gap-1"
-            style={{ paddingLeft: j.depth * 20 }}
+            style={{ paddingLeft: depth * 20 }}
         >
-            {(j.child_count ?? 0) > 0 ? (
+            {hasChildren ? (
                 <button
                     type="button"
                     aria-label={

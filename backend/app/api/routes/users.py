@@ -19,6 +19,7 @@ from app.models import (
     JurisdictionIds,
     JurisdictionSelection,
     JurisdictionsPublic,
+    JurisdictionSubtreeToggle,
     Message,
     UpdatePassword,
     User,
@@ -163,6 +164,20 @@ def set_my_jurisdictions(
         session=session, user=current_user, jurisdiction_ids=body.jurisdiction_ids
     )
     return to_public_list(session, rows)
+
+
+@router.post("/me/jurisdictions/subtree", response_model=JurisdictionIds)
+def toggle_my_jurisdiction_subtree(
+    *, session: SessionDep, current_user: CurrentUser, body: JurisdictionSubtreeToggle
+) -> Any:
+    """
+    Turn a jurisdiction and everything under it on or off for the current user,
+    skipping any their company hasn't opted into.
+    """
+    rows = crud.toggle_user_subtree(
+        session=session, user=current_user, root_id=body.root_id, enabled=body.enabled
+    )
+    return JurisdictionIds(jurisdiction_ids=[j.id for j in rows], count=len(rows))
 
 
 @router.delete("/me", response_model=Message)

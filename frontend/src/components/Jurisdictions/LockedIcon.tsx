@@ -18,7 +18,7 @@ export function LockedIcon({ className }: { className?: string }) {
                     >
                         {SUPPORT_EMAIL}
                     </a>{" "}
-                    to add more jurisdictions.
+                    to add more jurisdictions to your license.
                 </span>
             }
             placement="top"
@@ -29,7 +29,7 @@ export function LockedIcon({ className }: { className?: string }) {
         >
             <span
                 role="img"
-                aria-label={`Not enabled for your license. Contact ${SUPPORT_EMAIL} to add more jurisdictions.`}
+                aria-label={`Not enabled for your license. Contact ${SUPPORT_EMAIL} to add more jurisdictions to your license.`}
                 className={cn("flex shrink-0 items-center", className)}
             >
                 <CircleOff className="size-3.5 text-muted-foreground" />
