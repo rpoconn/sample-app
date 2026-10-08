@@ -5,7 +5,10 @@ from sqlmodel import Session
 
 from app import crud
 from app.core.config import settings
+from app.crud import SelectionOwner
 from app.models import CompanyCreate, Jurisdiction
+from tests.api.routes.conftest import Setup, make_jurisdiction
+from tests.utils.selections import set_company_ids, set_user_ids
 from tests.utils.utils import assert_error, random_lower_string
 
 API = settings.API_V1_STR
@@ -14,14 +17,14 @@ API = settings.API_V1_STR
 def test_list_roots_and_children(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
-    r = client.get(f"{API}/jurisdictions/", headers=normal_user_token_headers)
+    r = client.get(f"{API}/jurisdictions", headers=normal_user_token_headers)
     assert r.status_code == 200
     roots = r.json()["data"]
     assert roots and all(j["parent_id"] is None for j in roots)
 
     parent = next(j for j in roots if j["child_count"] > 0)
     r = client.get(
-        f"{API}/jurisdictions/",
+        f"{API}/jurisdictions",
         headers=normal_user_token_headers,
         params={"parent_id": parent["id"]},
     )
@@ -64,15 +67,15 @@ def test_jurisdiction_admin_lifecycle(
 ) -> None:
     body = {"name": random_lower_string()}
     r = client.post(
-        f"{API}/jurisdictions/", headers=normal_user_token_headers, json=body
+        f"{API}/jurisdictions", headers=normal_user_token_headers, json=body
     )
     assert_error(r, 403, "forbidden")
 
     root = client.post(
-        f"{API}/jurisdictions/", headers=superuser_token_headers, json=body
+        f"{API}/jurisdictions", headers=superuser_token_headers, json=body
     ).json()
     child = client.post(
-        f"{API}/jurisdictions/",
+        f"{API}/jurisdictions",
         headers=superuser_token_headers,
         json={
             "name": "Child",
@@ -127,7 +130,7 @@ def test_delete_opted_in_jurisdiction_conflicts(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     j = client.post(
-        f"{API}/jurisdictions/",
+        f"{API}/jurisdictions",
         headers=superuser_token_headers,
         json={"name": random_lower_string()},
     ).json()
@@ -142,6 +145,65 @@ def test_delete_opted_in_jurisdiction_conflicts(
 
     r = client.delete(f"{API}/jurisdictions/{j['id']}", headers=superuser_token_headers)
     assert_error(r, 409, "jurisdiction_has_licenses")
+
+
+def test_move_licensed_subtree_needs_flag(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    s: Setup,
+) -> None:
+    root = make_jurisdiction(db)
+    licensed = make_jurisdiction(db, root)
+    target = make_jurisdiction(db)
+    set_company_ids(db, s.company.id, [licensed.id])
+    set_user_ids(db, s.member.user, [licensed.id])
+    company, member = (
+        SelectionOwner.of_company(s.company.id),
+        SelectionOwner.of_user(s.member.user),
+    )
+    before = [
+        crud.get_selection_version(session=db, owner=o) for o in (company, member)
+    ]
+    url = f"{API}/jurisdictions/{root.id}"
+
+    r = client.patch(
+        url, headers=superuser_token_headers, json={"parent_id": str(target.id)}
+    )
+    assert_error(r, 409, "jurisdiction_has_licenses")
+    assert r.json()["context"] == {"company_count": 1, "jurisdiction_count": 1}
+
+    r = client.patch(
+        url,
+        headers=superuser_token_headers,
+        json={"parent_id": str(target.id), "allow_licensed_move": True},
+    )
+    assert r.status_code == 200
+    assert r.json()["parent_id"] == str(target.id)
+    db.expire_all()
+    after = [crud.get_selection_version(session=db, owner=o) for o in (company, member)]
+    assert after == [v + 1 for v in before]
+    # Renaming without a move needs no flag
+    r = client.patch(
+        url, headers=superuser_token_headers, json={"name": random_lower_string()}
+    )
+    assert r.status_code == 200
+
+
+def test_move_unlicensed_subtree(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    root = make_jurisdiction(db)
+    make_jurisdiction(db, root)
+    target = make_jurisdiction(db)
+
+    r = client.patch(
+        f"{API}/jurisdictions/{root.id}",
+        headers=superuser_token_headers,
+        json={"parent_id": str(target.id)},
+    )
+    assert r.status_code == 200
+    assert r.json()["parent_id"] == str(target.id)
 
 
 def _sibling_names(nodes: list[dict], parent_id: str) -> list[str]:
@@ -160,12 +222,12 @@ def test_tree_etag(client: TestClient, superuser_token_headers: dict[str, str]) 
     assert r.headers["ETag"] == etag
 
     root = client.post(
-        f"{API}/jurisdictions/",
+        f"{API}/jurisdictions",
         headers=superuser_token_headers,
         json={"name": random_lower_string()},
     ).json()
     child = client.post(
-        f"{API}/jurisdictions/",
+        f"{API}/jurisdictions",
         headers=superuser_token_headers,
         json={"name": "Child", "parent_id": root["id"]},
     ).json()
@@ -193,20 +255,20 @@ def test_rows_sort_siblings(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     root = client.post(
-        f"{API}/jurisdictions/",
+        f"{API}/jurisdictions",
         headers=superuser_token_headers,
         json={"name": random_lower_string()},
     ).json()
     for name in ["Bravo", "alpha", "Charlie"]:
         client.post(
-            f"{API}/jurisdictions/",
+            f"{API}/jurisdictions",
             headers=superuser_token_headers,
             json={"name": name, "parent_id": root["id"]},
         )
     by_id = {
         j["name"]: j["id"]
         for j in client.get(
-            f"{API}/jurisdictions/",
+            f"{API}/jurisdictions",
             headers=superuser_token_headers,
             params={"parent_id": root["id"]},
         ).json()["data"]
@@ -338,7 +400,7 @@ def test_create_with_unknown_parent(
 ) -> None:
     parent_id = str(uuid.uuid4())
     r = client.post(
-        f"{API}/jurisdictions/",
+        f"{API}/jurisdictions",
         headers=superuser_token_headers,
         json={"name": random_lower_string(), "parent_id": parent_id},
     )

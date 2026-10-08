@@ -86,7 +86,7 @@ export class LoginService {
     public static resetPassword<ThrowOnError extends boolean = true>(options: Options<loginResetPasswordData, ThrowOnError>) {
         return (options.client ?? client).post<loginResetPasswordResponses, loginResetPasswordErrors, ThrowOnError>({
             responseType: 'json',
-            url: '/api/v1/reset-password/',
+            url: '/api/v1/reset-password',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -250,7 +250,7 @@ export class UsersService {
         return (options?.client ?? client).get<usersReadUsersResponses, usersReadUsersErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/users/',
+            url: '/api/v1/users',
             ...options
         });
     }
@@ -264,7 +264,7 @@ export class UsersService {
         return (options.client ?? client).post<usersCreateUserResponses, usersCreateUserErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/users/',
+            url: '/api/v1/users',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -495,7 +495,7 @@ export class CompaniesService {
         return (options?.client ?? client).get<companiesReadCompaniesResponses, companiesReadCompaniesErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/companies/',
+            url: '/api/v1/companies',
             ...options
         });
     }
@@ -509,7 +509,7 @@ export class CompaniesService {
         return (options.client ?? client).post<companiesCreateCompanyResponses, companiesCreateCompanyErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/companies/',
+            url: '/api/v1/companies',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -572,7 +572,7 @@ export class UtilsService {
     public static healthCheck<ThrowOnError extends boolean = true>(options?: Options<utilsHealthCheckData, ThrowOnError>) {
         return (options?.client ?? client).get<utilsHealthCheckResponses, unknown, ThrowOnError>({
             responseType: 'json',
-            url: '/api/v1/utils/health-check/',
+            url: '/api/v1/utils/health-check',
             ...options
         });
     }
@@ -589,7 +589,7 @@ export class JurisdictionsService {
         return (options?.client ?? client).get<jurisdictionsReadJurisdictionsResponses, jurisdictionsReadJurisdictionsErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/jurisdictions/',
+            url: '/api/v1/jurisdictions',
             ...options
         });
     }
@@ -603,7 +603,7 @@ export class JurisdictionsService {
         return (options.client ?? client).post<jurisdictionsCreateJurisdictionResponses, jurisdictionsCreateJurisdictionErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/jurisdictions/',
+            url: '/api/v1/jurisdictions',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -743,7 +743,7 @@ export class PrivateService {
     public static createUser<ThrowOnError extends boolean = true>(options: Options<privateCreateUserData, ThrowOnError>) {
         return (options.client ?? client).post<privateCreateUserResponses, privateCreateUserErrors, ThrowOnError>({
             responseType: 'json',
-            url: '/api/v1/private/users/',
+            url: '/api/v1/private/users',
             ...options,
             headers: {
                 'Content-Type': 'application/json',

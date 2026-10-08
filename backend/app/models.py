@@ -242,6 +242,8 @@ class JurisdictionUpdate(SQLModel):
     region_type: RegionType | None = None
     parent_id: uuid.UUID | None = None
     sort_order: int | None = Field(default=None, ge=0)
+    # Moving a subtree that companies hold licenses in is refused unless this is set
+    allow_licensed_move: bool = False
 
 
 # A company's opt-in to a jurisdiction; users of the company may only pick from these

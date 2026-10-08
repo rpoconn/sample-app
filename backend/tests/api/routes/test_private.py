@@ -11,7 +11,7 @@ from tests.utils.utils import assert_error, random_email, random_lower_string
 
 def test_create_user(client: TestClient, db: Session) -> None:
     r = client.post(
-        f"{settings.API_V1_STR}/private/users/",
+        f"{settings.API_V1_STR}/private/users",
         json={
             "email": "pollo@listo.com",
             "password": "password123",
@@ -35,7 +35,7 @@ def test_create_user_in_company(client: TestClient, db: Session) -> None:
         session=db, company_in=CompanyCreate(name=random_lower_string())
     )
     r = client.post(
-        f"{settings.API_V1_STR}/private/users/",
+        f"{settings.API_V1_STR}/private/users",
         json={
             "email": random_email(),
             "password": "password123",
@@ -53,7 +53,7 @@ def test_create_user_in_company(client: TestClient, db: Session) -> None:
 
 def test_create_user_unknown_company(client: TestClient) -> None:
     r = client.post(
-        f"{settings.API_V1_STR}/private/users/",
+        f"{settings.API_V1_STR}/private/users",
         json={
             "email": random_email(),
             "password": "password123",
@@ -71,8 +71,22 @@ def test_create_user_existing_email(client: TestClient) -> None:
         "password": "password123",
         "full_name": "Twice",
     }
-    url = f"{settings.API_V1_STR}/private/users/"
+    url = f"{settings.API_V1_STR}/private/users"
     assert client.post(url, json=body).status_code == 200
 
     r = client.post(url, json=body)
     assert_error(r, 409, "email_taken")
+
+
+def test_create_user_ignores_superuser(client: TestClient) -> None:
+    r = client.post(
+        f"{settings.API_V1_STR}/private/users",
+        json={
+            "email": random_email(),
+            "password": "password123",
+            "is_superuser": True,
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.json()["is_superuser"] is False

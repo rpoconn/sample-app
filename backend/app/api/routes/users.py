@@ -30,7 +30,7 @@ router = APIRouter(prefix="/users", tags=["users"], responses=errors(401, 403, 4
 
 
 @router.get(
-    "/",
+    "",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=UsersPublic,
 )
@@ -56,7 +56,7 @@ def read_users(
 
 
 @router.post(
-    "/",
+    "",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=UserPublic,
     responses=errors(404, 409),

@@ -22,18 +22,18 @@ def test_create_company_superuser_only(
 ) -> None:
     name = random_lower_string()
     r = client.post(
-        f"{API}/companies/", headers=superuser_token_headers, json={"name": name}
+        f"{API}/companies", headers=superuser_token_headers, json={"name": name}
     )
     assert r.status_code == 200
     assert r.json()["name"] == name
 
     r = client.post(
-        f"{API}/companies/", headers=superuser_token_headers, json={"name": name}
+        f"{API}/companies", headers=superuser_token_headers, json={"name": name}
     )
     assert_error(r, 409, "company_name_taken")
 
     r = client.post(
-        f"{API}/companies/",
+        f"{API}/companies",
         headers=s.admin.headers,
         json={"name": random_lower_string()},
     )

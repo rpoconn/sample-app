@@ -6,7 +6,6 @@ import {
     JurisdictionsService,
     LoginService,
     PrivateService,
-    type SelectionChange,
     type UserPublic,
     UsersService,
 } from "../../src/client"
@@ -104,18 +103,6 @@ export async function savedCompanyIds(companyId: string) {
         path: { company_id: companyId },
     })
     return data.jurisdiction_ids
-}
-
-// Changes the company's license as someone else would, e.g. from another tab
-export async function changeCompanyIds(
-    companyId: string,
-    change: SelectionChange,
-) {
-    await CompaniesService.patchCompanyJurisdictions({
-        headers: bearer(await getSuperuserToken()),
-        path: { company_id: companyId },
-        body: change,
-    })
 }
 
 // Turns the ids on for the user, on top of what they already have

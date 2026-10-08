@@ -30,29 +30,13 @@ The start scripts are bash. On Windows, run them from Git Bash. In VS Code, choo
 ./start_backend.bash
 ```
 
-Or run the steps yourself from `backend/`:
-
-```bash
-uv sync
-uv run alembic upgrade head        # creates backend/app.db
-uv run python app/initial_data.py  # creates the superuser, seeds the tree and the sample plan
-uv run fastapi dev                 # http://localhost:8000, API docs at /docs
-```
-
-**Frontend.** From the project root, in a second terminal, run the start script. It installs dependencies and starts the dev server at http://localhost:5173.
+**Frontend.** From the project root, in a second terminal, run the start script. It installs dependencies and starts the dev server at http://localhost:5173.  Please wait about ~10 seconds after launching the backend to start the front end.  
 
 ```bash
 ./start_ui.bash
 ```
 
-Or run the steps yourself from the project root:
-
-```bash
-bun install
-bun run dev                        # http://localhost:5173
-```
-
-Log in as `admin@example.com` / `changethis`. This user is an admin of the seeded company, so they see both **Jurisdictions** (their own selection) and **Company Admin** (the company's license).
+Log in as `admin@example.com` / `changethis` (Or create a new user). This user is an admin of the seeded company, so they see both **Jurisdictions** (their own selection) and **Company Admin** (the company's license).  
 
 To reset the data, stop the backend, delete `backend/app.db`, and run `./start_backend.bash` again. More detail is in [development.md](development.md).
 
@@ -79,18 +63,21 @@ All routes are under `/api/v1`. The ones that matter for this feature:
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /users/me/jurisdictions/ids` | The current user's selected ids, as `{ jurisdiction_ids, count }` |
-| `PUT /users/me/jurisdictions` | Replace the user's selection (rejects unlicensed or structural ids) |
-| `POST /users/me/jurisdictions/subtree` | Turn a whole subtree on or off in one save, skipping locked rows |
+| `GET {owner}/jurisdictions` | The owner's selected ids, as `{ jurisdiction_ids, count, version }`, with the version as an `ETag` |
+| `PATCH {owner}/jurisdictions` | Merge a change: `add`, `remove`, `add_subtrees`, `remove_subtrees`. `add_subtrees` skips rows the company has not licensed. `If-Match` is optional |
+| `PUT {owner}/jurisdictions` | Replace the whole set (rejects unlicensed or structural ids). `If-Match` required |
+| `DELETE {owner}/jurisdictions` | Clear the set. `If-Match` required |
+| `POST /companies/{id}/jurisdictions/preview` | What a PATCH would add and remove, and which users would lose an opt-in. Nothing is written |
 | `GET /service/users/{user_id}/jurisdiction-ids` | **For other services:** a plain array of a user's ids. Authenticates with an `X-API-Key` header (`SERVICE_API_KEY` in `.env`) or a superuser token. An inactive user, or a user of an inactive company, gets `[]` |
-| `GET /companies/{id}/jurisdictions/ids` | The company's licensed ids |
-| `PUT /companies/{id}/jurisdictions` | Replace the license (company admins) |
-| `POST /companies/{id}/jurisdictions/affected-users` | Who would lose an opt-in if these were dropped |
-| `POST /jurisdictions/rows` | One page of the flattened, filtered, sorted tree for the grid |
-| `POST /jurisdictions/facets` | Counts and filter options for the toolbar |
+| `POST /views/jurisdiction-grid/rows` | One page of the flattened, filtered, sorted tree for the grid |
+| `POST /views/jurisdiction-grid/facets` | Counts and filter options for the toolbar |
 | `GET /jurisdictions/tree` | The whole tree as a flat list |
 
-Selections are saved by replacing the whole list. That makes a save idempotent, and a subtree toggle is still a single request.
+`{owner}` is `/users/me`, `/users/{user_id}` or `/companies/{company_id}`. A user's selection is limited to their company's license, and company writes need a company admin.
+
+**Errors.** Every non-2xx response has the same body, `{ detail, code, context }`. Branch on `code` (for example `email_taken`, `version_mismatch`, `jurisdiction_has_licenses`), not on `detail`. Ids and counts go in `context`.
+
+**Concurrency.** Each selection has a version, sent as the `ETag`. Send it back as `If-Match` and the write only lands if nobody changed the selection since you read it. Otherwise you get a 412 whose `context.version` is the current version, so re-read and retry. A company admin's confirm-disable flow previews the drop, shows the affected users, then sends the PATCH with the preview's version, so a license change made in the meantime can't slip through. Dropping a company license also bumps the version of every user who lost an opt-in, as does moving a licensed jurisdiction (`PATCH /jurisdictions/{id}` with `allow_licensed_move: true`).
 
 ### Frontend
 

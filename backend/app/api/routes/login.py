@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from email.header import Header
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
@@ -105,7 +106,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
     )
 
 
-@router.post("/reset-password/", responses=errors(400))
+@router.post("/reset-password", responses=errors(400))
 def reset_password(session: SessionDep, body: NewPassword) -> Message:
     """
     Reset password
@@ -151,5 +152,12 @@ def recover_password_html_content(email: str, session: SessionDep) -> Any:
     )
 
     return HTMLResponse(
-        content=email_data.html_content, headers={"subject:": email_data.subject}
+        content=email_data.html_content,
+        headers={"X-Email-Subject": _header_value(email_data.subject)},
     )
+
+
+def _header_value(text: str) -> str:
+    """HTTP headers are latin-1, so RFC 2047-encode anything outside ASCII."""
+    text = " ".join(text.splitlines())
+    return text if text.isascii() else Header(text, "utf-8").encode()

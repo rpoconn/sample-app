@@ -60,7 +60,7 @@ def _get_or_404(session: Session, jurisdiction_id: uuid.UUID) -> Jurisdiction:
     return jurisdiction
 
 
-@router.get("/", response_model=JurisdictionsPublic)
+@router.get("", response_model=JurisdictionsPublic)
 def read_jurisdictions(
     session: SessionDep, _current_user: CurrentUser, parent_id: uuid.UUID | None = None
 ) -> Any:
@@ -120,7 +120,7 @@ def read_jurisdiction(
 
 
 @router.post(
-    "/",
+    "",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=JurisdictionPublic,
     responses=errors(409),

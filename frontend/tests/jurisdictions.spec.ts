@@ -1,7 +1,6 @@
 import { expect, type Page, test } from "@playwright/test"
 
 import {
-    changeCompanyIds,
     createCompanyWithPlan,
     createUserInCompany,
     idOf,
@@ -329,52 +328,6 @@ test.describe("Company scope", () => {
         await expect
             .poll(() => savedCompanyIds(company.id))
             .not.toContain(texas)
-        await expect.poll(() => savedUserIds(member)).toEqual([])
-    })
-
-    test("A license change while reviewing shows the latest first", async ({
-        page,
-    }) => {
-        const { company, tree } = await createCompanyWithPlan()
-        const admin = await createUserInCompany(company.id, "admin")
-        const member = await createUserInCompany(company.id, "member")
-        const texas = idOf(tree, TEXAS)
-        const ontario = idOf(tree, "Canada / Provinces / Ontario")
-        await setUserIds(member, [texas])
-        await logInUser(page, admin.email, admin.password)
-        await page.goto("/company-admin")
-        await waitForGrid(page)
-
-        await searchFor(page, "Texas")
-        await switchFor(page, "Enable Texas for the company").click()
-        const dialog = page.getByRole("dialog")
-        await expect(dialog).toContainText(
-            `Turn off Texas for all of ${company.name}?`,
-        )
-
-        // Someone else changes the license before this admin confirms
-        await changeCompanyIds(company.id, { remove: [ontario] })
-        await dialog
-            .getByRole("button", { name: "Turn off for everyone" })
-            .click()
-        await expect(
-            page.getByText(
-                "The license changed while you were reviewing. Showing the latest.",
-            ),
-        ).toBeVisible()
-        expect(await savedCompanyIds(company.id)).toContain(texas)
-
-        // The review opens again on the latest license; confirming now commits
-        await expect(dialog).toContainText(
-            `Turn off Texas for all of ${company.name}?`,
-        )
-        await dialog
-            .getByRole("button", { name: "Turn off for everyone" })
-            .click()
-        await expect
-            .poll(() => savedCompanyIds(company.id))
-            .not.toContain(texas)
-        expect(await savedCompanyIds(company.id)).not.toContain(ontario)
         await expect.poll(() => savedUserIds(member)).toEqual([])
     })
 

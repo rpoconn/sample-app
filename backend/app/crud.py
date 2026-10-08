@@ -334,6 +334,26 @@ def update_jurisdiction(
             name=new_name,
             exclude_id=db_obj.id,
         )
+    licenses: list[tuple[uuid.UUID, uuid.UUID]] = []
+    if moving:
+        licenses = list(
+            session.exec(
+                select(
+                    CompanyJurisdiction.company_id, CompanyJurisdiction.jurisdiction_id
+                )
+                .join(Jurisdiction)
+                .where(col(Jurisdiction.path).startswith(db_obj.path))
+            ).all()
+        )
+        if licenses and not jurisdiction_in.allow_licensed_move:
+            raise Conflict(
+                "Companies hold licenses in this subtree; set allow_licensed_move to move it",
+                code="jurisdiction_has_licenses",
+                context={
+                    "company_count": len({c for c, _ in licenses}),
+                    "jurisdiction_count": len({j for _, j in licenses}),
+                },
+            )
 
     old_path, old_name_path, old_depth = db_obj.path, db_obj.name_path, db_obj.depth
     db_obj.name = new_name
@@ -366,6 +386,22 @@ def update_jurisdiction(
             # The tree cache keys on max(updated_at), so rewritten rows count as edits
             d.updated_at = db_obj.updated_at
             session.add(d)
+
+    # Selections list ids in name-path order, so a move changes what holders read back
+    if licenses:
+        company_ids = {c for c, _ in licenses}
+        session.exec(
+            update(Company)
+            .where(col(Company.id).in_(company_ids))
+            .values(jurisdictions_version=Company.jurisdictions_version + 1)
+        )
+        moved_ids = {j for _, j in licenses}
+        _bump_user_versions(
+            session=session,
+            user_ids=select(UserJurisdiction.user_id)
+            .where(col(UserJurisdiction.jurisdiction_id).in_(moved_ids))
+            .distinct(),
+        )
 
     session.add(db_obj)
     session.commit()

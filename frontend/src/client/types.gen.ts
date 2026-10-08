@@ -565,6 +565,10 @@ export type JurisdictionUpdate = {
      * Sort Order
      */
     sort_order?: number | null;
+    /**
+     * Allow Licensed Move
+     */
+    allow_licensed_move?: boolean;
 };
 
 /**
@@ -622,7 +626,7 @@ export type PrivateUserCreate = {
     /**
      * Full Name
      */
-    full_name: string;
+    full_name?: string | null;
     /**
      * Company Id
      */
@@ -990,7 +994,7 @@ export type loginResetPasswordData = {
     body: NewPassword;
     path?: never;
     query?: never;
-    url: '/api/v1/reset-password/';
+    url: '/api/v1/reset-password';
 };
 
 export type loginResetPasswordErrors = {
@@ -1706,7 +1710,7 @@ export type usersReadUsersData = {
          */
         limit?: number;
     };
-    url: '/api/v1/users/';
+    url: '/api/v1/users';
 };
 
 export type usersReadUsersErrors = {
@@ -1739,7 +1743,7 @@ export type usersCreateUserData = {
     body: UserCreate;
     path?: never;
     query?: never;
-    url: '/api/v1/users/';
+    url: '/api/v1/users';
 };
 
 export type usersCreateUserErrors = {
@@ -2095,7 +2099,7 @@ export type utilsHealthCheckData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/v1/utils/health-check/';
+    url: '/api/v1/utils/health-check';
 };
 
 export type utilsHealthCheckResponses = {
@@ -2118,7 +2122,7 @@ export type jurisdictionsReadJurisdictionsData = {
          */
         parent_id?: string | null;
     };
-    url: '/api/v1/jurisdictions/';
+    url: '/api/v1/jurisdictions';
 };
 
 export type jurisdictionsReadJurisdictionsErrors = {
@@ -2151,7 +2155,7 @@ export type jurisdictionsCreateJurisdictionData = {
     body: JurisdictionCreate;
     path?: never;
     query?: never;
-    url: '/api/v1/jurisdictions/';
+    url: '/api/v1/jurisdictions';
 };
 
 export type jurisdictionsCreateJurisdictionErrors = {
@@ -2370,7 +2374,7 @@ export type companiesReadCompaniesData = {
          */
         limit?: number;
     };
-    url: '/api/v1/companies/';
+    url: '/api/v1/companies';
 };
 
 export type companiesReadCompaniesErrors = {
@@ -2403,7 +2407,7 @@ export type companiesCreateCompanyData = {
     body: CompanyCreate;
     path?: never;
     query?: never;
-    url: '/api/v1/companies/';
+    url: '/api/v1/companies';
 };
 
 export type companiesCreateCompanyErrors = {
@@ -2676,7 +2680,7 @@ export type privateCreateUserData = {
     body: PrivateUserCreate;
     path?: never;
     query?: never;
-    url: '/api/v1/private/users/';
+    url: '/api/v1/private/users';
 };
 
 export type privateCreateUserErrors = {

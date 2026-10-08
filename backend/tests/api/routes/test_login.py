@@ -129,7 +129,7 @@ def test_reset_password(client: TestClient, db: Session) -> None:
     data = {"new_password": new_password, "token": token}
 
     r = client.post(
-        f"{settings.API_V1_STR}/reset-password/",
+        f"{settings.API_V1_STR}/reset-password",
         headers=headers,
         json=data,
     )
@@ -147,7 +147,7 @@ def test_reset_password_invalid_token(
 ) -> None:
     data = {"new_password": "changethis", "token": "invalid"}
     r = client.post(
-        f"{settings.API_V1_STR}/reset-password/",
+        f"{settings.API_V1_STR}/reset-password",
         headers=superuser_token_headers,
         json=data,
     )
@@ -218,3 +218,18 @@ def test_login_with_argon2_password_keeps_hash(client: TestClient, db: Session) 
 
     assert user.hashed_password == original_hash
     assert user.hashed_password.startswith("$argon2")
+
+
+def test_recovery_html_content_subject_header(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    url = f"{settings.API_V1_STR}/password-recovery-html-content/{settings.FIRST_SUPERUSER}"
+    r = client.post(url, headers=superuser_token_headers)
+    assert r.status_code == 200
+    assert r.headers["X-Email-Subject"].startswith(settings.PROJECT_NAME)
+
+    with patch.object(settings, "PROJECT_NAME", "Café ✓"):
+        r = client.post(url, headers=superuser_token_headers)
+    assert r.status_code == 200
+    subject = r.headers["X-Email-Subject"]
+    assert subject.isascii() and subject.startswith("=?utf-8?")

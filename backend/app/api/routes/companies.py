@@ -28,7 +28,7 @@ router = APIRouter(
 
 
 @router.get(
-    "/",
+    "",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=CompaniesPublic,
 )
@@ -49,7 +49,7 @@ def read_companies(
 
 
 @router.post(
-    "/",
+    "",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=CompanyPublic,
     responses=errors(409),
