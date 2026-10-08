@@ -23,7 +23,6 @@ class PrivateUserCreate(BaseModel):
     email: str
     password: str
     full_name: str
-    is_verified: bool = False
     # None places the user in the default company
     company_id: uuid.UUID | None = None
     company_role: CompanyRole = CompanyRole.admin

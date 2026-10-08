@@ -6,7 +6,7 @@ from sqlmodel import Session
 from app import crud
 from app.core.config import settings
 from app.models import CompanyCreate
-from tests.utils.utils import random_lower_string
+from tests.utils.utils import assert_error, random_lower_string
 
 API = settings.API_V1_STR
 
@@ -31,7 +31,7 @@ def test_list_roots_and_children(
 def test_read_tree_returns_every_level(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
-    assert client.get(f"{API}/jurisdictions/tree").status_code == 401
+    assert_error(client.get(f"{API}/jurisdictions/tree"), 401, "unauthorized")
 
     r = client.get(f"{API}/jurisdictions/tree", headers=normal_user_token_headers)
     assert r.status_code == 200
@@ -55,12 +55,10 @@ def test_jurisdiction_admin_lifecycle(
     normal_user_token_headers: dict[str, str],
 ) -> None:
     body = {"name": random_lower_string()}
-    assert (
-        client.post(
-            f"{API}/jurisdictions/", headers=normal_user_token_headers, json=body
-        ).status_code
-        == 403
+    r = client.post(
+        f"{API}/jurisdictions/", headers=normal_user_token_headers, json=body
     )
+    assert_error(r, 403, "forbidden")
 
     root = client.post(
         f"{API}/jurisdictions/", headers=superuser_token_headers, json=body
@@ -99,7 +97,7 @@ def test_jurisdiction_admin_lifecycle(
     r = client.delete(
         f"{API}/jurisdictions/{root['id']}", headers=superuser_token_headers
     )
-    assert r.status_code == 409
+    assert_error(r, 409, "jurisdiction_has_children")
 
     assert (
         client.delete(
@@ -113,12 +111,8 @@ def test_jurisdiction_admin_lifecycle(
         ).status_code
         == 200
     )
-    assert (
-        client.get(
-            f"{API}/jurisdictions/{root['id']}", headers=superuser_token_headers
-        ).status_code
-        == 404
-    )
+    r = client.get(f"{API}/jurisdictions/{root['id']}", headers=superuser_token_headers)
+    assert_error(r, 404, "jurisdiction_not_found")
 
 
 def test_delete_opted_in_jurisdiction_conflicts(
@@ -139,7 +133,7 @@ def test_delete_opted_in_jurisdiction_conflicts(
     )
 
     r = client.delete(f"{API}/jurisdictions/{j['id']}", headers=superuser_token_headers)
-    assert r.status_code == 409
+    assert_error(r, 409, "jurisdiction_has_licenses")
 
 
 def _sibling_names(nodes: list[dict], parent_id: str) -> list[str]:
@@ -213,14 +207,14 @@ def test_read_tree_sorts_siblings(
         headers=superuser_token_headers,
         params={"sort_by": "bogus"},
     )
-    assert r.status_code == 422
+    assert_error(r, 422, "invalid_input")
 
 
 def test_rows_pages_the_flattened_tree(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     url = f"{API}/jurisdictions/rows"
-    assert client.post(url, json={}).status_code == 401
+    assert_error(client.post(url, json={}), 401, "unauthorized")
 
     r = client.post(url, headers=normal_user_token_headers, json={"limit": 500})
     assert r.status_code == 200
@@ -249,16 +243,10 @@ def test_rows_pages_the_flattened_tree(
         pages += [row["id"] for row in page["data"]]
     assert pages == ids[: len(pages)]
 
-    for bad in [{"limit": 0}, {"limit": 501}, {"skip": -1}, {"sort_by": "bogus"}]:
-        assert (
-            client.post(url, headers=normal_user_token_headers, json=bad).status_code
-            == 422
-        )
-    bad_status = {"filters": {"status": "bogus"}}
-    assert (
-        client.post(url, headers=normal_user_token_headers, json=bad_status).status_code
-        == 422
-    )
+    bad_bodies = [{"limit": 0}, {"limit": 501}, {"skip": -1}, {"sort_by": "bogus"}]
+    for bad in [*bad_bodies, {"filters": {"status": "bogus"}}]:
+        r = client.post(url, headers=normal_user_token_headers, json=bad)
+        assert_error(r, 422, "invalid_input")
 
 
 def test_rows_filter_opens_ancestors_of_matches(
@@ -373,8 +361,7 @@ def test_subtree_toggles(
         headers=superuser_token_headers,
         json={"root_id": str(uuid.uuid4()), "enabled": True},
     )
-    assert r.status_code == 422
-    assert r.json()["code"] == "unknown_jurisdiction"
+    assert_error(r, 422, "unknown_jurisdiction")
 
 
 def test_create_with_unknown_parent(
@@ -386,7 +373,5 @@ def test_create_with_unknown_parent(
         headers=superuser_token_headers,
         json={"name": random_lower_string(), "parent_id": parent_id},
     )
-    assert r.status_code == 422
-    body = r.json()
-    assert body["code"] == "unknown_jurisdiction"
+    body = assert_error(r, 422, "unknown_jurisdiction")
     assert body["context"]["jurisdiction_ids"] == [parent_id]

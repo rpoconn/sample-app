@@ -51,20 +51,76 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
     return db_obj
 
 
+def _ensure_company_keeps_admin(
+    *, session: Session, user: User, after: dict[str, Any]
+) -> None:
+    """Raise if `after` (the user's new field values) leaves the user's current
+    company without an active admin while it still has other active users.
+    A delete is checked as `after={"is_active": False}`."""
+    if not (user.is_active and user.company_role == CompanyRole.admin):
+        return
+    stays_admin = (
+        after.get("is_active", True)
+        and after.get("company_role", user.company_role) == CompanyRole.admin
+        and after.get("company_id", user.company_id) == user.company_id
+    )
+    if stays_admin:
+        return
+    company = session.get(Company, user.company_id)
+    if not company or not company.is_active:
+        return
+    others = select(User.company_role).where(
+        User.company_id == user.company_id,
+        col(User.is_active).is_(True),
+        User.id != user.id,
+    )
+    roles = set(session.exec(others).all())
+    if roles and CompanyRole.admin not in roles:
+        raise Conflict(
+            "The company would be left without an active admin; promote another user first",
+            code="last_company_admin",
+            context={"company_id": str(user.company_id)},
+        )
+
+
+def _ensure_keeps_superuser(
+    *, session: Session, user: User, after: dict[str, Any]
+) -> None:
+    """Raise if `after` removes the last active superuser. A delete is checked as
+    `after={"is_active": False}`."""
+    if not (user.is_active and user.is_superuser):
+        return
+    if after.get("is_active", True) and after.get("is_superuser", True):
+        return
+    other = select(User.id).where(
+        col(User.is_superuser).is_(True),
+        col(User.is_active).is_(True),
+        User.id != user.id,
+    )
+    if not session.exec(other).first():
+        raise Conflict("This is the last active superuser", code="last_superuser")
+
+
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     user_data = user_in.model_dump(exclude_unset=True)
     # Company membership can be changed but never cleared
     for key in ("company_id", "company_role"):
         if key in user_data and user_data[key] is None:
             del user_data[key]
+    new_company_id = user_data.get("company_id")
+    moving = new_company_id is not None and new_company_id != db_user.company_id
+    if moving:
+        _get_company(session=session, company_id=user_data["company_id"])
+        # Admin rights don't carry across tenants
+        user_data.setdefault("company_role", CompanyRole.member)
+    _ensure_company_keeps_admin(session=session, user=db_user, after=user_data)
+    _ensure_keeps_superuser(session=session, user=db_user, after=user_data)
     extra_data = {}
     if "password" in user_data:
         password = user_data["password"]
         hashed_password = get_password_hash(password)
         extra_data["hashed_password"] = hashed_password
-    new_company_id = user_data.get("company_id")
-    if new_company_id and new_company_id != db_user.company_id:
-        _get_company(session=session, company_id=new_company_id)
+    if moving:
         # Opt-ins belong to the old company; the FK rejects the move while they exist
         session.exec(
             delete(UserJurisdiction).where(col(UserJurisdiction.user_id) == db_user.id)
@@ -74,6 +130,14 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     session.commit()
     session.refresh(db_user)
     return db_user
+
+
+def delete_user(*, session: Session, db_user: User) -> None:
+    gone = {"is_active": False}
+    _ensure_company_keeps_admin(session=session, user=db_user, after=gone)
+    _ensure_keeps_superuser(session=session, user=db_user, after=gone)
+    session.delete(db_user)
+    session.commit()
 
 
 def get_user_by_email(*, session: Session, email: str) -> User | None:
@@ -350,6 +414,11 @@ def update_company(
     *, session: Session, db_obj: Company, company_in: CompanyUpdate
 ) -> Company:
     data = company_in.model_dump(exclude_unset=True, exclude_none=True)
+    if db_obj.id == DEFAULT_COMPANY_ID and data.get("is_active") is False:
+        raise Conflict(
+            "The default company can't be deactivated",
+            code="cannot_deactivate_default_company",
+        )
     if "name" in data:
         _check_company_name(session=session, name=data["name"], exclude_id=db_obj.id)
     db_obj.sqlmodel_update(data, update={"updated_at": get_datetime_utc()})

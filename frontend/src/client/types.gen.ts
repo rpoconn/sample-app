@@ -696,10 +696,6 @@ export type PrivateUserCreate = {
      */
     full_name: string;
     /**
-     * Is Verified
-     */
-    is_verified?: boolean;
-    /**
      * Company Id
      */
     company_id?: string | null;

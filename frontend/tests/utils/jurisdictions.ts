@@ -75,7 +75,6 @@ export async function createUserInCompany(
             email,
             password,
             full_name: `Test ${role}`,
-            is_verified: true,
             company_id: companyId,
             company_role: role,
         },

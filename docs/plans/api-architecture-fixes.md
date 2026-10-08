@@ -2,8 +2,19 @@
 
 ## Status
 
-- In progress. Phase 1 steps 1.1–1.5 done. Findings come from the adversarial API review (2026-10-07).
+- In progress. Phases 1 (error model, list envelope) and 2 (lifecycle invariants) are done
+  and were removed from this file. Next up is Phase 3. Findings come from the adversarial
+  API review (2026-10-07).
 - In scope: review items 2, 3, 7, 9, 10, 11 and all the Low items.
+- Already in place for the later phases:
+  - `app/errors.py`: `ApiError` and its subclasses, including `PreconditionFailed` (412) and
+    `PreconditionRequired` (428), plus the `errors(...)` OpenAPI helper. Every route documents
+    its non-2xx responses as `ErrorResponse`, so new routes add `errors(412, 428)` where they apply.
+  - Error body: `{detail, code, context}`. Ids go in `context`, never in `detail`.
+  - Lists: `{data, count}`, with `skip` / `limit` bounded `ge=1, le=500`.
+  - Tests: `tests/utils/utils.py::assert_error(r, status, code)` checks the status and `code`.
+  - `crud.delete_user` and `update_user` enforce the last-company-admin and last-superuser
+    rules. A company move resets the role to member.
 - Out of scope (not chosen): #1 signup default role, #4 token lifetime / revocation on
   credential change, #5 recovery enumeration, #6 `FASTAPI_ENV` coupling, #8 implicit
   tenant addressing. New users still default to company `admin`.
@@ -25,215 +36,6 @@ client rather than as a `/v2`. The `/service` contract does not change.
 - Alembic head is `9d3b6e1f4a27` (`drop_item`, currently untracked). New migrations
   chain from it.
 - Never hand-edit `frontend/src/client/**`. Regenerate it.
-
----
-
-## Phase 1: one error model and one list envelope (#9)
-
-Everything after this phase raises these errors, so it comes first.
-
-### 1.1 Error types: new `backend/app/errors.py`
-
-**Done (2026-10-07).** `CrudError` was deleted outright (no alias), and crud and the tests now
-use `app.errors` directly. Every raise carries a specific `code`. HTTP statuses are
-unchanged for now (for example, duplicate email is still `ApiError` with status 400), because
-1.3 changes them. The `ApiError` handler in `main.py` already returns `detail` / `code` /
-`context` plus `headers`, so 1.2 only has to add the Starlette and validation handlers.
-
-Move `CrudError` and its subclasses out of `crud.py` into this module, and give every
-error a stable machine `code`:
-
-```python
-class ApiError(Exception):
-    status_code = 400
-    code = "bad_request"
-
-    def __init__(self, detail: str, *, code: str | None = None, context: dict | None = None) -> None:
-        super().__init__(detail)
-        self.detail = detail
-        self.code = code or self.code
-        self.context = context or {}
-
-class Unauthorized(ApiError): status_code, code = 401, "unauthorized"   # adds WWW-Authenticate: Bearer
-class Forbidden(ApiError): status_code, code = 403, "forbidden"
-class NotFound(ApiError): status_code, code = 404, "not_found"
-class Conflict(ApiError): status_code, code = 409, "conflict"
-class PreconditionFailed(ApiError): status_code, code = 412, "version_mismatch"
-class InvalidInput(ApiError): status_code, code = 422, "invalid_input"
-class PreconditionRequired(ApiError): status_code, code = 428, "if_match_required"
-```
-
-- Keep `crud.CrudError` as an alias for one phase if that keeps the diff small, then
-  delete it.
-- Replace every `HTTPException(...)` in `app/api/**` and `app/api/deps.py` with these
-  types. After this phase, `grep -rn HTTPException backend/app` should only match imports
-  that you then remove.
-
-### 1.2 Error envelope: `app/main.py`
-
-**Done (2026-10-07).** All three handlers go through one `error_response` helper. A Starlette
-`HTTPException` maps 401 → `unauthorized` (the missing-header case from `OAuth2PasswordBearer`,
-which keeps `WWW-Authenticate`), 404 → `not_found`, 405 → `method_not_allowed`, and any other
-status → `http_<status>`. The ids in `crud.py` errors now sit in `context.jurisdiction_ids`
-(structural errors also carry `context.name_paths`). Statuses are unchanged until 1.3, so
-`get_subtree_ids` still returns 404. `tests/api/test_errors.py` already covers the envelope for an
-`ApiError`, a routing 404 / 405, a validation 422 and the 401 header. 1.6 only needs to extend it.
-
-There's one body shape for every error, including request validation:
-
-```json
-{ "detail": "Human sentence", "code": "jurisdiction_not_licensed", "context": { "jurisdiction_ids": ["..."] } }
-```
-
-- Add handlers for `ApiError`, Starlette `HTTPException` (for 404s and 405s from
-  routing) and `RequestValidationError`. The validation handler sets `code:
-  "invalid_input"`, `detail` to the first error's `msg`, and `context.errors` to
-  FastAPI's list.
-- Stop putting ids into `detail` strings (`crud.py` `_validate_selectable`,
-  `set_user_jurisdictions`, `get_subtree_ids`). Put them in `context` instead.
-- `frontend/src/utils.ts` `extractErrorMessage` already reads a string `detail`, so it
-  keeps working. Drop its array branch once the validation handler is in.
-
-### 1.3 Normalize status codes
-
-**Done (2026-10-07).** Every row of the table now holds. Other changes made here:
-- `crud._get_parent` (an unknown `parent_id` in a jurisdiction create or update body) now raises
-  422 `unknown_jurisdiction` with `context.jurisdiction_ids`, under the "unknown id in a body" rule.
-- `get_subtree_ids` already raises `InvalidInput`, so 3.4 has nothing left to do there.
-- `/private/users` checks `get_user_by_email` first → 409 `email_taken`. The rest of that Low item
-  (routing it through `crud.create_user`) is still in Phase 5.
-- Frontend `main.tsx` `handleApiError` logs out only on 401 or 403 `user_inactive`. It used to log
-  out on any 403, which included plain permission errors.
-- New tests: bad JWT → 401 + `WWW-Authenticate` and inactive user → 403 (both in
-  `test_errors.py`), private duplicate email → 409, and unknown parent → 422.
-- Known pre-existing e2e failure, not caused by this step: `user-settings.spec.ts` "Selected mode is
-  preserved across sessions" times out on an unstable theme dropdown, with or without these
-  changes.
-
-| Case | Now | After | `code` |
-|---|---|---|---|
-| Duplicate email (signup, create, private create, update, update me) | 400 / 409 | 409 | `email_taken` |
-| Bad / expired JWT (`deps.get_token_payload`) | 403 | 401 + `WWW-Authenticate` | `invalid_token` |
-| Revoked token | 401 | 401 | `token_revoked` |
-| Inactive user on an authenticated request | 400 | 403 | `user_inactive` |
-| Login wrong credentials / inactive (OAuth2 token endpoint) | 400 | 400, as the spec requires | `invalid_grant` |
-| Jurisdiction not licensed by the company | 403 | 422 | `jurisdiction_not_licensed` |
-| Unknown jurisdiction id **in a body** (including subtree roots) | 422 / 404 | 422 | `unknown_jurisdiction` |
-| Structural id selected | 422 | 422 | `jurisdiction_structural` |
-| Unknown id **in the path** | 404 | 404 | `<thing>_not_found` |
-| Superuser deletes self | 403 | 409 | `cannot_delete_self` |
-| Reset password bad token | 400 | 400 | `invalid_reset_token` |
-| Not a superuser / not a company admin | 403 | 403 | `forbidden` |
-
-### 1.4 Document errors in OpenAPI
-
-**Done (2026-10-07).** `errors()` lives in `app/errors.py` next to the exception types. Router
-defaults: `users`, `companies`, `jurisdictions` and `service` use `errors(401, 403, 422)`. `login`
-and `private` use only `errors(422)`, because most of their routes are unauthenticated, so each
-route lists its own 400 / 401 / 403. `utils` has no params and gets nothing. Listing 422 on every
-router means FastAPI no longer adds `HTTPValidationError`, which is now gone from the spec and
-from the generated client. One wrinkle: FastAPI files a `model` response under the route's
-`response_class` media type. So the HTML route `password-recovery-html-content` uses a small
-`json_errors()` variant that references the schema under `application/json` directly. The new
-`test_errors.py::test_openapi_documents_errors_as_error_response` checks that every non-2xx
-response in the spec is a JSON `ErrorResponse`. Routes whose crud calls raise
-`company_not_found` (company selection PUT and subtree, user create) also list 404. Phase 3 adds
-412 and 428 when those routes are written.
-
-- Add a `ErrorResponse` model in `models.py` (`detail`, `code`, `context`).
-- Add a helper `errors(*codes) -> dict[int, dict]` that returns
-  `{code: {"model": ErrorResponse}}`.
-- Every router gets `responses=errors(401, 403, 422)`. Each route adds its specific codes
-  (404, 409, 412, 428).
-- Override the default 422 schema so the generated client types it as `ErrorResponse`,
-  not `HTTPValidationError`.
-
-### 1.5 One list envelope
-
-**Done (2026-10-07).** `read_users` and `read_companies` bound `skip` to `ge=0` and `limit` to
-`ge=1, le=500` through `Query`. `CompanyAdmins` has `count`, and `JurisdictionsPublic` has the
-docstring. `JurisdictionRowsPage` / `JurisdictionRowsQuery` use `count` / `skip`, and the frontend
-change is limited to `JurisdictionRowSource.ts`. `jq.flatten` keeps its internal `start` / `total`
-names. New test `test_users.py::test_retrieve_users_limit_bounds` covers the 422s on both routers,
-and `test_retrieve_users` checks that `count` is the total and not the page length. e2e: 62 passed,
-3 failed. One is the known theme-dropdown flake. The other two were stale `jurisdictions.spec.ts`
-assertions on summary text that a1503fb moved into the status filter tabs. They now read the tab
-counts instead (`statusTab` / `tabCount` helpers), and all 13 jurisdiction specs pass.
-
-The rule: `{ data: [...], count: <total matching, not page length> }`. Paging is always
-`skip` / `limit`, with `limit` bounded `ge=1, le=500`.
-
-| Model | Change |
-|---|---|
-| `UsersPublic`, `CompaniesPublic` | Already correct. Add the `le=500` bound on `limit` in `read_users` and `read_companies`. |
-| `JurisdictionsPublic` | Unpaginated, so `count == len(data)` is the total. Document that in the docstring. |
-| `CompanyAdmins` | Add `count`. |
-| `JurisdictionAffectedUsers` | Already correct. |
-| `JurisdictionUserCounts` | Deleted in Phase 3 (#7). |
-| `JurisdictionRowsPage` | Rename `total` → `count` and `start` → `skip`. `JurisdictionRowsQuery.start` → `skip`. Update `jurisdiction_query.build_rows_page` and `JurisdictionRowSource.ts`. |
-
-### 1.6 Tests
-
-- Update the status-code assertions in `tests/api/routes/*`. Add a `code` assertion
-  wherever a test already checks status.
-- Add `test_errors.py`. It covers the envelope shape for an `ApiError`, a routing 404 and
-  a validation 422, and checks that `WWW-Authenticate` is present on 401.
-
----
-
-## Phase 2: lifecycle invariants (#3)
-
-### 2.1 Enforce `Company.is_active`
-
-- In `deps.get_current_user`, after the user check: if the user is not a superuser and
-  `session.get(Company, user.company_id).is_active` is false, raise
-  `Forbidden(code="company_inactive")`.
-- `login_access_token` rejects the same case with 400 `invalid_grant` (detail "Company is
-  inactive").
-- `/service/users/{id}/jurisdiction-ids` returns `[]` for an inactive user or an inactive
-  company, meaning "monitors nothing". Document this in the docstring and README.
-  **Decision to confirm:** the other option is a 404.
-- `PATCH /companies/{DEFAULT_COMPANY_ID}` with `is_active: false` → 409
-  `cannot_deactivate_default_company`.
-
-### 2.2 A company with active users keeps an active admin
-
-Add `crud._ensure_company_keeps_admin(session, user, *, after: dict)`. It runs before
-any change that could remove the last active admin of an active company that still has
-other active users:
-
-- `update_user`: `company_role` → member, `is_active` → false, or `company_id` changes
-  (checked against the **old** company)
-- `DELETE /users/me`, `DELETE /users/{id}`
-
-On violation, raise `Conflict(code="last_company_admin")`.
-
-### 2.3 Keep at least one active superuser
-
-Add `crud._ensure_keeps_superuser`. It covers `is_superuser` → false, `is_active` →
-false, and deleting the last active superuser. On violation, raise
-`Conflict(code="last_superuser")`. The existing "can't delete self" check stays, now as a
-409.
-
-### 2.4 Company moves reset the role
-
-In `crud.update_user`, when `company_id` changes and `company_role` was not sent, set
-`company_role = CompanyRole.member`. Admin rights don't carry across tenants. Opt-ins are
-already cleared on a move.
-
-### 2.5 Dead field
-
-Remove `is_verified` from `PrivateUserCreate` and from `test_private.py`. Email
-verification is a separate feature and not part of this plan.
-
-### 2.6 Tests (`test_users.py`, `test_companies.py`, `test_login.py`)
-
-- A member of an inactive company gets 403 `company_inactive` on `/users/me`, and their
-  login gets 400. A superuser in that company still works.
-- Each of the four paths that remove the last admin gets 409. The same action succeeds
-  once a second admin exists, and also when the admin is the only user.
-- Last superuser demote / deactivate / delete gets 409.
-- Moving a user to another company makes them a member, unless the request sends a role.
 
 ---
 
@@ -335,8 +137,8 @@ def preview_company_change(*, session, company_id, change) -> SelectionPreview
 - User-scope `add_subtrees` keeps today's behavior: it intersects with the company's
   licensed ids, so locked rows are skipped. Explicit `add` of an unlicensed id is still
   rejected (422 `jurisdiction_not_licensed`).
-- `get_subtree_ids` raises `InvalidInput(code="unknown_jurisdiction")` instead of
-  `NotFoundError`.
+- `get_subtree_ids` already raises `InvalidInput(code="unknown_jurisdiction")`, so there's
+  nothing to change there.
 
 ### 3.5 Routes
 
@@ -424,7 +226,7 @@ def preview_company_change(*, session, company_id, change) -> SelectionPreview
   the views.
 - Frontend: `JurisdictionsService.readJurisdictionRows` / `readJurisdictionFacets` become
   `ViewsService.*` in `JurisdictionGridService.ts` (and `JurisdictionRowSource.ts`, which
-  also gets the `skip` / `count` renames from 1.5).
+  already uses `skip` / `count`).
 
 ### 4.3 Cache the canonical tree (#11)
 
@@ -451,7 +253,7 @@ This step is optional. Do it last in the phase, and defer it if the phase runs l
 |---|---|
 | Trailing slashes | One canonical form without slashes. Declare collection routes as `""` under their prefix: `/users`, `/companies`, `/jurisdictions`, `/private/users`, `/reset-password`, `/utils/health-check`. Update `compose.yml:37` (healthcheck URL). `.github/workflows/test-docker-compose.yml:26` already has no slash. Keep FastAPI's default `redirect_slashes` so old URLs 307 to the new ones. Note that the redirect won't carry the auth header across origins, which is fine because the client is regenerated. |
 | `"subject:"` header | `login.py:149`: rename to `X-Email-Subject`. Strip non-latin-1 characters or RFC 2047-encode the value so a project name with non-ASCII characters can't break the response. |
-| `/private/users` dup email → 500 | Route it through `crud.create_user` instead of building `User` by hand, with a `get_user_by_email` check first → 409 `email_taken`. `PrivateUserCreate` can then become a `UserCreate` (minus `is_superuser`), which Phase 2.5 already trimmed. |
+| `/private/users` dup email → 500 | Route it through `crud.create_user` instead of building `User` by hand, with a `get_user_by_email` check first → 409 `email_taken`. `PrivateUserCreate` can then become a `UserCreate` (minus `is_superuser`). `is_verified` is already gone from it. |
 | "Toggle is really set" | Fixed by Phase 3: the subtree routes are replaced by `PATCH` with explicit `add_subtrees` / `remove_subtrees`, returning the resulting selection and version. |
 | Moving a jurisdiction carries licenses | `JurisdictionUpdate` gains `allow_licensed_move: bool = False`. In `crud.update_jurisdiction`, when `moving` and any `CompanyJurisdiction` exists for an id with `path` starting with `db_obj.path`, raise `Conflict(code="jurisdiction_has_licenses", context={"company_count": n, "jurisdiction_count": m})` unless the flag is set. Tests cover the move being blocked, then allowed with the flag, and an unlicensed subtree moving freely. |
 

@@ -196,8 +196,7 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
             "Super users are not allowed to delete themselves",
             code="cannot_delete_self",
         )
-    session.delete(current_user)
-    session.commit()
+    crud.delete_user(session=session, db_user=current_user)
     return Message(message="User deleted successfully")
 
 
@@ -284,8 +283,7 @@ def delete_user(
             "Super users are not allowed to delete themselves",
             code="cannot_delete_self",
         )
-    session.delete(user)
-    session.commit()
+    crud.delete_user(session=session, db_user=user)
     return Message(message="User deleted successfully")
 
 

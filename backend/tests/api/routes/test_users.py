@@ -1,15 +1,18 @@
 import uuid
+from collections.abc import Generator
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app import crud
 from app.core.config import settings
 from app.core.security import verify_password
+from app.errors import Conflict
 from app.models import User, UserCreate
 from tests.utils.user import create_random_user
-from tests.utils.utils import random_email, random_lower_string
+from tests.utils.utils import assert_error, random_email, random_lower_string
 
 
 def test_get_users_superuser_me(
@@ -169,9 +172,7 @@ def test_create_user_existing_username(
         headers=superuser_token_headers,
         json=data,
     )
-    created_user = r.json()
-    assert r.status_code == 409
-    assert created_user["code"] == "email_taken"
+    created_user = assert_error(r, 409, "email_taken")
     assert "_id" not in created_user
 
 
@@ -186,7 +187,7 @@ def test_create_user_by_normal_user(
         headers=normal_user_token_headers,
         json=data,
     )
-    assert r.status_code == 403
+    assert_error(r, 403, "forbidden")
 
 
 def test_retrieve_users(
@@ -232,8 +233,7 @@ def test_retrieve_users_limit_bounds(
                 headers=superuser_token_headers,
                 params=params,
             )
-            assert r.status_code == 422
-            assert r.json()["code"] == "invalid_input"
+            assert_error(r, 422, "invalid_input")
 
 
 def test_update_user_me(
@@ -312,8 +312,7 @@ def test_update_password_me_incorrect_password(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 400
-    updated_user = r.json()
+    updated_user = assert_error(r, 400, "incorrect_password")
     assert updated_user["detail"] == "Incorrect password"
 
 
@@ -331,8 +330,8 @@ def test_update_user_me_email_exists(
         headers=normal_user_token_headers,
         json=data,
     )
-    assert r.status_code == 409
-    assert r.json()["detail"] == "User with this email already exists"
+    body = assert_error(r, 409, "email_taken")
+    assert body["detail"] == "User with this email already exists"
 
 
 def test_update_password_me_same_password_error(
@@ -347,8 +346,7 @@ def test_update_password_me_same_password_error(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 400
-    updated_user = r.json()
+    updated_user = assert_error(r, 400, "password_unchanged")
     assert (
         updated_user["detail"] == "New password cannot be the same as the current one"
     )
@@ -389,9 +387,8 @@ def test_register_user_already_exists_error(client: TestClient) -> None:
         f"{settings.API_V1_STR}/users/signup",
         json=data,
     )
-    assert r.status_code == 409
-    assert r.json()["code"] == "email_taken"
-    assert r.json()["detail"] == "The user with this email already exists in the system"
+    body = assert_error(r, 409, "email_taken")
+    assert body["detail"] == "The user with this email already exists in the system"
 
 
 def test_update_user(
@@ -429,8 +426,8 @@ def test_update_user_not_exists(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 404
-    assert r.json()["detail"] == "The user with this id does not exist in the system"
+    body = assert_error(r, 404, "user_not_found")
+    assert body["detail"] == "The user with this id does not exist in the system"
 
 
 def test_update_user_email_exists(
@@ -452,8 +449,8 @@ def test_update_user_email_exists(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 409
-    assert r.json()["detail"] == "User with this email already exists"
+    body = assert_error(r, 409, "email_taken")
+    assert body["detail"] == "User with this email already exists"
 
 
 def test_delete_user_me(client: TestClient, db: Session) -> None:
@@ -494,9 +491,7 @@ def test_delete_user_me_as_superuser(
         f"{settings.API_V1_STR}/users/me",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 409
-    response = r.json()
-    assert response["code"] == "cannot_delete_self"
+    response = assert_error(r, 409, "cannot_delete_self")
     assert response["detail"] == "Super users are not allowed to delete themselves"
 
 
@@ -526,8 +521,8 @@ def test_delete_user_not_found(
         f"{settings.API_V1_STR}/users/{uuid.uuid4()}",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 404
-    assert r.json()["detail"] == "User not found"
+    body = assert_error(r, 404, "user_not_found")
+    assert body["detail"] == "User not found"
 
 
 def test_delete_user_current_super_user_error(
@@ -541,9 +536,8 @@ def test_delete_user_current_super_user_error(
         f"{settings.API_V1_STR}/users/{user_id}",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 409
-    assert r.json()["code"] == "cannot_delete_self"
-    assert r.json()["detail"] == "Super users are not allowed to delete themselves"
+    body = assert_error(r, 409, "cannot_delete_self")
+    assert body["detail"] == "Super users are not allowed to delete themselves"
 
 
 def test_delete_user_without_privileges(
@@ -558,5 +552,61 @@ def test_delete_user_without_privileges(
         f"{settings.API_V1_STR}/users/{user.id}",
         headers=normal_user_token_headers,
     )
-    assert r.status_code == 403
-    assert r.json()["detail"] == "The user doesn't have enough privileges"
+    body = assert_error(r, 403, "forbidden")
+    assert body["detail"] == "The user doesn't have enough privileges"
+
+
+@pytest.fixture
+def sole_superuser(db: Session) -> Generator[User]:
+    """Make FIRST_SUPERUSER the only active superuser, restoring the others after."""
+    others = db.exec(
+        select(User).where(
+            col(User.is_superuser).is_(True),
+            col(User.is_active).is_(True),
+            User.email != settings.FIRST_SUPERUSER,
+        )
+    ).all()
+    for user in others:
+        user.is_superuser = False
+        db.add(user)
+    db.commit()
+    first = crud.get_user_by_email(session=db, email=settings.FIRST_SUPERUSER)
+    assert first
+    yield first
+    for user in others:
+        user.is_superuser = True
+        db.add(user)
+    db.commit()
+
+
+@pytest.mark.parametrize("body", [{"is_superuser": False}, {"is_active": False}])
+def test_last_superuser_is_kept(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    sole_superuser: User,
+    body: dict[str, bool],
+) -> None:
+    url = f"{settings.API_V1_STR}/users/{sole_superuser.id}"
+    r = client.patch(url, headers=superuser_token_headers, json=body)
+    assert_error(r, 409, "last_superuser")
+
+    # Once a second superuser exists, either one can step down
+    email, password = random_email(), random_lower_string()
+    second = crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, password=password, is_superuser=True),
+    )
+    r = client.patch(
+        f"{settings.API_V1_STR}/users/{second.id}",
+        headers=superuser_token_headers,
+        json=body,
+    )
+    assert r.status_code == 200
+
+
+def test_last_superuser_cannot_be_deleted(db: Session, sole_superuser: User) -> None:
+    # The API can't reach this (superusers can't delete themselves), so check crud
+    with pytest.raises(Conflict) as exc:
+        crud.delete_user(session=db, db_user=sole_superuser)
+    assert exc.value.code == "last_superuser"

@@ -11,6 +11,7 @@ from app.models import User, UserCreate
 from app.utils import generate_password_reset_token
 from tests.utils.user import user_authentication_headers
 from tests.utils.utils import (
+    assert_error,
     get_superuser_token_headers,
     random_email,
     random_lower_string,
@@ -35,7 +36,7 @@ def test_get_access_token_incorrect_password(client: TestClient) -> None:
         "password": "incorrect",
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
-    assert r.status_code == 400
+    assert_error(r, 400, "invalid_grant")
 
 
 def test_logout_revokes_only_that_token(client: TestClient) -> None:
@@ -62,7 +63,7 @@ def test_logout_revokes_only_that_token(client: TestClient) -> None:
 
 def test_logout_without_token(client: TestClient) -> None:
     r = client.post(f"{settings.API_V1_STR}/logout")
-    assert r.status_code == 401
+    assert_error(r, 401, "unauthorized")
 
 
 def test_use_access_token(
@@ -150,10 +151,7 @@ def test_reset_password_invalid_token(
         headers=superuser_token_headers,
         json=data,
     )
-    response = r.json()
-
-    assert "detail" in response
-    assert r.status_code == 400
+    response = assert_error(r, 400, "invalid_reset_token")
     assert response["detail"] == "Invalid token"
 
 

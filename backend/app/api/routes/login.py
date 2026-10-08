@@ -12,6 +12,7 @@ from app.api.deps import (
     SessionDep,
     TokenPayloadDep,
     get_current_active_superuser,
+    is_company_active,
 )
 from app.core import security
 from app.core.config import settings
@@ -48,6 +49,8 @@ def login_access_token(
         raise ApiError("Incorrect email or password", code="invalid_grant")
     elif not user.is_active:
         raise ApiError("Inactive user", code="invalid_grant")
+    elif not user.is_superuser and not is_company_active(session, user):
+        raise ApiError("Company is inactive", code="invalid_grant")
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(
         access_token=security.create_access_token(

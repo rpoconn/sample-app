@@ -14,7 +14,7 @@ from app.core import security
 from app.core.config import settings
 from app.core.db import engine
 from app.errors import Forbidden, Unauthorized
-from app.models import CompanyRole, RevokedToken, TokenPayload, User
+from app.models import Company, CompanyRole, RevokedToken, TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -46,6 +46,11 @@ def get_token_payload(session: SessionDep, token: TokenDep) -> TokenPayload:
 TokenPayloadDep = Annotated[TokenPayload, Depends(get_token_payload)]
 
 
+def is_company_active(session: Session, user: User) -> bool:
+    company = session.get(Company, user.company_id)
+    return company is not None and company.is_active
+
+
 def get_current_user(session: SessionDep, token_data: TokenPayloadDep) -> User:
     user = session.get(User, token_data.sub)
     if not user:
@@ -53,6 +58,8 @@ def get_current_user(session: SessionDep, token_data: TokenPayloadDep) -> User:
         raise Unauthorized("User not found", code="invalid_token")
     if not user.is_active:
         raise Forbidden("Inactive user", code="user_inactive")
+    if not user.is_superuser and not is_company_active(session, user):
+        raise Forbidden("Company is inactive", code="company_inactive")
     return user
 
 

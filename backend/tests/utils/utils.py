@@ -1,7 +1,9 @@
 import random
 import string
+from typing import Any
 
 from fastapi.testclient import TestClient
+from httpx import Response
 
 from app.core.config import settings
 
@@ -24,3 +26,11 @@ def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
     a_token = tokens["access_token"]
     headers = {"Authorization": f"Bearer {a_token}"}
     return headers
+
+
+def assert_error(r: Response, status_code: int, code: str) -> dict[str, Any]:
+    """Assert an error response's status and envelope `code`; return the body."""
+    assert r.status_code == status_code, r.text
+    body: dict[str, Any] = r.json()
+    assert body["code"] == code, body
+    return body

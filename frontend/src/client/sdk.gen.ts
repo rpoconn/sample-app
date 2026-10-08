@@ -713,6 +713,9 @@ export class ServiceService {
      * Read User Jurisdiction Ids For Service
      *
      * The user's active jurisdiction ids as a plain JSON array, e.g. ["…", "…"].
+     *
+     * An inactive user, or a user of an inactive company, monitors nothing: the
+     * response is [] rather than an error.
      */
     public static readUserJurisdictionIdsForService<ThrowOnError extends boolean = true>(options: Options<serviceReadUserJurisdictionIdsForServiceData, ThrowOnError>) {
         return (options.client ?? client).get<serviceReadUserJurisdictionIdsForServiceResponses, serviceReadUserJurisdictionIdsForServiceErrors, ThrowOnError>({

@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from app import crud
 from app.core.config import settings
 from app.models import CompanyCreate, CompanyRole, User
-from tests.utils.utils import random_email, random_lower_string
+from tests.utils.utils import assert_error, random_email, random_lower_string
 
 
 def test_create_user(client: TestClient, db: Session) -> None:
@@ -62,7 +62,7 @@ def test_create_user_unknown_company(client: TestClient) -> None:
         },
     )
 
-    assert r.status_code == 404
+    assert_error(r, 404, "company_not_found")
 
 
 def test_create_user_existing_email(client: TestClient) -> None:
@@ -75,5 +75,4 @@ def test_create_user_existing_email(client: TestClient) -> None:
     assert client.post(url, json=body).status_code == 200
 
     r = client.post(url, json=body)
-    assert r.status_code == 409
-    assert r.json()["code"] == "email_taken"
+    assert_error(r, 409, "email_taken")

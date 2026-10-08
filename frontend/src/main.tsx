@@ -24,9 +24,11 @@ const handleApiError = (error: Error) => {
         return
     }
     const status = error.response?.status
+    const code = error.response?.data?.code
     if (
         status === 401 ||
-        (status === 403 && error.response?.data?.code === "user_inactive")
+        (status === 403 &&
+            (code === "user_inactive" || code === "company_inactive"))
     ) {
         localStorage.removeItem("access_token")
         window.location.href = "/login"

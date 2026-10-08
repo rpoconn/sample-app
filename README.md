@@ -82,7 +82,7 @@ All routes are under `/api/v1`. The ones that matter for this feature:
 | `GET /users/me/jurisdictions/ids` | The current user's selected ids, as `{ jurisdiction_ids, count }` |
 | `PUT /users/me/jurisdictions` | Replace the user's selection (rejects unlicensed or structural ids) |
 | `POST /users/me/jurisdictions/subtree` | Turn a whole subtree on or off in one save, skipping locked rows |
-| `GET /service/users/{user_id}/jurisdiction-ids` | **For other services:** a plain array of a user's ids. Authenticates with an `X-API-Key` header (`SERVICE_API_KEY` in `.env`) or a superuser token |
+| `GET /service/users/{user_id}/jurisdiction-ids` | **For other services:** a plain array of a user's ids. Authenticates with an `X-API-Key` header (`SERVICE_API_KEY` in `.env`) or a superuser token. An inactive user, or a user of an inactive company, gets `[]` |
 | `GET /companies/{id}/jurisdictions/ids` | The company's licensed ids |
 | `PUT /companies/{id}/jurisdictions` | Replace the license (company admins) |
 | `POST /companies/{id}/jurisdictions/affected-users` | Who would lose an opt-in if these were dropped |

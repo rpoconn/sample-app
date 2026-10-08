@@ -25,8 +25,8 @@ const { defaultSort } = JurisdictionGridService
 // Rows per page request
 const pageSize = 100
 
-// The grid's wrapper border, above and below
-const borderHeight = 2
+// The grid's wrapper border, above and below, and the header's bottom border
+const borderHeight = 3
 
 // Body kept open with no rows, for the no-matches message over it
 const emptyBodyHeight = 192
