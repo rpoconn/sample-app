@@ -5,6 +5,7 @@ from typing import Any
 from sqlmodel import Session, case, col, delete, func, or_, select
 
 from app.core.security import get_password_hash, verify_password
+from app.errors import Conflict, InvalidInput, NotFound
 from app.jurisdiction_query import Selection
 from app.models import (
     DEFAULT_COMPANY_ID,
@@ -13,8 +14,6 @@ from app.models import (
     CompanyJurisdiction,
     CompanyRole,
     CompanyUpdate,
-    Item,
-    ItemCreate,
     Jurisdiction,
     JurisdictionCreate,
     JurisdictionUpdate,
@@ -29,35 +28,10 @@ from app.models import (
 )
 
 
-# Raised for rule violations; app.main maps status_code onto the HTTP response
-class CrudError(Exception):
-    status_code = 400
-
-    def __init__(self, detail: str) -> None:
-        super().__init__(detail)
-        self.detail = detail
-
-
-class NotFoundError(CrudError):
-    status_code = 404
-
-
-class ConflictError(CrudError):
-    status_code = 409
-
-
-class InvalidSelectionError(CrudError):
-    status_code = 422
-
-
-class NotPermittedError(CrudError):
-    status_code = 403
-
-
 def _get_company(*, session: Session, company_id: uuid.UUID) -> Company:
     company = session.get(Company, company_id)
     if not company:
-        raise NotFoundError("Company not found")
+        raise NotFound("Company not found", code="company_not_found")
     return company
 
 
@@ -131,14 +105,6 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
     return db_user
 
 
-def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -> Item:
-    db_item = Item.model_validate(item_in, update={"owner_id": owner_id})
-    session.add(db_item)
-    session.commit()
-    session.refresh(db_item)
-    return db_item
-
-
 def seed_jurisdictions(*, session: Session, nodes: list[dict[str, Any]]) -> int:
     """Insert a nested jurisdiction tree, skipping ids that already exist.
 
@@ -193,7 +159,11 @@ def _get_parent(
         return None
     parent = session.get(Jurisdiction, parent_id)
     if not parent:
-        raise NotFoundError("Parent jurisdiction not found")
+        raise InvalidInput(
+            "Parent jurisdiction not found",
+            code="unknown_jurisdiction",
+            context={"jurisdiction_ids": [str(parent_id)]},
+        )
     return parent
 
 
@@ -210,8 +180,9 @@ def _check_sibling_name(
     if exclude_id:
         statement = statement.where(Jurisdiction.id != exclude_id)
     if session.exec(statement).first():
-        raise ConflictError(
-            "A jurisdiction with this name already exists under that parent"
+        raise Conflict(
+            "A jurisdiction with this name already exists under that parent",
+            code="jurisdiction_name_taken",
         )
 
 
@@ -272,13 +243,15 @@ def update_jurisdiction(
 
     if data.get("is_structural") and not db_obj.is_structural:
         if _has_company_optins(session=session, jurisdiction_id=db_obj.id):
-            raise ConflictError(
-                "Companies have opted into this jurisdiction; it cannot become structural"
+            raise Conflict(
+                "Companies have opted into this jurisdiction; it cannot become structural",
+                code="jurisdiction_has_licenses",
             )
     parent = _get_parent(session=session, parent_id=new_parent_id)
     if parent and parent.path.startswith(db_obj.path):
-        raise ConflictError(
-            "A jurisdiction cannot be moved under itself or its descendants"
+        raise Conflict(
+            "A jurisdiction cannot be moved under itself or its descendants",
+            code="jurisdiction_cycle",
         )
     if moving or new_name != db_obj.name:
         _check_sibling_name(
@@ -329,10 +302,14 @@ def delete_jurisdiction(*, session: Session, db_obj: Jurisdiction) -> None:
         select(Jurisdiction.id).where(Jurisdiction.parent_id == db_obj.id)
     ).first()
     if has_children:
-        raise ConflictError("Jurisdiction has children; delete or move them first")
+        raise Conflict(
+            "Jurisdiction has children; delete or move them first",
+            code="jurisdiction_has_children",
+        )
     if _has_company_optins(session=session, jurisdiction_id=db_obj.id):
-        raise ConflictError(
-            "Companies have opted into this jurisdiction; remove those opt-ins first"
+        raise Conflict(
+            "Companies have opted into this jurisdiction; remove those opt-ins first",
+            code="jurisdiction_has_licenses",
         )
     session.delete(db_obj)
     session.commit()
@@ -355,7 +332,9 @@ def _check_company_name(
     if exclude_id:
         statement = statement.where(Company.id != exclude_id)
     if session.exec(statement).first():
-        raise ConflictError("A company with this name already exists")
+        raise Conflict(
+            "A company with this name already exists", code="company_name_taken"
+        )
 
 
 def create_company(*, session: Session, company_in: CompanyCreate) -> Company:
@@ -507,13 +486,20 @@ def _validate_selectable(*, session: Session, ids: set[uuid.UUID]) -> None:
     rows = session.exec(select(Jurisdiction).where(col(Jurisdiction.id).in_(ids))).all()
     missing = ids - {j.id for j in rows}
     if missing:
-        raise InvalidSelectionError(
-            f"Unknown jurisdiction ids: {sorted(str(i) for i in missing)}"
+        raise InvalidInput(
+            "Unknown jurisdiction ids",
+            code="unknown_jurisdiction",
+            context={"jurisdiction_ids": sorted(str(i) for i in missing)},
         )
-    structural = [j.name_path for j in rows if j.is_structural]
+    structural = [j for j in rows if j.is_structural]
     if structural:
-        raise InvalidSelectionError(
-            f"Structural jurisdictions cannot be selected: {structural}"
+        raise InvalidInput(
+            "Structural jurisdictions cannot be selected",
+            code="jurisdiction_structural",
+            context={
+                "jurisdiction_ids": sorted(str(j.id) for j in structural),
+                "name_paths": sorted(j.name_path for j in structural),
+            },
         )
 
 
@@ -560,9 +546,10 @@ def set_user_jurisdictions(
         ).all()
     )
     if outside := wanted - allowed:
-        raise NotPermittedError(
-            "The company has not opted into jurisdictions: "
-            f"{sorted(str(i) for i in outside)}"
+        raise InvalidInput(
+            "The company has not opted into these jurisdictions",
+            code="jurisdiction_not_licensed",
+            context={"jurisdiction_ids": sorted(str(i) for i in outside)},
         )
     current = set(
         session.exec(
@@ -626,8 +613,10 @@ def get_subtree_ids(
         select(Jurisdiction).where(col(Jurisdiction.id).in_(ids))
     ).all()
     if missing := ids - {r.id for r in roots}:
-        raise NotFoundError(
-            f"Unknown jurisdiction ids: {sorted(str(i) for i in missing)}"
+        raise InvalidInput(
+            "Unknown jurisdiction ids",
+            code="unknown_jurisdiction",
+            context={"jurisdiction_ids": sorted(str(i) for i in missing)},
         )
     statement = select(Jurisdiction.id).where(
         or_(*(col(Jurisdiction.path).startswith(r.path) for r in roots)),

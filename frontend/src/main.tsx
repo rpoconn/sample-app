@@ -20,9 +20,13 @@ client.setConfig({
 })
 
 const handleApiError = (error: Error) => {
+    if (!(error instanceof AxiosError)) {
+        return
+    }
+    const status = error.response?.status
     if (
-        error instanceof AxiosError &&
-        [401, 403].includes(error.response?.status ?? 0)
+        status === 401 ||
+        (status === 403 && error.response?.data?.code === "user_inactive")
     ) {
         localStorage.removeItem("access_token")
         window.location.href = "/login"

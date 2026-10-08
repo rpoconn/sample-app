@@ -263,7 +263,6 @@ export function JurisdictionGrid({
                     }
                     filtering={Service.hasFilters(filters)}
                     onClear={() => setFilters(noFilters)}
-                    summary={facets.summary}
                     onExpandAll={() => {
                         source.expandAll()
                         reload()

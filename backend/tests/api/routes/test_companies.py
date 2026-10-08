@@ -161,7 +161,8 @@ def test_user_optins_limited_to_company_set(client: TestClient, s: Setup) -> Non
         headers=s.member.headers,
         json={"jurisdiction_ids": [str(s.not_allowed.id)]},
     )
-    assert r.status_code == 403
+    assert r.status_code == 422
+    assert r.json()["code"] == "jurisdiction_not_licensed"
 
     r = client.put(
         url, headers=s.member.headers, json={"jurisdiction_ids": [str(s.allowed.id)]}

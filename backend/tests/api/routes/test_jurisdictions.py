@@ -373,4 +373,20 @@ def test_subtree_toggles(
         headers=superuser_token_headers,
         json={"root_id": str(uuid.uuid4()), "enabled": True},
     )
-    assert r.status_code == 404
+    assert r.status_code == 422
+    assert r.json()["code"] == "unknown_jurisdiction"
+
+
+def test_create_with_unknown_parent(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    parent_id = str(uuid.uuid4())
+    r = client.post(
+        f"{API}/jurisdictions/",
+        headers=superuser_token_headers,
+        json={"name": random_lower_string(), "parent_id": parent_id},
+    )
+    assert r.status_code == 422
+    body = r.json()
+    assert body["code"] == "unknown_jurisdiction"
+    assert body["context"]["jurisdiction_ids"] == [parent_id]

@@ -1,11 +1,13 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app import crud
 from app.api.deps import SessionDep
 from app.core.security import get_password_hash
+from app.errors import Conflict, NotFound
 from app.models import (
     DEFAULT_COMPANY_ID,
     Company,
@@ -34,7 +36,9 @@ def create_user(user_in: PrivateUserCreate, session: SessionDep) -> Any:
     """
     company_id = user_in.company_id or DEFAULT_COMPANY_ID
     if not session.get(Company, company_id):
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise NotFound("Company not found", code="company_not_found")
+    if crud.get_user_by_email(session=session, email=user_in.email):
+        raise Conflict("User with this email already exists", code="email_taken")
 
     user = User(
         email=user_in.email,

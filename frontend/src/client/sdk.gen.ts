@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { companiesCreateCompanyData, companiesCreateCompanyErrors, companiesCreateCompanyResponses, companiesReadCompaniesData, companiesReadCompaniesErrors, companiesReadCompaniesResponses, companiesReadCompanyAdminsData, companiesReadCompanyAdminsErrors, companiesReadCompanyAdminsResponses, companiesReadCompanyData, companiesReadCompanyErrors, companiesReadCompanyJurisdictionAffectedUsersData, companiesReadCompanyJurisdictionAffectedUsersErrors, companiesReadCompanyJurisdictionAffectedUsersResponses, companiesReadCompanyJurisdictionIdsData, companiesReadCompanyJurisdictionIdsErrors, companiesReadCompanyJurisdictionIdsResponses, companiesReadCompanyJurisdictionsData, companiesReadCompanyJurisdictionsErrors, companiesReadCompanyJurisdictionsResponses, companiesReadCompanyJurisdictionUserCountsData, companiesReadCompanyJurisdictionUserCountsErrors, companiesReadCompanyJurisdictionUserCountsResponses, companiesReadCompanyResponses, companiesSetCompanyJurisdictionsData, companiesSetCompanyJurisdictionsErrors, companiesSetCompanyJurisdictionsResponses, companiesToggleCompanyJurisdictionSubtreeData, companiesToggleCompanyJurisdictionSubtreeErrors, companiesToggleCompanyJurisdictionSubtreeResponses, companiesUpdateCompanyData, companiesUpdateCompanyErrors, companiesUpdateCompanyResponses, itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, jurisdictionsCreateJurisdictionData, jurisdictionsCreateJurisdictionErrors, jurisdictionsCreateJurisdictionResponses, jurisdictionsDeleteJurisdictionData, jurisdictionsDeleteJurisdictionErrors, jurisdictionsDeleteJurisdictionResponses, jurisdictionsReadJurisdictionData, jurisdictionsReadJurisdictionErrors, jurisdictionsReadJurisdictionFacetsData, jurisdictionsReadJurisdictionFacetsErrors, jurisdictionsReadJurisdictionFacetsResponses, jurisdictionsReadJurisdictionResponses, jurisdictionsReadJurisdictionRowsData, jurisdictionsReadJurisdictionRowsErrors, jurisdictionsReadJurisdictionRowsResponses, jurisdictionsReadJurisdictionsData, jurisdictionsReadJurisdictionsErrors, jurisdictionsReadJurisdictionsResponses, jurisdictionsReadJurisdictionTreeData, jurisdictionsReadJurisdictionTreeErrors, jurisdictionsReadJurisdictionTreeResponses, jurisdictionsUpdateJurisdictionData, jurisdictionsUpdateJurisdictionErrors, jurisdictionsUpdateJurisdictionResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginLogoutData, loginLogoutResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, serviceReadUserJurisdictionIdsForServiceData, serviceReadUserJurisdictionIdsForServiceErrors, serviceReadUserJurisdictionIdsForServiceResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadMyJurisdictionIdsData, usersReadMyJurisdictionIdsResponses, usersReadMyJurisdictionsData, usersReadMyJurisdictionsResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserJurisdictionIdsData, usersReadUserJurisdictionIdsErrors, usersReadUserJurisdictionIdsResponses, usersReadUserJurisdictionsData, usersReadUserJurisdictionsErrors, usersReadUserJurisdictionsResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersSetMyJurisdictionsData, usersSetMyJurisdictionsErrors, usersSetMyJurisdictionsResponses, usersSetUserJurisdictionsData, usersSetUserJurisdictionsErrors, usersSetUserJurisdictionsResponses, usersToggleMyJurisdictionSubtreeData, usersToggleMyJurisdictionSubtreeErrors, usersToggleMyJurisdictionSubtreeResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { companiesCreateCompanyData, companiesCreateCompanyErrors, companiesCreateCompanyResponses, companiesReadCompaniesData, companiesReadCompaniesErrors, companiesReadCompaniesResponses, companiesReadCompanyAdminsData, companiesReadCompanyAdminsErrors, companiesReadCompanyAdminsResponses, companiesReadCompanyData, companiesReadCompanyErrors, companiesReadCompanyJurisdictionAffectedUsersData, companiesReadCompanyJurisdictionAffectedUsersErrors, companiesReadCompanyJurisdictionAffectedUsersResponses, companiesReadCompanyJurisdictionIdsData, companiesReadCompanyJurisdictionIdsErrors, companiesReadCompanyJurisdictionIdsResponses, companiesReadCompanyJurisdictionsData, companiesReadCompanyJurisdictionsErrors, companiesReadCompanyJurisdictionsResponses, companiesReadCompanyJurisdictionUserCountsData, companiesReadCompanyJurisdictionUserCountsErrors, companiesReadCompanyJurisdictionUserCountsResponses, companiesReadCompanyResponses, companiesSetCompanyJurisdictionsData, companiesSetCompanyJurisdictionsErrors, companiesSetCompanyJurisdictionsResponses, companiesToggleCompanyJurisdictionSubtreeData, companiesToggleCompanyJurisdictionSubtreeErrors, companiesToggleCompanyJurisdictionSubtreeResponses, companiesUpdateCompanyData, companiesUpdateCompanyErrors, companiesUpdateCompanyResponses, jurisdictionsCreateJurisdictionData, jurisdictionsCreateJurisdictionErrors, jurisdictionsCreateJurisdictionResponses, jurisdictionsDeleteJurisdictionData, jurisdictionsDeleteJurisdictionErrors, jurisdictionsDeleteJurisdictionResponses, jurisdictionsReadJurisdictionData, jurisdictionsReadJurisdictionErrors, jurisdictionsReadJurisdictionFacetsData, jurisdictionsReadJurisdictionFacetsErrors, jurisdictionsReadJurisdictionFacetsResponses, jurisdictionsReadJurisdictionResponses, jurisdictionsReadJurisdictionRowsData, jurisdictionsReadJurisdictionRowsErrors, jurisdictionsReadJurisdictionRowsResponses, jurisdictionsReadJurisdictionsData, jurisdictionsReadJurisdictionsErrors, jurisdictionsReadJurisdictionsResponses, jurisdictionsReadJurisdictionTreeData, jurisdictionsReadJurisdictionTreeErrors, jurisdictionsReadJurisdictionTreeResponses, jurisdictionsUpdateJurisdictionData, jurisdictionsUpdateJurisdictionErrors, jurisdictionsUpdateJurisdictionResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginLogoutData, loginLogoutResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, serviceReadUserJurisdictionIdsForServiceData, serviceReadUserJurisdictionIdsForServiceErrors, serviceReadUserJurisdictionIdsForServiceResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadMyJurisdictionIdsData, usersReadMyJurisdictionIdsResponses, usersReadMyJurisdictionsData, usersReadMyJurisdictionsResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserJurisdictionIdsData, usersReadUserJurisdictionIdsErrors, usersReadUserJurisdictionIdsResponses, usersReadUserJurisdictionsData, usersReadUserJurisdictionsErrors, usersReadUserJurisdictionsResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersSetMyJurisdictionsData, usersSetMyJurisdictionsErrors, usersSetMyJurisdictionsResponses, usersSetUserJurisdictionsData, usersSetUserJurisdictionsErrors, usersSetUserJurisdictionsResponses, usersToggleMyJurisdictionSubtreeData, usersToggleMyJurisdictionSubtreeErrors, usersToggleMyJurisdictionSubtreeResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -384,20 +384,6 @@ export class UsersService {
 
 export class UtilsService {
     /**
-     * Test Email
-     *
-     * Test emails.
-     */
-    public static testEmail<ThrowOnError extends boolean = true>(options: Options<utilsTestEmailData, ThrowOnError>) {
-        return (options.client ?? client).post<utilsTestEmailResponses, utilsTestEmailErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/utils/test-email/',
-            ...options
-        });
-    }
-    
-    /**
      * Health Check
      */
     public static healthCheck<ThrowOnError extends boolean = true>(options?: Options<utilsHealthCheckData, ThrowOnError>) {
@@ -405,86 +391,6 @@ export class UtilsService {
             responseType: 'json',
             url: '/api/v1/utils/health-check/',
             ...options
-        });
-    }
-}
-
-export class ItemsService {
-    /**
-     * Read Items
-     *
-     * Retrieve items.
-     */
-    public static readItems<ThrowOnError extends boolean = true>(options?: Options<itemsReadItemsData, ThrowOnError>) {
-        return (options?.client ?? client).get<itemsReadItemsResponses, itemsReadItemsErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/',
-            ...options
-        });
-    }
-    
-    /**
-     * Create Item
-     *
-     * Create new item.
-     */
-    public static createItem<ThrowOnError extends boolean = true>(options: Options<itemsCreateItemData, ThrowOnError>) {
-        return (options.client ?? client).post<itemsCreateItemResponses, itemsCreateItemErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    /**
-     * Delete Item
-     *
-     * Delete an item.
-     */
-    public static deleteItem<ThrowOnError extends boolean = true>(options: Options<itemsDeleteItemData, ThrowOnError>) {
-        return (options.client ?? client).delete<itemsDeleteItemResponses, itemsDeleteItemErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
-            ...options
-        });
-    }
-    
-    /**
-     * Read Item
-     *
-     * Get item by ID.
-     */
-    public static readItem<ThrowOnError extends boolean = true>(options: Options<itemsReadItemData, ThrowOnError>) {
-        return (options.client ?? client).get<itemsReadItemResponses, itemsReadItemErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
-            ...options
-        });
-    }
-    
-    /**
-     * Update Item
-     *
-     * Update an item.
-     */
-    public static updateItem<ThrowOnError extends boolean = true>(options: Options<itemsUpdateItemData, ThrowOnError>) {
-        return (options.client ?? client).put<itemsUpdateItemResponses, itemsUpdateItemErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
         });
     }
 }

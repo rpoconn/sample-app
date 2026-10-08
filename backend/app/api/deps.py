@@ -4,7 +4,7 @@ from collections.abc import Generator
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
@@ -13,6 +13,7 @@ from sqlmodel import Session
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
+from app.errors import Forbidden, Unauthorized
 from app.models import CompanyRole, RevokedToken, TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -36,12 +37,9 @@ def get_token_payload(session: SessionDep, token: TokenDep) -> TokenPayload:
         )
         token_data = TokenPayload(**payload)
     except InvalidTokenError, ValidationError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials",
-        )
+        raise Unauthorized("Could not validate credentials", code="invalid_token")
     if session.get(RevokedToken, token_data.jti):
-        raise HTTPException(status_code=401, detail="Token has been revoked")
+        raise Unauthorized("Token has been revoked", code="token_revoked")
     return token_data
 
 
@@ -52,9 +50,9 @@ def get_current_user(session: SessionDep, token_data: TokenPayloadDep) -> User:
     user = session.get(User, token_data.sub)
     if not user:
         # 401 (not 404) so clients drop stale tokens, e.g. after a DB reset
-        raise HTTPException(status_code=401, detail="User not found")
+        raise Unauthorized("User not found", code="invalid_token")
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise Forbidden("Inactive user", code="user_inactive")
     return user
 
 
@@ -63,9 +61,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 def get_current_active_superuser(current_user: CurrentUser) -> User:
     if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
-        )
+        raise Forbidden("The user doesn't have enough privileges")
     return current_user
 
 
@@ -84,23 +80,17 @@ def require_service_caller(
     if api_key is not None:
         expected = settings.SERVICE_API_KEY
         if not expected or not secrets.compare_digest(api_key, expected):
-            raise HTTPException(status_code=401, detail="Invalid API key")
+            raise Unauthorized("Invalid API key", code="invalid_api_key")
         return
     if token is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise Unauthorized("Not authenticated")
     user = get_current_user(session, get_token_payload(session, token))
     get_current_active_superuser(user)
 
 
 def require_company_member(current_user: User, company_id: uuid.UUID) -> None:
     if not current_user.is_superuser and current_user.company_id != company_id:
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
-        )
+        raise Forbidden("The user doesn't have enough privileges")
 
 
 def require_company_admin(current_user: User, company_id: uuid.UUID) -> None:
@@ -109,6 +99,4 @@ def require_company_admin(current_user: User, company_id: uuid.UUID) -> None:
         and current_user.company_role == CompanyRole.admin
     )
     if not current_user.is_superuser and not is_admin:
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
-        )
+        raise Forbidden("The user doesn't have enough privileges")

@@ -6,11 +6,31 @@ This app lets each user choose which regulatory jurisdictions they monitor, with
 
 It is built on the [Full Stack FastAPI Template](https://github.com/fastapi/full-stack-fastapi-template): FastAPI, SQLModel and SQLite on the backend, and React, TypeScript, TanStack Router/Query and ag-grid on the frontend.
 
+## Requirements
+
+Install these first:
+
+| Tool | Why | Install |
+|---|---|---|
+| [Git](https://git-scm.com/downloads) | Cloning the repo. On Windows, [Git for Windows](https://gitforwindows.org) also provides Git Bash, which runs the start scripts | `winget install Git.Git` on Windows; Xcode Command Line Tools on macOS (`xcode-select --install`) |
+| [uv](https://docs.astral.sh/uv/getting-started/installation/) | Runs the backend and manages its Python packages | `powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 \| iex"` on Windows; `curl -LsSf https://astral.sh/uv/install.sh \| sh` on macOS and Linux |
+| [Bun](https://bun.sh/docs/installation) | Runs the frontend and installs its packages | `powershell -c "irm bun.sh/install.ps1 \| iex"` on Windows; `curl -fsSL https://bun.sh/install \| bash` on macOS and Linux |
+
+You don't need to install Python yourself. The backend needs Python 3.14, and `uv sync` downloads it if it's missing. The database is SQLite, which is a file, so there is no database server to install. The root `.env` already has working local defaults.
+
+After installing uv and Bun, open a new terminal so it picks up the updated `PATH`.
+
 ## Running locally
 
-You need [uv](https://docs.astral.sh/uv/) for Python and [Bun](https://bun.sh) for the frontend. The root `.env` already has working local defaults.
+The start scripts are bash. On Windows, run them from Git Bash. In VS Code, choose **Git Bash** from the dropdown next to **+** in the terminal panel. Typing `bash` in PowerShell opens WSL instead, which can't see your Windows `uv` or `bun`.
 
-**Backend.** From `backend/`:
+**Backend.** From the project root, run the start script. It installs dependencies, migrates and seeds the database, and starts the server. It's safe to rerun: seeding only happens on first setup.
+
+```bash
+./start_backend.bash
+```
+
+Or run the steps yourself from `backend/`:
 
 ```bash
 uv sync
@@ -19,7 +39,13 @@ uv run python app/initial_data.py  # creates the superuser, seeds the tree and t
 uv run fastapi dev                 # http://localhost:8000, API docs at /docs
 ```
 
-**Frontend.** From the project root, in a second terminal:
+**Frontend.** From the project root, in a second terminal, run the start script. It installs dependencies and starts the dev server at http://localhost:5173.
+
+```bash
+./start_ui.bash
+```
+
+Or run the steps yourself from the project root:
 
 ```bash
 bun install
@@ -28,7 +54,7 @@ bun run dev                        # http://localhost:5173
 
 Log in as `admin@example.com` / `changethis`. This user is an admin of the seeded company, so they see both **Jurisdictions** (their own selection) and **Company Admin** (the company's license).
 
-To reset the data, stop the backend, delete `backend/app.db`, and run the two database commands again. More detail is in [development.md](development.md).
+To reset the data, stop the backend, delete `backend/app.db`, and run `./start_backend.bash` again. More detail is in [development.md](development.md).
 
 ## What I built
 

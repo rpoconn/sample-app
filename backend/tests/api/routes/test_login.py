@@ -49,7 +49,12 @@ def test_logout_revokes_only_that_token(client: TestClient) -> None:
 
     r = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
     assert r.status_code == 401
-    assert r.json() == {"detail": "Token has been revoked"}
+    assert r.json() == {
+        "detail": "Token has been revoked",
+        "code": "token_revoked",
+        "context": {},
+    }
+    assert r.headers["WWW-Authenticate"] == "Bearer"
 
     r = client.get(f"{settings.API_V1_STR}/users/me", headers=other_headers)
     assert r.status_code == 200

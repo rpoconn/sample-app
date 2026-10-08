@@ -90,7 +90,7 @@ export class JurisdictionGridService {
         })
     }
 
-    // Filter options, status tab counts and the summary under the filters
+    // Filter options, status tab counts and row totals
     static facetsQuery(mode: JurisdictionMode, filters: JurisdictionFilters) {
         return queryOptions({
             queryKey: JurisdictionGridService.keys.facetsFor(mode, filters),

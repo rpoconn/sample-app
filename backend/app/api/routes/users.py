@@ -1,8 +1,8 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col, delete, func, select
+from fastapi import APIRouter, Depends
+from sqlmodel import col, func, select
 
 from app import crud
 from app.api.deps import (
@@ -14,8 +14,8 @@ from app.api.deps import (
 from app.api.routes.jurisdictions import to_public_list
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
+from app.errors import ApiError, Conflict, Forbidden, NotFound
 from app.models import (
-    Item,
     JurisdictionIds,
     JurisdictionSelection,
     JurisdictionsPublic,
@@ -66,9 +66,9 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists in the system.",
+        raise Conflict(
+            "The user with this email already exists in the system.",
+            code="email_taken",
         )
 
     user = crud.create_user(session=session, user_create=user_in)
@@ -95,9 +95,7 @@ def update_user_me(
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != current_user.id:
-            raise HTTPException(
-                status_code=409, detail="User with this email already exists"
-            )
+            raise Conflict("User with this email already exists", code="email_taken")
     user_data = user_in.model_dump(exclude_unset=True)
     current_user.sqlmodel_update(user_data)
     session.add(current_user)
@@ -115,10 +113,11 @@ def update_password_me(
     """
     verified, _ = verify_password(body.current_password, current_user.hashed_password)
     if not verified:
-        raise HTTPException(status_code=400, detail="Incorrect password")
+        raise ApiError("Incorrect password", code="incorrect_password")
     if body.current_password == body.new_password:
-        raise HTTPException(
-            status_code=400, detail="New password cannot be the same as the current one"
+        raise ApiError(
+            "New password cannot be the same as the current one",
+            code="password_unchanged",
         )
     hashed_password = get_password_hash(body.new_password)
     current_user.hashed_password = hashed_password
@@ -186,8 +185,9 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     Delete own user.
     """
     if current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="Super users are not allowed to delete themselves"
+        raise Conflict(
+            "Super users are not allowed to delete themselves",
+            code="cannot_delete_self",
         )
     session.delete(current_user)
     session.commit()
@@ -201,9 +201,9 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists in the system",
+        raise Conflict(
+            "The user with this email already exists in the system",
+            code="email_taken",
         )
     user_create = UserCreate.model_validate(user_in)
     user = crud.create_user(session=session, user_create=user_create)
@@ -221,12 +221,9 @@ def read_user_by_id(
     if user == current_user:
         return user
     if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="The user doesn't have enough privileges",
-        )
+        raise Forbidden("The user doesn't have enough privileges")
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise NotFound("User not found", code="user_not_found")
     return user
 
 
@@ -247,16 +244,14 @@ def update_user(
 
     db_user = session.get(User, user_id)
     if not db_user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this id does not exist in the system",
+        raise NotFound(
+            "The user with this id does not exist in the system",
+            code="user_not_found",
         )
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != user_id:
-            raise HTTPException(
-                status_code=409, detail="User with this email already exists"
-            )
+            raise Conflict("User with this email already exists", code="email_taken")
 
     db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
     return db_user
@@ -271,13 +266,12 @@ def delete_user(
     """
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise NotFound("User not found", code="user_not_found")
     if user == current_user:
-        raise HTTPException(
-            status_code=403, detail="Super users are not allowed to delete themselves"
+        raise Conflict(
+            "Super users are not allowed to delete themselves",
+            code="cannot_delete_self",
         )
-    statement = delete(Item).where(col(Item.owner_id) == user_id)
-    session.exec(statement)
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
@@ -290,10 +284,8 @@ def _get_user_for_company_admin(
     if not user:
         if not current_user.is_superuser:
             # Don't reveal whether the id exists to non-superusers
-            raise HTTPException(
-                status_code=403, detail="The user doesn't have enough privileges"
-            )
-        raise HTTPException(status_code=404, detail="User not found")
+            raise Forbidden("The user doesn't have enough privileges")
+        raise NotFound("User not found", code="user_not_found")
     require_company_admin(current_user, user.company_id)
     return user
 

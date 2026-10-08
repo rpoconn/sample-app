@@ -63,3 +63,17 @@ def test_create_user_unknown_company(client: TestClient) -> None:
     )
 
     assert r.status_code == 404
+
+
+def test_create_user_existing_email(client: TestClient) -> None:
+    body = {
+        "email": random_email(),
+        "password": "password123",
+        "full_name": "Twice",
+    }
+    url = f"{settings.API_V1_STR}/private/users/"
+    assert client.post(url, json=body).status_code == 200
+
+    r = client.post(url, json=body)
+    assert r.status_code == 409
+    assert r.json()["code"] == "email_taken"

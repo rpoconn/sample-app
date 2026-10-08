@@ -84,7 +84,11 @@ def test_get_non_existing_user_as_superuser(
         headers=superuser_token_headers,
     )
     assert r.status_code == 404
-    assert r.json() == {"detail": "User not found"}
+    assert r.json() == {
+        "detail": "User not found",
+        "code": "user_not_found",
+        "context": {},
+    }
 
 
 def test_get_existing_user_current_user(client: TestClient, db: Session) -> None:
@@ -126,7 +130,11 @@ def test_get_existing_user_permissions_error(
         headers=normal_user_token_headers,
     )
     assert r.status_code == 403
-    assert r.json() == {"detail": "The user doesn't have enough privileges"}
+    assert r.json() == {
+        "detail": "The user doesn't have enough privileges",
+        "code": "forbidden",
+        "context": {},
+    }
 
 
 def test_get_non_existing_user_permissions_error(
@@ -140,7 +148,11 @@ def test_get_non_existing_user_permissions_error(
         headers=normal_user_token_headers,
     )
     assert r.status_code == 403
-    assert r.json() == {"detail": "The user doesn't have enough privileges"}
+    assert r.json() == {
+        "detail": "The user doesn't have enough privileges",
+        "code": "forbidden",
+        "context": {},
+    }
 
 
 def test_create_user_existing_username(
@@ -158,7 +170,8 @@ def test_create_user_existing_username(
         json=data,
     )
     created_user = r.json()
-    assert r.status_code == 400
+    assert r.status_code == 409
+    assert created_user["code"] == "email_taken"
     assert "_id" not in created_user
 
 
@@ -351,7 +364,8 @@ def test_register_user_already_exists_error(client: TestClient) -> None:
         f"{settings.API_V1_STR}/users/signup",
         json=data,
     )
-    assert r.status_code == 400
+    assert r.status_code == 409
+    assert r.json()["code"] == "email_taken"
     assert r.json()["detail"] == "The user with this email already exists in the system"
 
 
@@ -455,8 +469,9 @@ def test_delete_user_me_as_superuser(
         f"{settings.API_V1_STR}/users/me",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 403
+    assert r.status_code == 409
     response = r.json()
+    assert response["code"] == "cannot_delete_self"
     assert response["detail"] == "Super users are not allowed to delete themselves"
 
 
@@ -501,7 +516,8 @@ def test_delete_user_current_super_user_error(
         f"{settings.API_V1_STR}/users/{user_id}",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 403
+    assert r.status_code == 409
+    assert r.json()["code"] == "cannot_delete_self"
     assert r.json()["detail"] == "Super users are not allowed to delete themselves"
 
 

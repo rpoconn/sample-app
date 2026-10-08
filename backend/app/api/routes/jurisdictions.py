@@ -2,12 +2,13 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import Session, col, func, select
 
 from app import crud
 from app import jurisdiction_query as jq
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.errors import NotFound
 from app.models import (
     CompanyRole,
     Jurisdiction,
@@ -60,7 +61,7 @@ def to_public_list(
 def _get_or_404(session: Session, jurisdiction_id: uuid.UUID) -> Jurisdiction:
     jurisdiction = session.get(Jurisdiction, jurisdiction_id)
     if not jurisdiction:
-        raise HTTPException(status_code=404, detail="Jurisdiction not found")
+        raise NotFound("Jurisdiction not found", code="jurisdiction_not_found")
     return jurisdiction
 
 

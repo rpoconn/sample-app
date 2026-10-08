@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import col, func, select
 
 from app import crud
@@ -13,6 +13,7 @@ from app.api.deps import (
     require_company_member,
 )
 from app.api.routes.jurisdictions import to_public_list
+from app.errors import NotFound
 from app.models import (
     CompaniesPublic,
     Company,
@@ -74,7 +75,7 @@ def read_company(
     require_company_member(current_user, company_id)
     company = session.get(Company, company_id)
     if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise NotFound("Company not found", code="company_not_found")
     return company
 
 
@@ -91,7 +92,7 @@ def update_company(
     """
     company = session.get(Company, company_id)
     if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise NotFound("Company not found", code="company_not_found")
     return crud.update_company(session=session, db_obj=company, company_in=company_in)
 
 

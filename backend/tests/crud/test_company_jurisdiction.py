@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app import crud
+from app import crud, errors
 from app.models import (
     Company,
     CompanyCreate,
@@ -100,10 +100,11 @@ def test_user_cannot_opt_into_jurisdiction_outside_company_set(db: Session) -> N
         session=db, company_id=company.id, jurisdiction_ids=[allowed.id]
     )
 
-    with pytest.raises(crud.NotPermittedError):
+    with pytest.raises(errors.InvalidInput) as exc:
         crud.set_user_jurisdictions(
             session=db, user=user, jurisdiction_ids=[allowed.id, other.id]
         )
+    assert exc.value.code == "jurisdiction_not_licensed"
     assert user_optin_ids(db, user) == set()
 
 
@@ -162,11 +163,11 @@ def test_structural_and_unknown_jurisdictions_rejected(db: Session) -> None:
     company = make_company(db)
     structural = make_jurisdiction(db, structural=True)
 
-    with pytest.raises(crud.InvalidSelectionError):
+    with pytest.raises(errors.InvalidInput):
         crud.set_company_jurisdictions(
             session=db, company_id=company.id, jurisdiction_ids=[structural.id]
         )
-    with pytest.raises(crud.InvalidSelectionError):
+    with pytest.raises(errors.InvalidInput):
         crud.set_company_jurisdictions(
             session=db, company_id=company.id, jurisdiction_ids=[company.id]
         )
@@ -179,7 +180,7 @@ def test_cannot_make_opted_in_jurisdiction_structural(db: Session) -> None:
         session=db, company_id=company.id, jurisdiction_ids=[j.id]
     )
 
-    with pytest.raises(crud.ConflictError):
+    with pytest.raises(errors.Conflict):
         crud.update_jurisdiction(
             session=db, db_obj=j, jurisdiction_in=JurisdictionUpdate(is_structural=True)
         )
@@ -193,9 +194,9 @@ def test_delete_jurisdiction_blocked_by_children_and_optins(db: Session) -> None
         session=db, company_id=company.id, jurisdiction_ids=[child.id]
     )
 
-    with pytest.raises(crud.ConflictError):
+    with pytest.raises(errors.Conflict):
         crud.delete_jurisdiction(session=db, db_obj=parent)
-    with pytest.raises(crud.ConflictError):
+    with pytest.raises(errors.Conflict):
         crud.delete_jurisdiction(session=db, db_obj=child)
 
     crud.set_company_jurisdictions(
@@ -220,7 +221,7 @@ def test_duplicate_sibling_name_rejected(db: Session) -> None:
     root = make_jurisdiction(db)
     child = make_jurisdiction(db, root)
 
-    with pytest.raises(crud.ConflictError):
+    with pytest.raises(errors.Conflict):
         crud.create_jurisdiction(
             session=db,
             jurisdiction_in=JurisdictionCreate(name=child.name, parent_id=root.id),
@@ -258,7 +259,7 @@ def test_move_under_own_descendant_rejected(db: Session) -> None:
     child = make_jurisdiction(db, root)
 
     for target in (root, child):
-        with pytest.raises(crud.ConflictError):
+        with pytest.raises(errors.Conflict):
             crud.update_jurisdiction(
                 session=db,
                 db_obj=root,

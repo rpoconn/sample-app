@@ -21,31 +21,21 @@ import type { JurisdictionMode, StatusFilter } from "./types"
 // What each status tab shows, worded for the scope being edited
 const statusHints: Record<JurisdictionMode, Record<StatusFilter, string>> = {
     user: {
-        all: "Every jurisdiction, whether it's on or off for you.",
-        enabled:
-            "Jurisdictions you've turned on. These are the ones you manage.",
+        all: "Every jurisdiction, whether or not it's on for you.",
+        enabled: "On for you. These are the jurisdictions you manage.",
         available:
-            "Off for you, but included in your company's license. You can turn these on.",
-        disabled:
-            "Locked: your company hasn't turned these on, so you can't select them.",
+            "In your company's license but not on for you yet. You can turn these on.",
+        disabled: "Not in your company's license, so you can't turn these on.",
     },
     company: {
         all: "Every jurisdiction, whether it's on or off for the company.",
         enabled:
-            "Jurisdictions your company has turned on. Members can pick from these.",
+            "Jurisdictions this company has turned on. Members can pick from these.",
         // Never shown: the company's selections are its license
         available: "",
         disabled:
             "Jurisdictions your company hasn't turned on. Members can't pick these.",
     },
-}
-
-export type ToolbarSummary = {
-    shown: number
-    total: number
-    enabled: number
-    // User scope only
-    locked?: number | null
 }
 
 export function JurisdictionToolbar({
@@ -59,7 +49,6 @@ export function JurisdictionToolbar({
     onFacetChange,
     filtering,
     onClear,
-    summary,
     onExpandAll,
     onCollapseAll,
     onViewSelection,
@@ -75,7 +64,6 @@ export function JurisdictionToolbar({
     onFacetChange: (type: RegionType, ids: string[]) => void
     filtering: boolean
     onClear: () => void
-    summary: ToolbarSummary
     onExpandAll: () => void
     onCollapseAll: () => void
     onViewSelection: () => void
@@ -188,12 +176,36 @@ export function JurisdictionToolbar({
                 <Button
                     variant="outline"
                     aria-haspopup="dialog"
-                    className="h-10 sm:ml-auto"
+                    className="h-10"
                     onClick={onViewSelection}
                 >
                     <ListChecks />
                     View selection
                 </Button>
+                <fieldset
+                    aria-label="Expand or collapse rows"
+                    className="m-0 flex h-10 min-w-0 items-center rounded-lg border bg-muted p-1 sm:ml-auto"
+                >
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-full rounded-md px-2.5 text-muted-foreground hover:bg-background hover:text-foreground hover:shadow-sm"
+                        onClick={onExpandAll}
+                    >
+                        <ChevronsUpDown />
+                        Expand all
+                    </Button>
+                    <div className="mx-0.5 h-4 w-px bg-border" />
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-full rounded-md px-2.5 text-muted-foreground hover:bg-background hover:text-foreground hover:shadow-sm"
+                        onClick={onCollapseAll}
+                    >
+                        <ChevronsDownUp />
+                        Collapse all
+                    </Button>
+                </fieldset>
             </div>
             <div className="flex flex-wrap items-center gap-2">
                 {facets.map((facet) => (
@@ -213,55 +225,6 @@ export function JurisdictionToolbar({
                         Clear filters
                     </Button>
                 )}
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground" aria-live="polite">
-                    {filtering ? (
-                        <>
-                            Showing{" "}
-                            <span className="font-medium text-foreground">
-                                {summary.shown}
-                            </span>{" "}
-                            of {summary.total}
-                        </>
-                    ) : (
-                        <>{summary.total} jurisdictions</>
-                    )}
-                    {" · "}
-                    <span className="font-medium text-foreground">
-                        {summary.enabled}
-                    </span>{" "}
-                    enabled
-                    {summary.locked != null && summary.locked > 0 && (
-                        <> · {summary.locked} not enabled for your company</>
-                    )}
-                </p>
-                <div className="flex shrink-0 gap-2">
-                    <fieldset
-                        aria-label="Expand or collapse rows"
-                        className="m-0 flex h-8 min-w-0 items-center rounded-lg border bg-muted p-0.5"
-                    >
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-full rounded-md px-2.5 text-muted-foreground hover:bg-background hover:text-foreground hover:shadow-sm"
-                            onClick={onExpandAll}
-                        >
-                            <ChevronsUpDown />
-                            Expand all
-                        </Button>
-                        <div className="mx-0.5 h-4 w-px bg-border" />
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-full rounded-md px-2.5 text-muted-foreground hover:bg-background hover:text-foreground hover:shadow-sm"
-                            onClick={onCollapseAll}
-                        >
-                            <ChevronsDownUp />
-                            Collapse all
-                        </Button>
-                    </fieldset>
-                </div>
             </div>
         </div>
     )
