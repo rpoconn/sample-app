@@ -8,7 +8,7 @@ from app.companies.service import create_company
 from app.core.config import settings
 from app.jurisdictions.models import Jurisdiction
 from app.selections.service import SelectionOwner, get_selection_version
-from tests.api.routes.conftest import Setup, make_jurisdiction
+from tests.utils.factories import Setup, make_jurisdiction
 from tests.utils.selections import set_company_ids, set_user_ids
 from tests.utils.utils import assert_error, random_lower_string
 

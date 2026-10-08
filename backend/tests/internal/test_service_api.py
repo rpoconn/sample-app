@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.config import settings
-from tests.crud.test_company_jurisdiction import (
+from tests.utils.factories import (
     make_company,
     make_jurisdiction,
     make_user,

@@ -14,12 +14,18 @@ from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlmodel import Session  # noqa: E402
 
+from app.companies.models import CompanyCreate, CompanyRole  # noqa: E402
+from app.companies.service import create_company  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.db import engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.seed import init_db  # noqa: E402
+from tests.utils.factories import Setup, make_account, make_jurisdiction  # noqa: E402
 from tests.utils.user import authentication_token_from_email  # noqa: E402
-from tests.utils.utils import get_superuser_token_headers  # noqa: E402
+from tests.utils.utils import (  # noqa: E402
+    get_superuser_token_headers,
+    random_lower_string,
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -48,4 +54,26 @@ def superuser_token_headers(client: TestClient) -> dict[str, str]:
 def normal_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
     return authentication_token_from_email(
         client=client, email=settings.EMAIL_TEST_USER, db=db
+    )
+
+
+@pytest.fixture
+def s(client: TestClient, db: Session) -> Setup:
+    """A company with an admin and a member, another company with its own admin, and
+    three fresh root jurisdictions."""
+    company = create_company(
+        session=db, company_in=CompanyCreate(name=random_lower_string())
+    )
+    other = create_company(
+        session=db, company_in=CompanyCreate(name=random_lower_string())
+    )
+    return Setup(
+        company=company,
+        other_company=other,
+        admin=make_account(client, db, company, CompanyRole.admin),
+        member=make_account(client, db, company, CompanyRole.member),
+        other_admin=make_account(client, db, other, CompanyRole.admin),
+        allowed=make_jurisdiction(db),
+        not_allowed=make_jurisdiction(db),
+        structural=make_jurisdiction(db, structural=True),
     )

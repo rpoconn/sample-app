@@ -6,7 +6,7 @@ from sqlmodel import Session
 from app.companies.models import DEFAULT_COMPANY_ID, Company, CompanyCreate, CompanyRole
 from app.companies.service import create_company
 from app.core.config import settings
-from tests.api.routes.conftest import Account, Setup, make_account
+from tests.utils.factories import Account, Setup, make_account
 from tests.utils.utils import assert_error, random_lower_string
 
 API = settings.API_V1_STR

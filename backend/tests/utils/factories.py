@@ -1,6 +1,7 @@
+"""Builders for test data, and the accounts the route tests act as."""
+
 from dataclasses import dataclass
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -31,6 +32,19 @@ class Setup:
     allowed: Jurisdiction
     not_allowed: Jurisdiction
     structural: Jurisdiction
+
+
+def make_company(db: Session) -> Company:
+    return create_company(
+        session=db, company_in=CompanyCreate(name=random_lower_string())
+    )
+
+
+def make_user(db: Session, company: Company) -> User:
+    user_in = UserCreate(
+        email=random_email(), password=random_lower_string(), company_id=company.id
+    )
+    return create_user(session=db, user_create=user_in)
 
 
 def make_account(
@@ -66,26 +80,4 @@ def make_jurisdiction(
             parent_id=parent.id if parent else None,
             is_structural=structural,
         ),
-    )
-
-
-@pytest.fixture
-def s(client: TestClient, db: Session) -> Setup:
-    """A company with an admin and a member, another company with its own admin, and
-    three fresh root jurisdictions."""
-    company = create_company(
-        session=db, company_in=CompanyCreate(name=random_lower_string())
-    )
-    other = create_company(
-        session=db, company_in=CompanyCreate(name=random_lower_string())
-    )
-    return Setup(
-        company=company,
-        other_company=other,
-        admin=make_account(client, db, company, CompanyRole.admin),
-        member=make_account(client, db, company, CompanyRole.member),
-        other_admin=make_account(client, db, other, CompanyRole.admin),
-        allowed=make_jurisdiction(db),
-        not_allowed=make_jurisdiction(db),
-        structural=make_jurisdiction(db, structural=True),
     )

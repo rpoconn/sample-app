@@ -4,8 +4,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app.companies.models import Company, CompanyCreate
-from app.companies.service import create_company
 from app.core.errors import Conflict, InvalidInput
 from app.jurisdictions.models import (
     Jurisdiction,
@@ -24,36 +22,10 @@ from app.selections.service import (
     get_company_jurisdiction_user_counts,
     get_selection,
 )
-from app.users.models import User, UserCreate, UserUpdate
-from app.users.service import create_user, update_user
+from app.users.models import User, UserUpdate
+from app.users.service import update_user
+from tests.utils.factories import make_company, make_jurisdiction, make_user
 from tests.utils.selections import set_company_ids, set_user_ids
-from tests.utils.utils import random_email, random_lower_string
-
-
-def make_company(db: Session) -> Company:
-    return create_company(
-        session=db, company_in=CompanyCreate(name=random_lower_string())
-    )
-
-
-def make_user(db: Session, company: Company) -> User:
-    user_in = UserCreate(
-        email=random_email(), password=random_lower_string(), company_id=company.id
-    )
-    return create_user(session=db, user_create=user_in)
-
-
-def make_jurisdiction(
-    db: Session, parent: Jurisdiction | None = None, *, structural: bool = False
-) -> Jurisdiction:
-    return create_jurisdiction(
-        session=db,
-        jurisdiction_in=JurisdictionCreate(
-            name=random_lower_string(),
-            parent_id=parent.id if parent else None,
-            is_structural=structural,
-        ),
-    )
 
 
 def user_optin_ids(db: Session, user: User) -> set[uuid.UUID]:
