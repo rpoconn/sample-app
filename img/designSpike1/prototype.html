@@ -1,0 +1,423 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Subscriptions Prototype</title>
+<style>
+    :root {
+        --teal: #0d9488; --teal-dark: #0b7d73; --teal-bg: #f0fdfa; --teal-border: #99f6e4;
+        --text: #111827; --body: #374151; --muted: #6b7280; --faint: #9ca3af;
+        --border: #e5e7eb; --bg-side: #fafafa; --blue-bg: #f0f9ff; --blue-border: #0ea5e9;
+        --red: #b91c1c; --red-bg: #fef2f2;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", Inter, system-ui, sans-serif; color: var(--text); background: #fff; font-size: 14px; }
+    .app { display: flex; height: 1000px; overflow: hidden; }
+    .side { width: 256px; background: var(--bg-side); border-right: 1px solid var(--border); padding: 18px 8px; display: flex; flex-direction: column; }
+    .logo { font-size: 25px; font-weight: 600; padding: 0 8px 22px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 6px; }
+    .nav { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px; margin-bottom: 4px; }
+    .nav.active { background: var(--teal); color: #fff; font-weight: 600; }
+    .side-foot { margin-top: auto; padding: 0 8px; }
+    .user { display: flex; gap: 10px; align-items: center; margin-top: 18px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #4b5563; color: #fff; display: grid; place-items: center; font-size: 13px; }
+    .main { flex: 1; display: flex; flex-direction: column; position: relative; }
+    .top { height: 64px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; padding: 0 26px; gap: 22px; }
+    .content { padding: 34px 32px; max-width: 1000px; }
+    h1 { margin: 0; font-size: 24px; letter-spacing: -0.4px; }
+    .sub { color: var(--muted); font-size: 16px; margin-top: 4px; }
+    .code { color: var(--muted); font-size: 12.5px; }
+
+    /* Page tabs: My jurisdictions | Subscriptions */
+    .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin-top: 22px; }
+    .tabs > span { padding: 10px 2px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 7px; align-items: center; }
+    .tabs > span.on { color: var(--text); border-color: var(--teal); }
+    .pill { background: #f3f4f6; color: var(--muted); border-radius: 9px; padding: 0 7px; font-size: 12px; font-weight: 600; }
+    .tabs span.on .pill { background: var(--teal-bg); color: var(--teal-dark); }
+
+    .banner { margin-top: 22px; border-radius: 8px; padding: 13px 18px 13px 46px; position: relative; border-left: 4px solid; font-size: 13.5px; line-height: 1.5; background: var(--blue-bg); border-color: var(--blue-border); color: var(--body); }
+    .banner b { color: var(--text); font-weight: 600; }
+    .banner .bi { position: absolute; left: 18px; top: 15px; color: var(--text); }
+
+    .sechead { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 26px; }
+    .sechead h2 { margin: 0; font-size: 16px; }
+    .sechead p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+    .btn { border: 1px solid var(--border); border-radius: 7px; padding: 8px 14px; font-weight: 600; background: #fff; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .btn.primary { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .btn.disabled { opacity: .45; }
+    .btn.link { border: 0; background: none; color: var(--teal-dark); padding: 0; }
+
+    /* Subscription list */
+    .list { margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .sub-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--border); position: relative; }
+    .sub-row:last-child { border-bottom: 0; }
+    .sub-row.hover { background: #fafafa; }
+    .sub-row.gone { opacity: .35; }
+    .sub-main { flex: 1; min-width: 0; }
+    .sub-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14.5px; }
+    .sub-title .kind { font-weight: 400; color: var(--muted); font-size: 12.5px; }
+    .sub-desc { color: var(--body); font-size: 13px; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .tag { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; font-size: 12px; color: var(--body); background: #fff; }
+    .tag svg { color: var(--teal); }
+    .select { border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px 6px 10px; display: inline-flex; gap: 7px; align-items: center; font-weight: 600; font-size: 13px; width: 150px; justify-content: space-between; background: #fff; }
+    .select .l { display: inline-flex; gap: 7px; align-items: center; }
+    .select.auto .l svg { color: var(--teal); }
+    .iconbtn { width: 32px; height: 32px; border-radius: 7px; display: grid; place-items: center; color: var(--faint); }
+    .iconbtn.hover { background: var(--red-bg); color: var(--red); }
+    .tip { position: absolute; z-index: 5; background: #111827; color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 12.5px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+    .tip::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: #111827; }
+    .foot-note { color: var(--muted); font-size: 12.5px; margin-top: 12px; display: flex; gap: 6px; align-items: center; }
+
+    .flag { width: 18px; height: 12px; display: inline-block; border: 1px solid #e5e7eb; flex: none; }
+    .flag.ca { background: linear-gradient(90deg, #d52b1e 0 26%, #fff 26% 74%, #d52b1e 74%); position: relative; }
+    .flag.ca::after { content: ""; position: absolute; left: 6px; top: 3px; width: 4px; height: 4px; background: #d52b1e; border-radius: 1px; }
+    .flag.us { background: repeating-linear-gradient(180deg, #b91c1c 0 2px, #fff 2px 4px); position: relative; }
+    .flag.us::after { content: ""; position: absolute; left: 0; top: 0; width: 8px; height: 6px; background: #1e3a8a; }
+    .flag.st { background: linear-gradient(180deg, #1e3a8a 0 50%, #dbeafe 50%); }
+    .flag.cal { background: linear-gradient(180deg, #fff 0 78%, #b91c1c 78%); position: relative; }
+    .flag.cal::after { content: ""; position: absolute; left: 5px; top: 3px; width: 7px; height: 4px; background: #92400e; border-radius: 2px; }
+
+    /* Empty state */
+    .empty { margin-top: 14px; border: 1px dashed #d1d5db; border-radius: 10px; padding: 44px 24px; text-align: center; }
+    .empty .ei { width: 48px; height: 48px; border-radius: 50%; background: var(--teal-bg); color: var(--teal); display: grid; place-items: center; margin: 0 auto 14px; }
+    .empty h3 { margin: 0 0 6px; font-size: 16px; }
+    .empty p { margin: 0 auto 18px; color: var(--muted); max-width: 470px; line-height: 1.5; }
+
+    /* Dialog */
+    .overlay { position: absolute; inset: 0; background: rgba(17,24,39,.45); z-index: 20; display: flex; justify-content: center; align-items: flex-start; padding-top: 110px; }
+    .dialog { width: 540px; background: #fff; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.3); position: relative; }
+    .dbody { padding: 22px 24px 4px; }
+    .dialog h2 { margin: 0 0 4px; font-size: 18px; }
+    .dialog .dsub { color: var(--muted); font-size: 13px; margin-bottom: 18px; line-height: 1.45; }
+    .dialog .dx { position: absolute; right: 16px; top: 16px; color: var(--faint); }
+    .field { margin-bottom: 18px; }
+    .field > label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 7px; }
+    .combo { border: 1px solid var(--border); border-radius: 7px; padding: 9px 11px; display: flex; gap: 8px; align-items: center; color: var(--text); }
+    .combo.focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,.18); }
+    .combo .ph { color: var(--faint); }
+    .combo .caret { width: 1px; height: 17px; background: var(--text); margin-left: -6px; }
+    .combo .end { margin-left: auto; color: var(--faint); display: inline-flex; }
+    .combo .selkind { color: var(--muted); font-size: 12.5px; }
+    .dropdown { position: absolute; left: 24px; right: 24px; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 12px 30px rgba(0,0,0,.16); padding: 5px; z-index: 3; }
+    .dropdown .grp { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); font-weight: 600; padding: 8px 10px 4px; }
+    .opt { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 6px; }
+    .opt.focus { background: var(--teal-bg); }
+    .opt .on { flex: 1; }
+    .opt mark { background: none; color: inherit; font-weight: 700; }
+    .opt .meta { color: var(--muted); font-size: 12.5px; }
+    .opt.dim { color: var(--faint); }
+    .opt.dim .meta { color: var(--faint); }
+    .dd-foot { border-top: 1px solid var(--border); margin-top: 4px; padding: 8px 10px 4px; color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; }
+    kbd { font-family: inherit; font-size: 11px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--muted); background: #fff; }
+
+    .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .choice { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px 11px 36px; position: relative; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+    .choice b { display: block; color: var(--text); font-size: 13.5px; margin-bottom: 2px; }
+    .choice::before { content: ""; position: absolute; left: 12px; top: 12px; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #9ca3af; background: #fff; }
+    .choice.on { border-color: var(--teal); background: var(--teal-bg); }
+    .choice.on::before { border: 4.5px solid var(--teal); }
+
+    .toggle-row { display: flex; align-items: flex-start; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+    .toggle-row:first-of-type { border-top: 0; padding-top: 2px; }
+    .toggle-row .tl { flex: 1; }
+    .toggle-row .tl b { display: block; font-size: 13.5px; }
+    .toggle-row .tl span { color: var(--muted); font-size: 12.5px; }
+    .t { display: inline-block; width: 36px; height: 12px; border-radius: 6px; background: #d1d5db; position: relative; margin-top: 5px; flex: none; }
+    .t::after { content: ""; position: absolute; left: -2px; top: -3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    .t.on { background: var(--teal); }
+    .t.on::after { left: 20px; }
+    .t.on::before { content: "✓"; position: absolute; left: 25px; top: -2px; font-size: 10px; color: var(--teal); z-index: 1; font-weight: 700; }
+    .nested { margin: 8px 0 2px; padding-left: 12px; border-left: 2px solid var(--border); display: flex; flex-direction: column; gap: 7px; }
+    .radio { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; }
+    .radio::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #9ca3af; flex: none; margin-top: 2px; box-sizing: border-box; }
+    .radio.on::before { border: 4.5px solid var(--teal); }
+    .radio small { display: block; color: var(--muted); font-size: 12px; }
+
+    .summary { background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px 10px 36px; position: relative; font-size: 13px; color: var(--body); line-height: 1.5; margin-bottom: 4px; }
+    .summary .si { position: absolute; left: 12px; top: 12px; color: var(--teal); }
+    .dfoot { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 20px; }
+
+    /* My jurisdictions tree (as in the app today, plus a ⋯ column) */
+    .toolbar { display: flex; gap: 8px; margin-top: 18px; }
+    .input { border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; color: var(--muted); width: 256px; display: flex; gap: 8px; align-items: center; }
+    .seg { border: 1px solid var(--border); border-radius: 7px; display: flex; padding: 3px; background: #f9fafb; }
+    .seg span { padding: 5px 12px; border-radius: 5px; font-weight: 600; }
+    .seg span.on { background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .seg small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+    .grid { margin-top: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .ghead { display: flex; padding: 0 16px; height: 46px; align-items: center; background: #fafafa; border-bottom: 1px solid var(--border); font-weight: 600; }
+    .ghead .c1 { flex: 1; }
+    .ghead .c2 { width: 150px; border-left: 1px solid #d1d5db; padding-left: 16px; }
+    .ghead .c3 { width: 44px; }
+    .row { display: flex; align-items: center; height: 40px; border-bottom: 1px solid var(--border); padding: 0 16px; }
+    .row:last-child { border-bottom: 0; }
+    .row.hl { background: #fafafa; }
+    .row .name { flex: 1; display: flex; align-items: center; gap: 8px; }
+    .row .tog { width: 150px; padding-left: 26px; }
+    .row .tog .t { margin-top: 0; vertical-align: middle; }
+    .row .keb { width: 44px; display: flex; justify-content: center; }
+    .chev { width: 16px; color: #374151; display: inline-flex; }
+    .grpname { font-weight: 500; }
+    .act { color: var(--teal); font-size: 12.5px; font-weight: 600; margin-left: 10px; }
+    .count { color: var(--muted); font-size: 12.5px; margin-left: 2px; }
+    .kebab { color: var(--muted); width: 28px; height: 26px; border-radius: 5px; display: grid; place-items: center; font-weight: 700; letter-spacing: 1px; }
+    .kebab.on { background: #e5e7eb; color: var(--text); }
+    .kebab.faint { color: #d1d5db; }
+    .menu { position: absolute; z-index: 10; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 10px 28px rgba(0,0,0,.16); width: 290px; padding: 5px; }
+    .menu .mh { padding: 6px 10px 7px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); margin-bottom: 4px; display: flex; gap: 7px; align-items: center; }
+    .menu .mi { padding: 8px 10px; border-radius: 5px; display: flex; gap: 9px; align-items: center; }
+    .menu .mi.focus { background: var(--teal-bg); color: var(--teal-dark); font-weight: 600; }
+
+    .catchup { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--teal-border); background: var(--teal-bg); border-radius: 8px; padding: 11px 12px; margin-top: 10px; }
+    .cb { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #9ca3af; flex: none; margin-top: 2px; display: grid; place-items: center; color: #fff; background: #fff; }
+    .cb.on { background: var(--teal); border-color: var(--teal); }
+    .catchup b { display: block; font-size: 13.5px; }
+    .catchup span.d { color: var(--body); font-size: 12.5px; line-height: 1.45; }
+    .catchup .names { color: var(--muted); }
+
+    .toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: 32px; background: #111827; color: #fff; border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.2); padding: 12px 14px 12px 16px; z-index: 10; display: flex; gap: 14px; align-items: center; font-size: 13.5px; }
+    .toast .undo { color: #5eead4; font-weight: 700; }
+    .toast .tx { color: #9ca3af; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const svg = (s, body, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+const I = {
+    globe: s => svg(s, `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20"/>`),
+    bell: s => svg(s, `<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>`),
+    bellRing: s => svg(s, `<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M4 2C2.8 3.7 2 5.7 2 8"/><path d="M22 8c0-2.3-.8-4.3-2-6"/>`),
+    zap: s => svg(s, `<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>`),
+    x: s => svg(s, `<path d="M18 6 6 18M6 6l12 12"/>`),
+    plus: s => svg(s, `<path d="M5 12h14M12 5v14"/>`, 2.4),
+    check: s => svg(s, `<path d="M20 6 9 17l-5-5"/>`, 2.6),
+    chevron: s => svg(s, `<path d="m6 9 6 6 6-6"/>`),
+    search: s => svg(s, `<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>`),
+    info: s => svg(s, `<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>`),
+    mapPin: s => svg(s, `<path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>`),
+    sparkle: s => svg(s, `<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.13 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z"/>`),
+    user: s => svg(s, `<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>`),
+};
+const flag = f => `<span class="flag ${f}"></span>`;
+
+const subs = [
+    { id: "us", flag: "us", name: "United States", kind: "Country", action: "notify",
+      tags: ["New states", "New cities"], scope: "Cities only in states you've selected" },
+    { id: "ca", flag: "ca", name: "Canada", kind: "Country", action: "auto",
+      tags: ["New provinces", "New cities"], scope: "Cities in every province" },
+    { id: "ny", flag: "st", name: "New York", kind: "State · United States", action: "notify",
+      tags: ["New cities"] },
+];
+
+function subRow(s, { hover, gone } = {}) {
+    const auto = s.action === "auto";
+    const tags = s.tags.map(t => `<span class="tag">${I.check(11)} ${t}</span>`).join("");
+    const scope = s.scope ? `<span class="code">· ${s.scope}</span>` : "";
+    return `<div class="sub-row${hover ? " hover" : ""}${gone ? " gone" : ""}" id="row-${s.id}">
+        ${flag(s.flag)}
+        <div class="sub-main">
+            <div class="sub-title">${s.name} <span class="kind">${s.kind}</span></div>
+            <div class="sub-desc">${tags} ${scope}</div>
+        </div>
+        <div class="select${auto ? " auto" : ""}"><span class="l">${auto ? I.zap(14) : I.bellRing(14)} ${auto ? "Auto-add" : "Notify me"}</span>${I.chevron(14)}</div>
+        <div class="iconbtn${hover ? " hover" : ""}" aria-label="Remove ${s.name} subscription">${I.x(17)}</div>
+    </div>`;
+}
+
+function shell({ count, body, overlay = "", tab = "subs" }) {
+    return `<div class="app">
+        <aside class="side">
+            <div class="logo"><span style="font-weight:800">D</span>Daptic</div>
+            <div class="nav active">${I.globe(16)} Jurisdictions</div>
+            <div class="side-foot">
+                <div>☼ Appearance</div>
+                <div class="user"><div class="avatar">TM</div><div><b>Test member</b><div class="code">member@example.com</div></div></div>
+            </div>
+        </aside>
+        <main class="main">
+            <div class="top"><span>${I.bell(19)}</span><span>⇥ <b style="font-weight:500">Log out</b></span></div>
+            <div class="content">
+                <h1>Jurisdictions</h1>
+                <div class="sub">Choose the jurisdictions you personally manage</div>
+                <div class="tabs"><span${tab === "mine" ? ' class="on"' : ""}>My jurisdictions <span class="pill">4</span></span><span${tab === "subs" ? ' class="on"' : ""}>Subscriptions <span class="pill">${count}</span></span></div>
+                ${body}
+            </div>
+            ${overlay}
+        </main>
+    </div>`;
+}
+
+const listHead = (disabledAdd) => `<div class="sechead">
+    <div><h2>Your subscriptions</h2><p>Decide what happens when new jurisdictions are added in these locations.</p></div>
+    <span class="btn primary${disabledAdd ? "" : ""}">${I.plus(15)} Add subscription</span>
+</div>`;
+
+const filterBanner = `<div class="banner"><span class="bi">${I.info(16)}</span>
+    <b>You'll only hear about new jurisdictions in these locations.</b>
+    Remove every subscription to go back to hearing about everything your company's license covers.</div>`;
+
+function listPage({ hover, gone } = {}) {
+    return filterBanner + listHead() + `<div class="list">${subs.map(s => subRow(s, { hover: s.id === hover, gone: s.id === gone })).join("")}</div>
+        <div class="foot-note">${I.info(13)} Only jurisdictions in your company's license are ever added.</div>`;
+}
+
+// The Add subscription dialog. state: "search" (typing, dropdown open), "country" (United States picked),
+// or "state" (opened from California's ⋯ menu, Auto-add picked)
+function addDialog(state) {
+    const search = state === "search";
+    const combo = search
+        ? `<div class="combo focus">${I.search(16)}<span>New</span><span class="caret"></span><span class="end">${I.x(15)}</span></div>`
+        : state === "state"
+            ? `<div class="combo">${flag("cal")}<b>California</b><span class="selkind">State · United States</span><span class="end">${I.x(15)}</span></div>`
+            : `<div class="combo">${flag("us")}<b>United States</b><span class="selkind">Country</span><span class="end">${I.x(15)}</span></div>`;
+    const m = (name) => name.replace(/^New/, "<mark>New</mark>");
+    const opt = (f, name, meta, cls = "") => `<div class="opt ${cls}">${flag(f)}<span class="on">${m(name)}</span><span class="meta">${meta}</span></div>`;
+    const dropdown = search ? `<div class="dropdown" style="top:166px">
+        <div class="grp">States · United States</div>
+        ${opt("st", "New Hampshire", "State", "focus")}
+        ${opt("st", "New Jersey", "State")}
+        ${opt("st", "New Mexico", "State")}
+        ${opt("st", "New York", "State")}
+        <div class="grp">Provinces · Canada</div>
+        ${opt("st", "New Brunswick", "Province")}
+        ${opt("st", "Newfoundland and Labrador", "Province")}
+        <div class="dd-foot">${I.info(12)} Cities aren't listed. Subscribe to their state or country instead. <span style="margin-left:auto"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd></span></div>
+    </div>` : "";
+
+    // A state only has cities under it, so there's nothing to include or exclude. Auto-add on a location
+    // the user hasn't fully selected offers to turn on the rest now.
+    const stateOptions = `
+        <div class="field"><label>When a new city is added in California</label>
+            <div class="choices">
+                <div class="choice"><b>Notify me</b>You get a notification with an Add button. Nothing changes until you click it.</div>
+                <div class="choice on"><b>Auto-add</b>It's turned on for you right away. You get a notification with Undo.</div>
+            </div>
+            <div class="catchup"><span class="cb on">${I.check(11)}</span><div>
+                <b>Also turn on the 4 California cities you haven't selected</b>
+                <span class="d">You have 2 of 6 on. <span class="names">Los Angeles, Oakland, San Diego, San Jose.</span><br>Leave this off to auto-add only cities that are new.</span>
+            </div></div>
+        </div>
+        <div class="summary"><span class="si">${I.sparkle(15)}</span>All 6 California cities will be on now, and any new city in <b>California</b> will be turned on for you automatically.</div>`;
+
+    const options = search ? "" : state === "state" ? stateOptions : `
+        <div class="field"><label>When a new jurisdiction is added</label>
+            <div class="choices">
+                <div class="choice on"><b>Notify me</b>You get a notification with an Add button. Nothing changes until you click it.</div>
+                <div class="choice"><b>Auto-add</b>It's turned on for you right away. You get a notification with Undo.</div>
+            </div>
+        </div>
+        <div class="field"><label>Include</label>
+            <div class="toggle-row"><div class="tl"><b>New states</b><span>For example, if a new US territory becomes a state</span></div><span class="t on"></span></div>
+            <div class="toggle-row"><div class="tl"><b>New cities</b><span>New cities and towns in the United States</span>
+                <div class="nested">
+                    <div class="radio on"><div>Only in states I've selected<small>Right now: California, New York, Texas. Follows your selections as they change.</small></div></div>
+                    <div class="radio"><div>In every state</div></div>
+                </div></div><span class="t on"></span></div>
+        </div>
+        <div class="summary"><span class="si">${I.sparkle(15)}</span>You'll get a notification when a new state is added in the <b>United States</b>, or a new city in a state you've selected.</div>`;
+
+    return `<div class="overlay"><div class="dialog">
+        <span class="dx">${I.x(18)}</span>
+        <div class="dbody">
+            <h2>Add subscription</h2>
+            <div class="dsub">Pick a country, state, or province. We'll tell you, or add it for you, when new jurisdictions appear there.</div>
+            <div class="field"><label>Location</label>${combo}</div>
+            ${search ? `<div style="height:330px"></div>` : options}
+        </div>
+        <div class="dfoot"><span class="btn">Cancel</span><span class="btn primary${search ? " disabled" : ""}">Add subscription</span></div>
+        ${dropdown}
+    </div></div>`;
+}
+
+// level: 0 country, 1 group, 2 state, 3 cities group, 4 city
+function row(r) {
+    const pad = [0, 20, 40, 60, 80][r.level];
+    const chev = r.chev === undefined ? "" : (r.chev ? I.chevron(14) : `<span style="display:inline-flex;transform:rotate(-90deg)">${I.chevron(14)}</span>`);
+    const code = r.code ? `<span class="code">· ${r.code}</span>` : "";
+    const act = r.act ? `<span class="act">${r.act}</span>` : "";
+    const count = r.count ? `<span class="count">${r.count}</span>` : "";
+    const tog = r.toggle === undefined ? "" : `<span class="t${r.toggle ? " on" : ""}"></span>`;
+    // Only countries and states can be subscribed to; the ⋯ shows on hover
+    const keb = r.kebab ? `<span class="kebab${r.kebab === "on" ? " on" : " faint"}">⋯</span>` : "";
+    return `<div class="row${r.hl ? " hl" : ""}" ${r.id ? `id="${r.id}"` : ""}>
+        <div class="name" style="padding-left:${pad}px"><span class="chev">${chev}</span>${r.flag ? flag(r.flag) : ""}
+            <span class="${r.flag ? "" : "grpname"}">${r.name}</span>${code}${act}${count}</div>
+        <div class="tog">${tog}</div><div class="keb">${keb}</div>
+    </div>`;
+}
+
+function treePage({ menu } = {}) {
+    const city = (name, on) => row({ level: 4, flag: "cal", name, toggle: on });
+    return `<div class="toolbar">
+            <div class="input">${I.search(15)} Search name or code</div>
+            <div class="seg"><span class="on">All<small>69</small></span><span>Enabled<small>4</small></span><span>Available<small>60</small></span><span>Disabled<small>5</small></span></div>
+        </div>
+        <div class="grid"><div class="ghead"><div class="c1">Jurisdiction ↑</div><div class="c2">Enabled for me</div><div class="c3"></div></div>
+        ${[
+            row({ level: 0, chev: false, flag: "ca", name: "Canada", code: "CA", act: "+ Select all" }),
+            row({ level: 0, chev: true, flag: "us", name: "United States", code: "US", act: "+ Select all", count: "4 of 55" }),
+            row({ level: 1, flag: "us", name: "National", toggle: true }),
+            row({ level: 1, chev: true, name: "States", act: "+ Select all", count: "1 of 52" }),
+            row({ level: 2, flag: "st", name: "Alabama", code: "AL", toggle: false }),
+            row({ level: 2, flag: "st", name: "Alaska", code: "AK", toggle: false }),
+            row({ level: 2, chev: true, flag: "cal", name: "California", code: "CA", toggle: true, hl: !!menu, kebab: menu ? "on" : true, id: "california" }),
+            row({ level: 3, chev: true, name: "Cities", act: "+ Select all", count: "2 of 6" }),
+            city("Los Angeles", false), city("Oakland", false), city("Sacramento", true),
+            city("San Diego", false), city("San Francisco", true), city("San Jose", false),
+            row({ level: 2, flag: "st", name: "Colorado", code: "CO", toggle: false }),
+        ].join("")}</div>`;
+}
+
+const mocks = {
+    // 1. The list, hovering the X on Canada
+    list: () => shell({ count: 3, body: listPage({ hover: "ca" }) }),
+    // 2. Add dialog, typing a location
+    addSearch: () => shell({ count: 3, body: listPage(), overlay: addDialog("search") }),
+    // 3. Add dialog, a country picked: action + include cities
+    addCountry: () => shell({ count: 3, body: listPage(), overlay: addDialog("country") }),
+    // 4. Removed with an X: no confirm, just Undo
+    removed: () => shell({ count: 2, body: filterBanner + listHead() + `<div class="list">${subs.filter(s => s.id !== "ca").map(s => subRow(s)).join("")}</div>`,
+        overlay: `<div class="toast">Canada subscription removed <span class="undo">Undo</span> <span class="tx">${I.x(15)}</span></div>` }),
+    // 6. ⋯ menu on a state row in the tree
+    treeMenu: () => shell({ count: 3, tab: "mine", body: treePage({ menu: true }) }),
+    // 7. The dialog opened from that menu: California prefilled, Auto-add, turn on the rest
+    addState: () => shell({ count: 3, tab: "mine", body: treePage(), overlay: addDialog("state") }),
+    // 5. No subscriptions yet
+    empty: () => shell({ count: 0, body: `<div class="sechead"><div><h2>Your subscriptions</h2><p>Decide what happens when new jurisdictions are added in these locations.</p></div></div>
+        <div class="empty"><div class="ei">${I.mapPin(22)}</div>
+            <h3>No subscriptions yet</h3>
+            <p>Right now you'll hear about <b>every</b> new jurisdiction your company's license covers. Subscribe to a country, state, or province to hear only about that area, or to have new jurisdictions there added for you.</p>
+            <span class="btn primary">${I.plus(15)} Add subscription</span>
+        </div>` }),
+};
+
+const which = new URLSearchParams(location.search).get("mock") || "list";
+document.getElementById("root").innerHTML = mocks[which]();
+
+// Pin the row menu under California's ⋯
+if (which === "treeMenu") {
+    const k = document.querySelector("#california .kebab").getBoundingClientRect();
+    const main = document.querySelector(".main").getBoundingClientRect();
+    const m = document.createElement("div");
+    m.className = "menu";
+    m.innerHTML = `<div class="mh">${flag("cal")} California</div>
+        <div class="mi focus">${I.zap(15)} Auto-add new jurisdictions here…</div>`;
+    m.style.left = (k.right - main.left - 290) + "px";
+    m.style.top = (k.bottom - main.top + 4) + "px";
+    document.querySelector(".main").appendChild(m);
+}
+
+// Pin the X button's tooltip so it shows in a static screenshot
+if (which === "list") {
+    const b = document.querySelector("#row-ca .iconbtn").getBoundingClientRect();
+    const main = document.querySelector(".main").getBoundingClientRect();
+    const tip = document.createElement("div");
+    tip.className = "tip";
+    tip.textContent = "Remove subscription";
+    document.querySelector(".main").appendChild(tip);
+    tip.style.left = (b.left + b.width / 2 - main.left - tip.offsetWidth / 2) + "px";
+    tip.style.top = (b.top - main.top - tip.offsetHeight - 8) + "px";
+}
+</script>
+</body>
+</html>

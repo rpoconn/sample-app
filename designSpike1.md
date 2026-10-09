@@ -16,12 +16,17 @@ A subscription is a location (a country, state, or province) plus a few options:
 | Option | Choices |
 |---|---|
 | **Action** | **Notify me** (a notification with the Add button) or **Auto-add** (turned on automatically, with a notification and Undo) |
-| **Include** | ☑ New states / provinces ☑ New cities |
-| **Cities** | ○ In every state ○ **Only in states I already have selected** |
+| **Include** (countries only) | ☑ New states / provinces ☑ New cities |
+| **Cities** (countries only) | ○ In every state ○ **Only in states I already have selected** |
+| **Turn on the rest now** (Auto-add only) | ☐ Also turn on the jurisdictions here you haven't selected yet |
+
+A state or province only has cities under it, so its subscription has no **Include** or **Cities** options: it always covers new cities.
+
+**Turn on the rest now** is offered when the user picks *Auto-add* for a location they haven't fully selected. Auto-add exists so people don't have to keep turning jurisdictions on by hand, and this catches them up in the same step. It's a one-time change to their selections, not a setting that's saved, and it only turns on licensed jurisdictions.
 
 - **Adding a subscription:**
-    - On the **Subscriptions tab**, type a location name (*Unit…* → *United States*) and it's added to the list with default options, which can then be changed.
-    - From the **⋯ menu** on any row of the Jurisdictions tree, choose **Notify me about new jurisdictions here** or **Auto-add new jurisdictions here**.
+    - On the **Subscriptions tab**, **Add subscription** opens a dialog: type a location name (*Unit…* → *United States*), then choose the options.
+    - From the **⋯ menu** on a country or state row of the Jurisdictions tree, choose **Auto-add new jurisdictions here…**. It opens the same dialog with the location filled in and *Auto-add* chosen.
 - **The "only in states I already have selected" option** follows the user's current choices: if they turn a state on later, its new cities start being covered too.
 - **Limiting notifications to certain areas:** a user with any *Notify me* subscriptions hears only about jurisdictions those subscriptions cover. A user with none hears about every licensed new jurisdiction, unless muted.
 - **Licensing still applies:** only jurisdictions the company's license covers are added automatically.
@@ -31,9 +36,58 @@ Example Subscriptions tab:
 ```
 Subscriptions                          [ Add a location… ]
 
-United States   Auto-add   States ✓  Cities ✓ (only in states I have selected)
-Canada          Notify me  Provinces ✓  Cities ✓ (every province)
+United States   Notify me  States ✓  Cities ✓ (only in states I have selected)
+Canada          Auto-add   Provinces ✓  Cities ✓ (every province)
+New York        Notify me  Cities ✓
 ```
+
+## Mocks: the Subscriptions tab
+
+The mocks are static: [img/designSpike1/prototype.html](img/designSpike1/prototype.html), one mock per `?mock=` value. None of the app's code was changed.
+
+### 1. My subscriptions
+
+Subscriptions is a second tab on the Jurisdictions page. Each row says, in words, what it covers (✓ *New states*, ✓ *New cities*, *only in states you've selected*). The action can be changed in place from the dropdown. **✕** removes the subscription.
+
+The banner explains the side effect that's easiest to miss: having a subscription means you only hear about those locations.
+
+![My subscriptions](img/designSpike1/list.png)
+
+### 2. Adding a subscription: choosing a location
+
+Type any part of a name. Results are grouped by country and level, and the matching text is in bold. Cities aren't offered, and the footer says why. **Add subscription** stays disabled until a location is picked.
+
+![Typing a location](img/designSpike1/addSearch.png)
+
+### 3. Adding a subscription: options
+
+After a location is picked, the dialog shows the action as two cards that each describe what happens, the **Include** toggles, and a one-line summary of the result. *Only in states I've selected* lists the states that applies to right now. The defaults are the cautious ones: *Notify me*, with cities only in states you've selected.
+
+![Subscription options](img/designSpike1/addCountry.png)
+
+### 4. Adding from the Jurisdictions tree
+
+Country and state rows get a **⋯** button, shown on hover. Its menu has one item, **Auto-add new jurisdictions here…**, which opens the Add subscription dialog for that row. Cities and grouping rows (*States*, *Cities*) have no **⋯**, because they can't be subscribed to.
+
+![Row menu](img/designSpike1/treeMenu.png)
+
+### 5. A state, with Auto-add
+
+The dialog opens with *California* filled in and *Auto-add* chosen. A state has no **Include** options. Because only 2 of California's 6 cities are on, the dialog offers to turn on the other 4 now, and names them. The box is unticked by default because it changes existing selections; it's shown ticked here. The summary line updates to say what will happen.
+
+![State subscription with Auto-add](img/designSpike1/addState.png)
+
+### 6. Removing a subscription
+
+**✕** removes it right away with no confirmation, and a toast offers **Undo**. It's quick to do and easy to reverse, so a confirmation dialog would only slow people down.
+
+![Removed with Undo](img/designSpike1/removed.png)
+
+### 7. No subscriptions yet
+
+The empty state says what happens today (you hear about everything) and why you'd add a subscription.
+
+![Empty state](img/designSpike1/empty.png)
 
 ## How it works for each persona
 

@@ -1,0 +1,352 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Jurisdiction Trial Prototype</title>
+<style>
+    :root {
+        --teal: #0d9488; --teal-dark: #0b7d73; --text: #111827; --muted: #6b7280; --faint: #9ca3af;
+        --border: #e5e7eb; --bg-side: #fafafa; --amber: #b45309; --amber-bg: #fffbeb; --amber-border: #f59e0b;
+        --blue-bg: #f0f9ff; --blue-border: #0ea5e9;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", Inter, system-ui, sans-serif; color: var(--text); background: #fff; font-size: 14px; }
+    .app { display: flex; height: 1000px; overflow: hidden; }
+    .side { width: 256px; background: var(--bg-side); border-right: 1px solid var(--border); padding: 18px 8px; display: flex; flex-direction: column; }
+    .logo { font-size: 25px; font-weight: 600; padding: 0 8px 22px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 6px; }
+    .nav { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px; margin-bottom: 4px; }
+    .nav.active { background: var(--teal); color: #fff; font-weight: 600; }
+    .side-foot { margin-top: auto; padding: 0 8px; }
+    .user { display: flex; gap: 10px; align-items: center; margin-top: 18px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #4b5563; color: #fff; display: grid; place-items: center; font-size: 13px; }
+    .main { flex: 1; display: flex; flex-direction: column; position: relative; }
+    .top { height: 64px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; padding: 0 26px; gap: 22px; }
+    .bell { position: relative; }
+    .bell .dot { position: absolute; top: -4px; right: -5px; background: #dc2626; color: #fff; font-size: 10px; border-radius: 8px; padding: 0 5px; font-weight: 600; }
+    .content { padding: 34px 32px; }
+    h1 { margin: 0; font-size: 24px; letter-spacing: -0.4px; }
+    .sub { color: var(--muted); font-size: 16px; margin-top: 4px; }
+    .banner { margin-top: 24px; border-radius: 8px; padding: 14px 20px 14px 46px; position: relative; border-left: 4px solid; font-size: 13.5px; }
+    .banner.blue { background: var(--blue-bg); border-color: var(--blue-border); }
+    .banner.amber { background: var(--amber-bg); border-color: var(--amber-border); }
+    .banner b { display: block; margin-bottom: 4px; font-weight: 600; }
+    .banner .bi { position: absolute; left: 18px; top: 15px; }
+    .toolbar { display: flex; gap: 8px; margin-top: 16px; }
+    .input { border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; color: var(--muted); width: 256px; }
+    .seg { border: 1px solid var(--border); border-radius: 7px; display: flex; padding: 3px; background: #f9fafb; }
+    .seg span { padding: 6px 12px; border-radius: 5px; font-weight: 600; }
+    .seg span.on { background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .seg small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+    .btn { border: 1px solid var(--border); border-radius: 7px; padding: 8px 14px; font-weight: 600; background: #fff; display: inline-flex; align-items: center; gap: 6px; }
+    .btn.primary { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .grid { margin-top: 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .ghead { display: flex; padding: 0 16px; height: 48px; align-items: center; background: #fafafa; border-bottom: 1px solid var(--border); font-weight: 600; }
+    .ghead .c1 { flex: 1; }
+    .ghead .c2 { width: 150px; border-left: 1px solid #d1d5db; padding-left: 16px; }
+    .ghead .c3 { width: 90px; border-left: 1px solid #d1d5db; padding-left: 16px; }
+    .row { display: flex; align-items: center; height: 42px; border-bottom: 1px solid var(--border); padding: 0 16px; position: relative; }
+    .row:last-child { border-bottom: 0; }
+    .row .name { flex: 1; display: flex; align-items: center; gap: 8px; }
+    .row .tog { width: 150px; padding-left: 26px; }
+    .row .users { width: 90px; padding-left: 16px; }
+    .row.locked .label { color: var(--faint); }
+    .row.hl { background: #f0fdfa; }
+    .chev { width: 16px; color: #374151; }
+    .code { color: var(--muted); font-size: 12.5px; }
+    .grp { font-weight: 500; }
+    .act { color: var(--teal); font-size: 12.5px; font-weight: 600; margin-left: 12px; }
+    .count { color: var(--muted); font-size: 12.5px; margin-left: 4px; }
+    .flag { width: 18px; height: 12px; display: inline-block; border: 1px solid #e5e7eb; }
+    .flag.ca { background: linear-gradient(90deg, #d52b1e 0 26%, #fff 26% 74%, #d52b1e 74%); position: relative; }
+    .flag.ca::after { content: ""; position: absolute; left: 6px; top: 3px; width: 4px; height: 4px; background: #d52b1e; border-radius: 1px; }
+    .flag.pv { background: linear-gradient(180deg, #1e3a8a 0 50%, #dbeafe 50%); }
+    .flag.us { background: repeating-linear-gradient(180deg, #b91c1c 0 2px, #fff 2px 4px); position: relative; }
+    .flag.us::after { content: ""; position: absolute; left: 0; top: 0; width: 8px; height: 6px; background: #1e3a8a; }
+    .row.locked .flag { opacity: .4; }
+    .t { display: inline-block; width: 36px; height: 12px; border-radius: 6px; background: #d1d5db; position: relative; vertical-align: middle; }
+    .t::after { content: ""; position: absolute; left: -2px; top: -3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    .t.on { background: var(--teal); }
+    .t.on::after { left: 20px; }
+    .t.on::before { content: "✓"; position: absolute; left: 25px; top: -2px; font-size: 10px; color: var(--teal); z-index: 1; font-weight: 700; }
+    .t.dis { opacity: .35; }
+    .ic { display: inline-flex; vertical-align: middle; }
+    .trial { color: var(--amber); display: inline-flex; align-items: center; }
+    .trial.urgent { color: #dc2626; }
+    .tip { position: absolute; z-index: 5; background: #111827; color: #fff; border-radius: 7px; padding: 9px 12px; font-size: 12.5px; line-height: 1.45; width: 250px; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+    .tip b { color: #fcd34d; }
+    .tip::before { content: ""; position: absolute; left: -6px; top: 13px; border: 6px solid transparent; border-left: 0; border-right-color: #111827; }
+    .toast { position: absolute; right: 28px; bottom: 28px; width: 400px; background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--amber-border); border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.15); padding: 14px 16px 14px 44px; z-index: 10; }
+    .toast .ti { position: absolute; left: 15px; top: 15px; color: var(--amber); }
+    .toast b { display: block; margin-bottom: 3px; }
+    .toast p { margin: 0; color: #374151; font-size: 13px; line-height: 1.45; }
+    .toast .days { display: inline-block; background: var(--amber-bg); color: var(--amber); border: 1px solid #fcd34d; border-radius: 10px; padding: 0 8px; font-size: 12px; font-weight: 600; margin-left: 6px; }
+    .pop { position: absolute; right: 120px; top: 54px; width: 410px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.18); z-index: 10; }
+    .pop h3 { margin: 0; padding: 14px 16px; font-size: 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+    .note { padding: 14px 16px 16px 46px; position: relative; border-bottom: 1px solid var(--border); }
+    .note.unread { background: var(--amber-bg); }
+    .note .ni { position: absolute; left: 16px; top: 15px; color: var(--amber); }
+    .note b { display: block; }
+    .note p { margin: 4px 0 8px; color: #374151; font-size: 13px; line-height: 1.45; }
+    .note ul { margin: 0 0 10px; padding-left: 18px; font-size: 13px; color: #374151; }
+    .note .when { color: var(--faint); font-size: 12px; }
+    .overlay { position: absolute; inset: 0; background: rgba(17,24,39,.45); z-index: 20; display: grid; place-items: center; }
+    .dialog { width: 540px; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+    .dialog h2 { margin: 0 0 4px; font-size: 18px; display: flex; gap: 8px; align-items: center; }
+    .dialog .dsub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+    .chips { border: 1px solid var(--border); border-radius: 7px; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { background: #f3f4f6; border-radius: 5px; padding: 3px 8px; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; }
+    .chip i { color: var(--faint); font-style: normal; }
+    .durs { display: flex; gap: 6px; align-items: center; }
+    .durs span { border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 13px; }
+    .durs span.on { border-color: var(--teal); background: #f0fdfa; color: var(--teal-dark); font-weight: 600; }
+    .hint { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+    .dfoot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+    .menu { position: absolute; z-index: 10; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 10px 28px rgba(0,0,0,.16); width: 300px; padding: 5px; }
+    .menu .mh { padding: 7px 10px 8px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+    .menu .mi { padding: 8px 10px; border-radius: 5px; display: flex; gap: 9px; align-items: center; }
+    .menu .mi.focus { background: #f0fdfa; color: var(--teal-dark); font-weight: 600; }
+    .menu .mi.danger { color: #b91c1c; }
+    .menu .sep { height: 1px; background: var(--border); margin: 4px 0; }
+    .kebab { color: var(--muted); padding: 2px 6px; border-radius: 4px; }
+    .kebab.on { background: #e5e7eb; color: var(--text); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const I = {
+    hourglass: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>`,
+    ban: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>`,
+    globe: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20"/></svg>`,
+    building: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></svg>`,
+    user: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>`,
+    bell: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`,
+    check: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>`,
+    clock: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
+    x: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+};
+
+const trialIcon = (urgent) => `<span class="trial${urgent ? " urgent" : ""}">${I.hourglass(14)}</span>`;
+
+// level: 0 country, 1 group, 2 item
+function row(r) {
+    const pad = [0, 28, 56][r.level];
+    const chev = r.chev === undefined ? "" : (r.chev ? "⌄" : "›");
+    const flag = r.flag ? `<span class="flag ${r.flag}"></span>` : "";
+    const code = r.code ? `<span class="code">· ${r.code}</span>` : "";
+    const lock = r.locked ? I.ban(14) : "";
+    const trial = r.trial ? trialIcon(r.urgent) : "";
+    const act = r.act ? `<span class="act">${r.act}</span>` : "";
+    const count = r.count ? `<span class="count">${r.count}</span>` : "";
+    const tog = r.toggle === undefined ? "" : `<span class="t${r.toggle ? " on" : ""}${r.locked ? " dis" : ""}"></span>`;
+    const users = r.users === undefined ? "" : r.users;
+    const kebab = r.kebab ? `<span class="kebab${r.kebab === "on" ? " on" : ""}">⋯</span>` : "";
+    return `<div class="row${r.locked ? " locked" : ""}${r.hl ? " hl" : ""}" ${r.id ? `id="${r.id}"` : ""}>
+        <div class="name" style="padding-left:${pad}px">
+            <span class="chev">${chev}</span>${flag}
+            <span class="label ${r.flag ? "" : "grp"}">${r.name}</span>${code}${trial}${lock}${act}${count}
+        </div>
+        <div class="tog">${tog}</div>${r.admin ? `<div class="users">${users} ${kebab}</div>` : ""}
+    </div>`;
+}
+
+function shell({ admin, title, sub, banner, toolbar, grid, overlay = "", bellCount = 0 }) {
+    return `<div class="app">
+        <aside class="side">
+            <div class="logo"><span style="font-weight:800">D</span>Daptic</div>
+            <div class="nav ${admin ? "" : "active"}">${I.globe(16)} Jurisdictions</div>
+            ${admin ? `<div class="nav active">${I.building(16)} Company Admin</div>` : ""}
+            <div class="side-foot">
+                <div>☼ Appearance</div>
+                <div class="user"><div class="avatar">${admin ? "TA" : "TM"}</div><div><b>${admin ? "Test admin" : "Test member"}</b><div class="code">${admin ? "admin" : "member"}@example.com</div></div></div>
+            </div>
+        </aside>
+        <main class="main">
+            <div class="top">
+                ${admin ? "" : `<span class="bell">${I.bell(19)}${bellCount ? `<span class="dot">${bellCount}</span>` : ""}</span>`}
+                <span>⇥ <b style="font-weight:500">Log out</b></span>
+            </div>
+            <div class="content">
+                <h1>${title}</h1>
+                <div class="sub">${sub}</div>
+                ${banner}
+                ${toolbar}
+                <div class="grid">${grid}</div>
+            </div>
+            ${overlay}
+        </main>
+    </div>`;
+}
+
+const userBanner = `<div class="banner blue"><span class="bi">${I.user(16)}</span>
+    <b>These are your personal jurisdictions</b>
+    Choose the jurisdictions where you want compliance checks. Jurisdictions marked ${I.ban(13)} aren't in your company's license. Contact Daptic to add more jurisdictions.</div>`;
+
+const userToolbar = `<div class="toolbar">
+    <div class="input">⌕ Search name or code</div>
+    <div class="seg"><span class="on">All<small>69</small></span><span>Enabled<small>5</small></span><span>Available<small>63</small></span><span>Disabled<small>11</small></span></div>
+    <div class="btn">☰ View selection</div>
+</div>`;
+
+const userHead = `<div class="ghead"><div class="c1">Jurisdiction ↑</div><div class="c2">Enabled for me</div></div>`;
+
+function userCanadaRows({ ontario = true, quebec = false, hlQuebec = false, urgent = false } = {}) {
+    return [
+        row({ level: 0, chev: true, flag: "ca", name: "Canada", code: "CA", act: "+ Select all", count: `${(ontario ? 1 : 0) + (quebec ? 1 : 0)} of 3` }),
+        row({ level: 1, flag: "ca", name: "National", toggle: false, locked: true }),
+        row({ level: 1, chev: true, name: "Provinces", act: "+ Select all", count: `${(ontario ? 1 : 0) + (quebec ? 1 : 0)} of 3` }),
+        row({ level: 2, flag: "pv", name: "Alberta", code: "AB", toggle: false, locked: true }),
+        row({ level: 2, flag: "pv", name: "British Columbia", code: "BC", toggle: false, trial: true, urgent }),
+        row({ level: 2, flag: "pv", name: "Manitoba", code: "MB", toggle: false, locked: true }),
+        row({ level: 2, id: "ontario", flag: "pv", name: "Ontario", code: "ON", toggle: ontario, trial: true, urgent }),
+        row({ level: 2, id: "quebec", flag: "pv", name: "Quebec", code: "QC", toggle: quebec, trial: true, urgent, hl: hlQuebec }),
+        row({ level: 2, flag: "pv", name: "Saskatchewan", code: "SK", toggle: false, locked: true }),
+        row({ level: 1, chev: false, name: "Territories", act: "", count: "", locked: true }),
+        row({ level: 0, chev: false, flag: "us", name: "United States", code: "US", act: "+ Select all", count: "4 of 55" }),
+    ].join("");
+}
+
+const mocks = {
+    // 1. Trial icon + tooltip on the user's tree
+    tooltip() {
+        return shell({
+            title: "Jurisdictions", sub: "Choose the jurisdictions you personally manage",
+            banner: userBanner, toolbar: userToolbar,
+            grid: userHead + userCanadaRows(),
+        });
+    },
+    // 2. Enabling a trial jurisdiction shows how long it lasts
+    enable() {
+        return shell({
+            title: "Jurisdictions", sub: "Choose the jurisdictions you personally manage",
+            banner: userBanner, toolbar: userToolbar,
+            grid: userHead + userCanadaRows({ quebec: true, hlQuebec: true }),
+            overlay: `<div class="toast"><span class="ti">${I.hourglass(18)}</span>
+                <b>Quebec enabled <span class="days">Trial · 23 days left</span></b>
+                <p>Your company is trialing Quebec until <b style="display:inline">Nov 8, 2026</b>. If it isn't added to your company's license by then, Quebec will be removed from your jurisdictions.</p>
+            </div>`,
+        });
+    },
+    // 3. Reminder ~7 days before the trial ends
+    reminder() {
+        return shell({
+            title: "Jurisdictions", sub: "Choose the jurisdictions you personally manage",
+            banner: userBanner, toolbar: userToolbar, bellCount: 1,
+            grid: userHead + userCanadaRows({ quebec: true, urgent: true }),
+            overlay: `<div class="pop"><h3>Notifications <span class="code" style="font-weight:400">Mark all read</span></h3>
+                <div class="note unread"><span class="ni">${I.clock(18)}</span>
+                    <b>Your Canada trial ends in 7 days</b>
+                    <p>You have 2 trial jurisdictions set up. On <b style="display:inline">Nov 8, 2026</b> they'll be removed from your jurisdictions unless your company adds them to its license.</p>
+                    <ul><li>Ontario · ON</li><li>Quebec · QC</li></ul>
+                    <span class="btn" style="padding:5px 10px;font-size:12.5px">View jurisdictions</span>
+                    <span class="when" style="margin-left:10px">Today, 9:00 AM</span>
+                </div>
+                <div class="note"><span class="ni" style="color:var(--teal)">${I.check(18)}</span>
+                    <b>San Jose was added to your jurisdictions</b>
+                    <span class="when">Oct 22</span>
+                </div>
+            </div>`,
+        });
+    },
+    // 4. Admin: start a trial for a few users
+    adminStart() {
+        return shell({
+            admin: true, title: "Admin View - changes licensing for a given company", sub: "Manage which jurisdictions this company operates in",
+            banner: adminBanner, toolbar: adminToolbar, grid: adminGrid({ trial: false }),
+            overlay: `<div class="overlay"><div class="dialog">
+                <h2><span class="trial">${I.hourglass(18)}</span> Start a trial</h2>
+                <div class="dsub">Let selected users of <b>Acme Corp</b> pick these jurisdictions for a fixed time. Everyone else keeps seeing them as locked.</div>
+                <div class="field"><label>Jurisdictions</label>
+                    <div class="chips"><span class="chip">British Columbia <i>✕</i></span><span class="chip">Ontario <i>✕</i></span><span class="chip">Quebec <i>✕</i></span><span class="chip" style="background:none;color:var(--faint)">Add jurisdiction…</span></div></div>
+                <div class="field"><label>Users</label>
+                    <div class="chips"><span class="chip">Dana Lee <i>✕</i></span><span class="chip">Sam Ortiz <i>✕</i></span><span class="chip">Priya Shah <i>✕</i></span><span class="chip" style="background:none;color:var(--faint)">Add user…</span></div></div>
+                <div class="field"><label>Length</label>
+                    <div class="durs"><span>14 days</span><span class="on">30 days</span><span>60 days</span><span>Custom…</span></div>
+                    <div class="hint">Ends <b>Nov 8, 2026</b>. Users are reminded 7 days before. If the trial isn't converted, the jurisdictions are removed from these users' selections.</div></div>
+                <div class="dfoot"><span class="btn">Cancel</span><span class="btn primary">Start trial</span></div>
+            </div></div>`,
+        });
+    },
+    // 5. Admin: the trial in the licensing tree, converting it to a license
+    adminConvert() {
+        return shell({
+            admin: true, title: "Admin View - changes licensing for a given company", sub: "Manage which jurisdictions this company operates in",
+            banner: adminBanner, toolbar: adminToolbar, grid: adminGrid({ trial: true }),
+        });
+    },
+};
+
+const adminBanner = `<div class="banner amber"><span class="bi">${I.building(16)}</span>
+    <b>You're editing jurisdictions licenses for this company</b>
+    Changes apply to every user of this company. Disabling a jurisdiction also removes it from anyone who selected it.</div>`;
+const adminToolbar = `<div class="toolbar">
+    <div class="input">⌕ Search name or code</div>
+    <div class="seg"><span class="on">All<small>69</small></span><span>Enabled<small>53</small></span><span>Disabled<small>16</small></span></div>
+    <div class="btn">☰ View selection</div>
+    <div class="btn">${I.hourglass(15)} Start trial…</div>
+</div>`;
+
+function adminGrid({ trial }) {
+    const head = `<div class="ghead"><div class="c1">Jurisdiction ↑</div><div class="c2">Enabled for comp…</div><div class="c3">Users</div></div>`;
+    const p = (name, code, isTrial, users, extra = {}) => row({ level: 2, flag: "pv", name, code, admin: true,
+        toggle: trial && isTrial, trial: trial && isTrial, locked: false, users: trial && isTrial ? users : "", kebab: trial && isTrial ? (extra.menu ? "on" : true) : false, id: extra.id });
+    return head + [
+        row({ level: 0, chev: true, flag: "ca", name: "Canada", code: "CA", act: "+ Select all", count: trial ? "3 of 14" : "", admin: true }),
+        row({ level: 1, flag: "ca", name: "National", toggle: false, admin: true }),
+        row({ level: 1, chev: true, name: "Provinces", act: "+ Select all", count: trial ? "3 of 10" : "", admin: true }),
+        p("Alberta", "AB", false),
+        p("British Columbia", "BC", true, "0 of 3"),
+        p("Manitoba", "MB", false),
+        p("Ontario", "ON", true, "3 of 3", { menu: true, id: "adminOntario" }),
+        p("Quebec", "QC", true, "2 of 3"),
+        p("Saskatchewan", "SK", false),
+        row({ level: 1, chev: false, name: "Territories", act: "+ Select all", admin: true }),
+        row({ level: 0, chev: false, flag: "us", name: "United States", code: "US", act: "+ Select all", count: "50 of 55", admin: true }),
+    ].join("");
+}
+
+const which = new URLSearchParams(location.search).get("mock") || "tooltip";
+document.getElementById("root").innerHTML = mocks[which]();
+
+// Pin a tooltip / menu next to a row's trial icon so it shows in a static screenshot
+function pinNextTo(rowId, html, cls, dx = 10, dy = -12) {
+    const r = document.getElementById(rowId);
+    if (!r) return;
+    const icon = r.querySelector(".trial");
+    const main = document.querySelector(".main").getBoundingClientRect();
+    const b = icon.getBoundingClientRect();
+    const el = document.createElement("div");
+    el.className = cls;
+    el.innerHTML = html;
+    el.style.left = (b.right - main.left + dx) + "px";
+    el.style.top = (b.top - main.top + dy) + "px";
+    document.querySelector(".main").appendChild(el);
+}
+
+if (which === "tooltip") {
+    pinNextTo("ontario", `<b>Trial · 23 days left</b><br>Your company is trialing Ontario until Nov 8, 2026. After that it's removed unless your company adds it to its license.`, "tip");
+}
+if (which === "reminder") {
+    pinNextTo("ontario", `<b>Trial · 7 days left</b><br>Ends Nov 8, 2026.`, "tip");
+}
+if (which === "adminConvert") {
+    const k = document.querySelector("#adminOntario .kebab");
+    const main = document.querySelector(".main").getBoundingClientRect();
+    const b = k.getBoundingClientRect();
+    const m = document.createElement("div");
+    m.className = "menu";
+    m.innerHTML = `<div class="mh">${I.hourglass(12)} Trial for 3 users · ends Nov 8, 2026 (23 days)</div>
+        <div class="mi focus">${I.check(15)} Add to license (end trial)</div>
+        <div class="mi">${I.clock(15)} Extend trial…</div>
+        <div class="mi">${I.user(15)} Manage trial users…</div>
+        <div class="sep"></div>
+        <div class="mi danger">${I.x(15)} End trial now</div>`;
+    m.style.left = (b.right - main.left - 300) + "px";
+    m.style.top = (b.bottom - main.top + 4) + "px";
+    document.querySelector(".main").appendChild(m);
+}
+</script>
+</body>
+</html>
