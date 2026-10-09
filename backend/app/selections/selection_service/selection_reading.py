@@ -19,7 +19,8 @@ def selected_ids(*, session: Session, owner: SelectionOwner) -> set[uuid.UUID]:
         )
     else:
         statement = select(UserJurisdiction.jurisdiction_id).where(
-            UserJurisdiction.user_id == owner.id
+            UserJurisdiction.user_id == owner.id,
+            UserJurisdiction.company_id == owner.company_id,
         )
     return set(session.exec(statement).all())
 

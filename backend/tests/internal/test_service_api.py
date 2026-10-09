@@ -42,6 +42,16 @@ def users_url(company_id: uuid.UUID, jurisdiction_id: uuid.UUID) -> str:
     )
 
 
+def licensed_ids_url(company_id: uuid.UUID) -> str:
+    return f"{API}/service/companies/{company_id}/jurisdiction-ids"
+
+
+def licensed_url(company_id: uuid.UUID, jurisdiction_id: uuid.UUID) -> str:
+    return (
+        f"{API}/service/companies/{company_id}/jurisdictions/{jurisdiction_id}/licensed"
+    )
+
+
 def test_returns_plain_id_list_with_api_key(client: TestClient, db: Session) -> None:
     company = make_company(db)
     user = make_user(db, company)
@@ -98,6 +108,8 @@ def test_rejects_missing_or_wrong_credentials(
         url(company.id, user.id),
         active_url(company.id, user.id, j.id),
         users_url(company.id, j.id),
+        licensed_ids_url(company.id),
+        licensed_url(company.id, j.id),
     ):
         assert_error(client.get(u), 401, "unauthorized")
         r = client.get(u, headers={"X-API-Key": "nope"})
@@ -244,4 +256,71 @@ def test_user_ids_unknown_company_or_jurisdiction_is_404(
     r = client.get(users_url(uuid.uuid4(), j.id), headers=HEADERS)
     assert_error(r, 404, "company_not_found")
     r = client.get(users_url(company.id, uuid.uuid4()), headers=HEADERS)
+    assert_error(r, 404, "jurisdiction_not_found")
+
+
+def test_licensed_ids_list_the_company_license(client: TestClient, db: Session) -> None:
+    company, other_company = make_company(db), make_company(db)
+    j, k, unlicensed = (make_jurisdiction(db) for _ in range(3))
+    set_company_ids(db, company.id, [j.id, k.id])
+    set_company_ids(db, other_company.id, [unlicensed.id])
+
+    r = client.get(licensed_ids_url(company.id), headers=HEADERS)
+    assert r.status_code == 200
+    assert set(r.json()) == {str(j.id), str(k.id)}
+
+
+def test_licensed_ids_do_not_depend_on_user_opt_ins(
+    client: TestClient, db: Session
+) -> None:
+    company = make_company(db)
+    j = make_jurisdiction(db)
+    set_company_ids(db, company.id, [j.id])
+    # Licensed but nobody opted in is still licensed
+    r = client.get(licensed_ids_url(company.id), headers=HEADERS)
+    assert r.json() == [str(j.id)]
+    r = client.get(licensed_url(company.id, j.id), headers=HEADERS)
+    assert r.json() is True
+
+
+def test_licensed_check_returns_bool(client: TestClient, db: Session) -> None:
+    company, other_company = make_company(db), make_company(db)
+    licensed, unlicensed = make_jurisdiction(db), make_jurisdiction(db)
+    set_company_ids(db, company.id, [licensed.id])
+    set_company_ids(db, other_company.id, [unlicensed.id])
+
+    r = client.get(licensed_url(company.id, licensed.id), headers=HEADERS)
+    assert r.json() is True
+    r = client.get(licensed_url(company.id, unlicensed.id), headers=HEADERS)
+    assert r.status_code == 200
+    assert r.json() is False
+
+
+def test_licensed_routes_empty_for_inactive_company(
+    client: TestClient, db: Session
+) -> None:
+    company = make_company(db)
+    j = make_jurisdiction(db)
+    set_company_ids(db, company.id, [j.id])
+    company.is_active = False
+    db.add(company)
+    db.commit()
+
+    r = client.get(licensed_ids_url(company.id), headers=HEADERS)
+    assert r.status_code == 200
+    assert r.json() == []
+    r = client.get(licensed_url(company.id, j.id), headers=HEADERS)
+    assert r.json() is False
+
+
+def test_licensed_routes_unknown_company_or_jurisdiction_is_404(
+    client: TestClient, db: Session
+) -> None:
+    company = make_company(db)
+    j = make_jurisdiction(db)
+    r = client.get(licensed_ids_url(uuid.uuid4()), headers=HEADERS)
+    assert_error(r, 404, "company_not_found")
+    r = client.get(licensed_url(uuid.uuid4(), j.id), headers=HEADERS)
+    assert_error(r, 404, "company_not_found")
+    r = client.get(licensed_url(company.id, uuid.uuid4()), headers=HEADERS)
     assert_error(r, 404, "jurisdiction_not_found")

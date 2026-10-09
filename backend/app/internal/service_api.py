@@ -9,7 +9,7 @@ from app.core.deps import SessionDep
 from app.core.errors import NotFound, errors
 from app.jurisdictions.jurisdiction_models import Jurisdiction
 from app.selections import selection_service as selections
-from app.selections.selection_models import UserJurisdiction
+from app.selections.selection_models import CompanyJurisdiction, UserJurisdiction
 from app.users.user_models import User
 
 # Machine-to-machine reads for other services: X-API-Key or a superuser bearer token.
@@ -39,6 +39,42 @@ def get_company_user(session: Session, company: Company, user_id: uuid.UUID) -> 
 def check_jurisdiction(session: Session, jurisdiction_id: uuid.UUID) -> None:
     if not session.get(Jurisdiction, jurisdiction_id):
         raise NotFound("Jurisdiction not found", code="jurisdiction_not_found")
+
+
+@router.get("/jurisdiction-ids")
+def read_company_jurisdiction_ids_for_service(
+    session: SessionDep, company_id: uuid.UUID
+) -> list[uuid.UUID]:
+    """
+    The company's licensed jurisdiction ids as a plain JSON array, e.g. ["…", "…"].
+
+    Licensed is not the same as active: users still pick from these. An inactive
+    company has no license in effect: the response is [] rather than an error.
+    """
+    company = get_company(session, company_id)
+    if not company.is_active:
+        return []
+    owner = selections.SelectionOwner.of_company(company.id)
+    return selections.get_selection(session=session, owner=owner).jurisdiction_ids
+
+
+@router.get("/jurisdictions/{jurisdiction_id}/licensed")
+def read_company_jurisdiction_licensed_for_service(
+    session: SessionDep, company_id: uuid.UUID, jurisdiction_id: uuid.UUID
+) -> bool:
+    """
+    Whether one jurisdiction is in the company's license, as a bare JSON true or
+    false. An inactive company gets false.
+    """
+    company = get_company(session, company_id)
+    check_jurisdiction(session, jurisdiction_id)
+    if not company.is_active:
+        return False
+    statement = select(CompanyJurisdiction.jurisdiction_id).where(
+        CompanyJurisdiction.company_id == company.id,
+        CompanyJurisdiction.jurisdiction_id == jurisdiction_id,
+    )
+    return session.exec(statement).first() is not None
 
 
 @router.get("/users/{user_id}/jurisdiction-ids")
@@ -79,6 +115,7 @@ def read_user_jurisdiction_active_for_service(
         return False
     statement = select(UserJurisdiction.jurisdiction_id).where(
         UserJurisdiction.user_id == user.id,
+        UserJurisdiction.company_id == company.id,
         UserJurisdiction.jurisdiction_id == jurisdiction_id,
     )
     return session.exec(statement).first() is not None
