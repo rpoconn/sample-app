@@ -158,7 +158,11 @@ export function JurisdictionGrid({
                 // Fetch fresh: someone may have opted in since the page loaded
                 let preview: Awaited<ReturnType<typeof Service.previewDisable>>
                 try {
-                    preview = await Service.previewDisable(companyId, rowId)
+                    preview = await Service.previewDisable(
+                        companyId,
+                        rowId,
+                        subtree,
+                    )
                 } catch (err) {
                     handleError.call(showErrorToast, err as Error)
                     return

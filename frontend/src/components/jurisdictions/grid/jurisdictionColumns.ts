@@ -46,7 +46,7 @@ export const columnsFor = (
         headerName:
             mode === "company" ? "Enabled for company" : "Enabled for me",
         valueGetter: rowValue,
-        width: 180,
+        width: 160,
         cellRenderer: EnabledCell,
     },
     ...(showUserCounts ? [usersColumn] : []),

@@ -8,14 +8,15 @@ import { handleError } from "@/utils"
 export type SubtreeChange = {
     rootId: string
     enabled: boolean
-    // Whether the click was on the row's select-all switch
+    // Whether the click was on the row's select-all button
     subtree: boolean
     // The previewed version a confirmed change commits against; plain toggles
     // send none
     version?: number
 }
 
-// Turns a jurisdiction and everything selectable under it on or off in this scope.
+// Turns a jurisdiction, or it and everything selectable under it, on or off in
+// this scope.
 // A change made against a version that has since moved on goes to onConflict.
 export function useSelectionMutation(
     mode: JurisdictionMode,
@@ -26,12 +27,13 @@ export function useSelectionMutation(
     const { showErrorToast } = useCustomToast()
 
     return useMutation({
-        mutationFn: ({ rootId, enabled, version }: SubtreeChange) =>
-            JurisdictionGridService.saveSubtree(
+        mutationFn: ({ rootId, enabled, subtree, version }: SubtreeChange) =>
+            JurisdictionGridService.saveSelection(
                 mode,
                 companyId,
                 rootId,
                 enabled,
+                subtree,
                 version,
             ),
         onError: (err, change) => {

@@ -55,7 +55,7 @@ export type JurisdictionRow = {
     // Company scope (admins): users who opted into this jurisdiction
     userCount?: number
     // Rows with children: selectable jurisdictions in the subtree (self included),
-    // and how many of them are on. Drives the select-all switch.
+    // and how many of them are on. Drives the select-all button.
     subtree?: SubtreeSelection
 }
 

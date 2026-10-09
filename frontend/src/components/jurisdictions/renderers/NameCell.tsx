@@ -5,6 +5,7 @@ import type {
     JurisdictionRow,
 } from "@/components/jurisdictions/jurisdictionTypes"
 import { LockedIcon } from "@/components/jurisdictions/renderers/LockedIcon"
+import { SelectAllControl } from "@/components/jurisdictions/renderers/SelectAllControl"
 import { cn } from "@/lib/utils"
 
 // Splits text around the first case-insensitive match of term
@@ -100,6 +101,9 @@ export function NameCell({
                 </span>
             )}
             {locked && <LockedIcon className="ml-1" />}
+            <div className="ml-4">
+                <SelectAllControl data={data} context={context} />
+            </div>
         </div>
     )
 }

@@ -155,19 +155,18 @@ export class JurisdictionGridService {
         })
     }
 
-    // Turns a jurisdiction and everything selectable under it on or off; a row
-    // without children is a subtree of one. With a version, the save only lands
-    // if nothing changed since then (412 otherwise).
-    static saveSubtree(
+    // Turns a jurisdiction on or off, or with subtree, it and everything selectable
+    // under it. With a version, the save only lands if nothing changed since then
+    // (412 otherwise).
+    static saveSelection(
         mode: JurisdictionMode,
         companyId: string,
         rootId: string,
         enabled: boolean,
+        subtree: boolean,
         version?: number,
     ) {
-        const body: SelectionChange = enabled
-            ? { add_subtrees: [rootId] }
-            : { remove_subtrees: [rootId] }
+        const body = JurisdictionGridService.changeFor(rootId, enabled, subtree)
         const headers =
             version === undefined ? undefined : { "If-Match": String(version) }
         return mode === "company"
@@ -179,14 +178,31 @@ export class JurisdictionGridService {
             : UsersService.patchMyJurisdictions({ body, headers })
     }
 
-    // Who would lose an opt-in if the company dropped the subtree, and the
-    // version to commit exactly that against; always fresh
-    static async previewDisable(companyId: string, rootId: string) {
+    // Who would lose an opt-in if the company dropped the row (or its subtree),
+    // and the version to commit exactly that against; always fresh
+    static async previewDisable(
+        companyId: string,
+        rootId: string,
+        subtree: boolean,
+    ) {
         const { data } = await CompaniesService.previewCompanyJurisdictions({
             path: { company_id: companyId },
-            body: { remove_subtrees: [rootId] },
+            body: JurisdictionGridService.changeFor(rootId, false, subtree),
         })
         return { version: data.version, users: data.affected_users.data }
+    }
+
+    private static changeFor(
+        rootId: string,
+        enabled: boolean,
+        subtree: boolean,
+    ): SelectionChange {
+        if (subtree) {
+            return enabled
+                ? { add_subtrees: [rootId] }
+                : { remove_subtrees: [rootId] }
+        }
+        return enabled ? { add: [rootId] } : { remove: [rootId] }
     }
 
     // Asks the company's admins to turn a jurisdiction on, linking to where they'd do it

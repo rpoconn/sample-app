@@ -77,6 +77,7 @@ The seed applies the PRD's plan to the default company: all of Canada, US Nation
 - **`jurisdiction`** is an adjacency list (`parent_id`) plus a materialized `path` of ancestor ids, so a whole subtree is one indexed prefix query. Each row also has `depth`, `sort_order` (keeps the source order), `name_path` (a readable breadcrumb), `code` (ISO 3166 / UN/LOCODE) and `region_type`.
 - **`is_structural`** rows are grouping labels: the countries, groups such as "States", "Provinces" and "Cities", and a state that has cities (California). They can never be selected, by the API or the UI, but their select-all switch covers everything beneath them. Where a grouping is also a jurisdiction in its own right, that jurisdiction is a selectable child: "National" under each country, and "State" under California.
 - **The license is enforced by the database.** A user opt-in has composite foreign keys to `(user, company)` and to `(company, jurisdiction)` in the company's license. A user can't hold a jurisdiction their company hasn't licensed, and when the company drops one, the database cascades it away from every user.
+- **In production I'd use Postgres `ltree`.** The hand-rolled `path` column works on SQLite, but the grid still loads the whole tree into the app server to flatten, filter and page it. With `ltree`, its GiST-indexed ancestor and descendant operators would let the database page the tree directly, returning just the visible rows and their subtree counts, so the app server would never need to hold the full tree.
 
 ### API
 
@@ -89,12 +90,16 @@ All routes are under `/api/v1`. The ones that matter for this feature:
 | `PUT {owner}/jurisdictions` | Replace the whole set (rejects unlicensed or structural ids). `If-Match` required |
 | `DELETE {owner}/jurisdictions` | Clear the set. `If-Match` required |
 | `POST /companies/{id}/jurisdictions/preview` | What a PATCH would add and remove, and which users would lose an opt-in. Nothing is written |
-| `GET /service/users/{user_id}/jurisdiction-ids` | **For other services:** a plain array of a user's ids. Authenticates with a superuser token, or with an `X-API-Key` header once you add `SERVICE_API_KEY` to `.env` (it isn't set by default). An inactive user, or a user of an inactive company, gets `[]` |
+| `GET /service/companies/{company_id}/users/{user_id}/jurisdiction-ids` | **For other services:** a plain array of a user's active jurisdiction ids |
+| `GET /service/companies/{company_id}/users/{user_id}/jurisdictions/{jurisdiction_id}/active` | **For other services:** a bare `true` or `false` for whether one jurisdiction is active for the user |
+| `GET /service/companies/{company_id}/jurisdictions/{jurisdiction_id}/user-ids` | **For other services:** a plain array of the company's users who have the jurisdiction active, ordered by email |
 | `POST /views/jurisdiction-grid/rows` | One page of the flattened, filtered, sorted tree for the grid |
 | `POST /views/jurisdiction-grid/facets` | Counts and filter options for the toolbar |
 | `GET /jurisdictions/tree` | The whole tree as a flat list |
 
 `{owner}` is `/users/me`, `/users/{user_id}` or `/companies/{company_id}`. A user's selection is limited to their company's license. Company license writes are meant for Daptic staff; today the API also accepts a company admin (see Next steps).
+
+**Service API.** The `/service` routes are a stable, machine-to-machine contract, separate from the UI-facing routes. They exist for downstream services that need to decide whether a given jurisdiction is active for a given user (for example, whether to send that user an alert about it), or which users to notify about a jurisdiction. Every route is scoped to a company: a user from another company is a 404, so a caller can't read across companies. Use the id list when a consumer caches a user's set, the `active` check for a single jurisdiction, and `user-ids` to fan out from a jurisdiction to its users. All three already account for the license and for inactive users and companies (an inactive user or company gets `[]` or `false`, never an error), so the consumer doesn't have to apply those rules itself. An unknown company, user or jurisdiction is a 404. They authenticate with a superuser token, or with an `X-API-Key` header once you add `SERVICE_API_KEY` to `.env` (it isn't set by default).
 
 **Errors.** Every non-2xx response has the same body, `{ detail, code, context }`. Branch on `code` (for example `email_taken`, `version_mismatch`, `jurisdiction_has_licenses`), not on `detail`. Ids and counts go in `context`.
 
@@ -137,7 +142,7 @@ bunx playwright test jurisdictions
 - **Scale testing.** Paging, filtering and subtree toggles already run on the server, but nothing has been tested against a tree of thousands of rows. Load-test it and check the SQLite queries, then move to Postgres for production.
 - **License changes over time.** Record who changed a company's license and when, notify users who lose an opt-in, and offer a "re-enable for everyone who had it" undo.
 - **Accessibility pass.** The status tabs' accessible names come from their tooltips ("On for you. These are the jurisdictions you manage.") rather than their labels. Use `describeChild` on those tooltips, then do a full keyboard and screen-reader review of the grid.
-- **Service API hardening.** Replace the single shared `SERVICE_API_KEY` with keys scoped per service, and add a bulk "ids for these users" endpoint for consumers that fan out.
+- **Service API hardening.** Replace the single shared `SERVICE_API_KEY` with keys scoped per service, and limit each key to the companies it serves. A bulk "jurisdiction ids for these users" endpoint would also save callers one request per user.
 
 ## Security: what's hardened and what's left open
 

@@ -136,25 +136,25 @@ export async function searchFor(page: Page, term: string) {
     ).toBeVisible()
 }
 
-// A single jurisdiction's switch; subtree switches start "Enable all of"
+// A single jurisdiction's switch
 export function switchFor(page: Page, label: string): Locator {
     return page
         .getByRole("grid")
         .getByRole("switch", { name: label, exact: true })
 }
 
-export function subtreeSwitchFor(
-    page: Page,
-    name: string,
-    scope: string,
-): Locator {
-    return page.getByRole("grid").getByRole("switch", {
-        name: new RegExp(`^Enable all of ${name} ${scope} \\(`),
+// A row's select-all button; aria-pressed is true only when all of it is on
+export function selectAllFor(page: Page, name: string, scope: string): Locator {
+    return page.getByRole("grid").getByRole("button", {
+        name: new RegExp(`^Select all in ${name} ${scope} \\(`),
     })
 }
 
 export async function waitForGrid(page: Page) {
     await expect(
-        page.getByRole("grid").getByRole("switch").first(),
+        page
+            .getByRole("grid")
+            .locator('[role="switch"], [aria-pressed]')
+            .first(),
     ).toBeVisible()
 }

@@ -7,8 +7,8 @@ import {
     savedCompanyIds,
     savedUserIds,
     searchFor,
+    selectAllFor,
     setUserIds,
-    subtreeSwitchFor,
     switchFor,
     waitForGrid,
 } from "./utils/jurisdictions"
@@ -16,6 +16,7 @@ import { logInUser } from "./utils/user"
 
 const TEXAS = "United States / States / Texas"
 const WYOMING = "United States / States / Wyoming"
+const CALIFORNIA = "United States / States / California"
 
 // The tabs' accessible names are their tooltips, so match the label
 const statusTab = (page: Page, label: string) =>
@@ -90,6 +91,20 @@ test.describe("User scope", () => {
         await expect(switchFor(page, "Enable Texas for me")).toBeChecked()
     })
 
+    test("A parent's switch turns on only itself", async ({ page }) => {
+        const { company, tree } = await createCompanyWithPlan()
+        const member = await createUserInCompany(company.id, "member")
+        await logInUser(page, member.email, member.password)
+        await waitForGrid(page)
+
+        // San Francisco is licensed, so a subtree save would pick it up too
+        await searchFor(page, "California")
+        await switchFor(page, "Enable California for me").click()
+        await expect
+            .poll(() => savedUserIds(member))
+            .toEqual([idOf(tree, CALIFORNIA)])
+    })
+
     test("Select all turns on a whole subtree", async ({ page }) => {
         const { company, tree, planIds } = await createCompanyWithPlan()
         const member = await createUserInCompany(company.id, "member")
@@ -102,11 +117,14 @@ test.describe("User scope", () => {
             .map((j) => j.id)
             .sort()
 
-        await subtreeSwitchFor(page, "Canada", "for me").click()
+        await selectAllFor(page, "Canada", "for me").click()
         await expect
             .poll(async () => (await savedUserIds(member)).sort())
             .toEqual(canada)
-        await expect(subtreeSwitchFor(page, "Canada", "for me")).toBeChecked()
+        await expect(selectAllFor(page, "Canada", "for me")).toHaveAttribute(
+            "aria-pressed",
+            "true",
+        )
     })
 
     test("Select all skips locked jurisdictions and turns back off", async ({
@@ -125,14 +143,14 @@ test.describe("User scope", () => {
             .map((j) => j.id)
             .sort()
 
-        const states_ = subtreeSwitchFor(page, "States", "for me")
+        const states_ = selectAllFor(page, "States", "for me")
         await states_.click()
         await expect
             .poll(async () => (await savedUserIds(member)).sort())
             .toEqual(licensed)
         expect(licensed).not.toContain(idOf(tree, WYOMING))
         // Locked states keep it short of fully on
-        await expect(states_).not.toBeChecked()
+        await expect(states_).toHaveAttribute("aria-pressed", "mixed")
         await expect(states_).toHaveAccessibleName(
             new RegExp(`\\(${licensed.length} of \\d+ on\\)`),
         )
