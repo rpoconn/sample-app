@@ -83,7 +83,7 @@ disk:
     sizeGB: 1
 ```
 
-**Not set up.** The deployed app runs without `FASTAPI_ENV=development`, so it refuses the `changethis` defaults and leaves out the `/private` routes. No SMTP server is configured, so password-recovery and new-account emails aren't sent; add the `SMTP_*` and `EMAILS_FROM_EMAIL` variables in the Render dashboard to enable them. With a custom domain, also set `FRONTEND_HOST` to its URL so email links point there.
+**Not set up.** The deployed app runs without `FASTAPI_ENV=development`, so it refuses `changethis` as the `SECRET_KEY` and leaves out the `/private` routes. No SMTP server is configured, so password-recovery and new-account emails aren't sent; add the `SMTP_*` and `EMAILS_FROM_EMAIL` variables in the Render dashboard to enable them. With a custom domain, also set `FRONTEND_HOST` to its URL so email links point there.
 
 ## What I built
 
@@ -186,7 +186,7 @@ This is a sample app built for an interview, not a production deployment. A code
 - **No rate limiting** on login, signup or password recovery.
 - **The access token is kept in `localStorage`**, not in an httpOnly cookie, and lasts 8 days.
 - **Changing your own email doesn't ask for your password**, and doesn't end your other sessions.
-- **The secrets are local defaults.** `.env` ships `SECRET_KEY=changethis` and a known admin password. The backend refuses to start with them unless `FASTAPI_ENV=development`, which the local `.env` sets.
+- **The secrets are local defaults.** `.env` ships `SECRET_KEY=changethis` and a known admin password. The backend refuses to start with that `SECRET_KEY` unless `FASTAPI_ENV=development`, which the local `.env` sets. The admin password is allowed anywhere, so a demo deployment can keep the login documented above.
 
 ## License
 

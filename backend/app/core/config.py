@@ -69,10 +69,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:
+        # FIRST_SUPERUSER_PASSWORD is not checked: the demo deployment keeps the README login
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
-        self._check_default_secret(
-            "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
-        )
         self._check_default_secret("SERVICE_API_KEY", self.SERVICE_API_KEY)
 
         return self
