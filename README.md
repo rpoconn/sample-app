@@ -72,9 +72,16 @@ To reset the data, stop the backend, delete `backend/app.db`, and run `bash star
 
 Each start runs the migrations and the seed before serving, the same as the local Docker setup.
 
-**The database.** SQLite is a file, and a Render container's filesystem is wiped on every deploy and restart. The Blueprint mounts a 1 GB persistent disk at `/data` to keep `app.db`. Disks need a paid plan, so the Blueprint uses `starter`. A service with a disk runs as a single instance and has a few seconds of downtime on each deploy.
+**The database.** The Blueprint uses Render's free plan, which has no persistent storage. SQLite is a file inside the container, so every deploy, restart or idle spin-down resets the database to the seed data: sign-ups and changes are lost, and the first admin is recreated from `FIRST_SUPERUSER`. A free service spins down after 15 minutes without traffic, and the next request takes up to a minute while it starts again.
 
-To run on the free plan instead, set `plan: free` and delete the `disk:` block in `render.yaml`. The app still works, but every deploy, restart or idle spin-down resets the database to the seed data.
+To keep the data, set `plan: starter` in `render.yaml` and add a disk to the service:
+
+```yaml
+disk:
+    name: data
+    mountPath: /data
+    sizeGB: 1
+```
 
 **Not set up.** The deployed app runs without `FASTAPI_ENV=development`, so it refuses the `changethis` defaults and leaves out the `/private` routes. No SMTP server is configured, so password-recovery and new-account emails aren't sent; add the `SMTP_*` and `EMAILS_FROM_EMAIL` variables in the Render dashboard to enable them. With a custom domain, also set `FRONTEND_HOST` to its URL so email links point there.
 

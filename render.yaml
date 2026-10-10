@@ -6,13 +6,9 @@ services:
       runtime: docker
       dockerfilePath: ./render.Dockerfile
       dockerContext: .
-      # Persistent disks need a paid plan; see README.md#deploying-to-render for the free variant
-      plan: starter
+      # No persistent disk on the free plan: the database resets to the seed data on every start
+      plan: free
       healthCheckPath: /api/v1/utils/health-check
-      disk:
-          name: data
-          mountPath: /data
-          sizeGB: 1
       envVars:
           - key: PROJECT_NAME
             value: Daptic Jurisdiction Settings

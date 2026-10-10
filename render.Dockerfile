@@ -41,7 +41,7 @@ RUN uv sync --frozen --no-dev --package app
 
 COPY --from=frontend /app/backend/app/frontend backend/app/frontend
 
-# SQLite lives here; render.yaml mounts a persistent disk over it
+# SQLite lives here. It is not persisted: each start migrates and seeds a fresh database
 RUN mkdir -p /data
 
 WORKDIR /app/backend
