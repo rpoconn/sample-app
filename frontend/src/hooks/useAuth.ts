@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { AxiosError } from "axios"
 
 import {
     type Body_login_login_access_token as AccessToken,
@@ -13,6 +14,20 @@ import useCustomToast from "./useCustomToast"
 
 const isLoggedIn = () => {
     return localStorage.getItem("access_token") !== null
+}
+
+// The token is invalid (expired, revoked, or its user is gone) or the account is disabled
+const isAuthError = (error: unknown) => {
+    if (!(error instanceof AxiosError)) {
+        return false
+    }
+    const status = error.response?.status
+    const code = error.response?.data?.code
+    return (
+        status === 401 ||
+        (status === 403 &&
+            (code === "user_inactive" || code === "company_inactive"))
+    )
 }
 
 const useAuth = () => {
@@ -72,5 +87,5 @@ const useAuth = () => {
     }
 }
 
-export { isLoggedIn }
+export { isAuthError, isLoggedIn }
 export default useAuth

@@ -5,12 +5,12 @@ import {
     QueryClientProvider,
 } from "@tanstack/react-query"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
-import { AxiosError } from "axios"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 import { client } from "./client/client.gen"
 import { ThemeProvider } from "./components/ThemeProvider"
 import { Toaster } from "./components/ui/Sonner"
+import { isAuthError } from "./hooks/useAuth"
 import "./index.css"
 import { routeTree } from "./routeTree.gen"
 
@@ -20,16 +20,7 @@ client.setConfig({
 })
 
 const handleApiError = (error: Error) => {
-    if (!(error instanceof AxiosError)) {
-        return
-    }
-    const status = error.response?.status
-    const code = error.response?.data?.code
-    if (
-        status === 401 ||
-        (status === 403 &&
-            (code === "user_inactive" || code === "company_inactive"))
-    ) {
+    if (isAuthError(error)) {
         localStorage.removeItem("access_token")
         window.location.href = "/login"
     }
@@ -43,7 +34,7 @@ const queryClient = new QueryClient({
     }),
 })
 
-const router = createRouter({ routeTree })
+const router = createRouter({ routeTree, context: { queryClient } })
 declare module "@tanstack/react-router" {
     interface Register {
         router: typeof router
