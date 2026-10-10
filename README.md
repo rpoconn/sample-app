@@ -61,6 +61,23 @@ Log in as `admin@example.com` / `changethis`. This superuser stands in for a Dap
 
 To reset the data, stop the backend, delete `backend/app.db`, and run `bash start_backend.bash` again. More detail is in [development.md](development.md).
 
+## Deploying to Render
+
+[render.yaml](render.yaml) is a [Render Blueprint](https://render.com/docs/infrastructure-as-code) that runs the whole app as one Docker web service. [render.Dockerfile](render.Dockerfile) builds the frontend and bakes it into the backend image, so FastAPI serves the API and the site from the same origin. There is no nginx container and no CORS setup.
+
+1. Push the repository to GitHub.
+2. In the Render dashboard, choose **New > Blueprint** and pick the repository.
+3. Render asks for `FIRST_SUPERUSER` (an email) and `FIRST_SUPERUSER_PASSWORD`. These are the login for the first admin. It generates `SECRET_KEY` and `SERVICE_API_KEY` itself.
+4. Apply. The first build takes a few minutes. Later pushes to `master` redeploy automatically.
+
+Each start runs the migrations and the seed before serving, the same as the local Docker setup.
+
+**The database.** SQLite is a file, and a Render container's filesystem is wiped on every deploy and restart. The Blueprint mounts a 1 GB persistent disk at `/data` to keep `app.db`. Disks need a paid plan, so the Blueprint uses `starter`. A service with a disk runs as a single instance and has a few seconds of downtime on each deploy.
+
+To run on the free plan instead, set `plan: free` and delete the `disk:` block in `render.yaml`. The app still works, but every deploy, restart or idle spin-down resets the database to the seed data.
+
+**Not set up.** The deployed app runs without `FASTAPI_ENV=development`, so it refuses the `changethis` defaults and leaves out the `/private` routes. No SMTP server is configured, so password-recovery and new-account emails aren't sent; add the `SMTP_*` and `EMAILS_FROM_EMAIL` variables in the Render dashboard to enable them. With a custom domain, also set `FRONTEND_HOST` to its URL so email links point there.
+
 ## What I built
 
 ### The two layers

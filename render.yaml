@@ -1,0 +1,29 @@
+# Render Blueprint: one Docker web service that serves the API and the built frontend.
+# https://render.com/docs/blueprint-spec
+services:
+    - type: web
+      name: daptic-jurisdictions
+      runtime: docker
+      dockerfilePath: ./render.Dockerfile
+      dockerContext: .
+      # Persistent disks need a paid plan; see README.md#deploying-to-render for the free variant
+      plan: starter
+      healthCheckPath: /api/v1/utils/health-check
+      disk:
+          name: data
+          mountPath: /data
+          sizeGB: 1
+      envVars:
+          - key: PROJECT_NAME
+            value: Daptic Jurisdiction Settings
+          - key: DATABASE_URL
+            value: sqlite:////data/app.db
+          - key: SECRET_KEY
+            generateValue: true
+          - key: SERVICE_API_KEY
+            generateValue: true
+          # Asked for in the Render dashboard when the Blueprint is created
+          - key: FIRST_SUPERUSER
+            sync: false
+          - key: FIRST_SUPERUSER_PASSWORD
+            sync: false
